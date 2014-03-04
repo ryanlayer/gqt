@@ -10,6 +10,13 @@ parser.add_option("-b",
     dest="binary_file",
     help="Binary file")
 
+parser.add_option("-s",
+    "--seek",
+    dest="seek",
+    type="int",
+    default=0,
+    help="Distance to seek")
+
 parser.add_option("-c",
     "--count",
     dest="count",
@@ -25,6 +32,7 @@ if not options.binary_file:
     parser.error('Binary file not given')
 
 f = open(options.binary_file,'rb')
+f.seek(options.seek)
 count = options.count 
 
 try:

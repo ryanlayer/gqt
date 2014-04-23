@@ -1,31 +1,30 @@
+BIN=../../bin
+OBJ=../../obj
 
-all: get_common_genot_ind \
+
+LIB=genotq.o \
+    timer.o
+OBJS=$(addprefix $(OBJ)/, $(LIB))
+
+
+PROG=and_speed_test \
+	get_common_genot_ind \
 	get_common_genot_var \
-	test_int_genotype_reader \
-	int_to_ubin \
 	get_gt_from_ubin \
+	int_to_ubin \
+	or_gt_fields_from_ubin \
 	or_gt_records_from_ubin \
-	or_gt_fields_from_ubin
+	test_int_genotype_reader 
 
+LIST=$(addprefix $(BIN)/, $(PROG))
 
-get_common_genot_ind: get_common_genot_ind.c
-	gcc -o get_common_genot_ind get_common_genot_ind.c
-	
-get_common_genot_var: get_common_genot_var.c
-	gcc -o get_common_genot_var get_common_genot_var.c
+all: $(LIST)
 
-test_int_genotype_reader: test_int_genotype_reader.c genotq.c
-	gcc -g -o test_int_genotype_reader test_int_genotype_reader.c genotq.c
+$(OBJ)/%.o: %.c %.h
+	gcc -c -o $@ $< 
 
-int_to_ubin: int_to_ubin.c genotq.c
-	gcc -g -o int_to_ubin int_to_ubin.c genotq.c
-
-get_gt_from_ubin: get_gt_from_ubin.c genotq.c
-	gcc -g -o get_gt_from_ubin get_gt_from_ubin.c genotq.c
-
-or_gt_records_from_ubin: or_gt_records_from_ubin.c genotq.c
-	gcc -g -o or_gt_records_from_ubin or_gt_records_from_ubin.c genotq.c
-
-or_gt_fields_from_ubin: or_gt_fields_from_ubin.c genotq.c
-	gcc -g -o or_gt_fields_from_ubin or_gt_fields_from_ubin.c genotq.c
-
+$(BIN)/%: %.c $(OBJS)
+	gcc -o $@ $^ 
+clean:
+	rm -rf $(BIN)/*
+	rm -rf $(OBJ)/*

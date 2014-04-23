@@ -1,0 +1,63 @@
+#!/bin/bash
+
+############################################################
+#  Program:
+#  Author :
+############################################################
+
+
+## BEGIN SCRIPT
+usage()
+{
+    cat << EOF
+
+usage: $0 OPTIONS
+
+OPTIONS can be:
+    -h      Show this message
+    -i      Input file name
+    -o      Output file name
+
+EOF
+}
+
+# Show usage when there are no arguments.
+if test -z "$1"
+then
+    usage
+    exit
+fi
+
+VERBOSE=
+I=
+O=
+
+# Check options passed in.
+while getopts "h i:o:" OPTION
+do
+    case $OPTION in
+        h)
+            usage
+            exit 1
+            ;;
+        i)
+            I=$OPTARG
+            ;;
+        o)
+            O=$OPTARG
+            ;;
+        ?)
+            usage
+            exit
+            ;;
+    esac
+done
+
+FIELDS=`head -n1 $I | wc -w`
+RECORDS=`cat $I | wc -l`
+
+~/src/genotq/src/C/int_to_ubin \
+    -i $I \
+    -f $FIELDS \
+    -r $RECORDS \
+    -o $O

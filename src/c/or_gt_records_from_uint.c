@@ -7,8 +7,8 @@
 void usage()
 {
     fprintf(stderr,
-        "usage:\tint_to_ubin <options>\n"
-        "\t\t-u\tInput variant or individual uncompressed binary file name\n"
+        "usage:\tor_gt_records_from_uint <options>\n"
+        "\t\t-u\tInput variant or individual uncompressed interger file name\n"
         "\t\t-R\tNumber of records\n"
         "\t\t-F\tNumber of fields\n"
         "\t\t-n\tNumber of records to OR\n"
@@ -84,8 +84,6 @@ int main(int argc, char **argv)
     struct uint_file u_file = init_uint_file(in_file_name,
                                              num_records,
                                              num_fields);
-
-    printf("%d %d\n", u_file.num_fields, u_file.num_records);
 
     unsigned int *r;
     or_uint_records(u_file, num_r, R, &r);

@@ -1,5 +1,6 @@
 BIN=../../bin
 OBJ=../../obj
+CFLAGS=-g
 
 
 LIB=genotq.o \
@@ -22,10 +23,10 @@ LIST=$(addprefix $(BIN)/, $(PROG))
 all: $(LIST)
 
 $(OBJ)/%.o: %.c %.h
-	gcc -c -o $@ $< 
+	gcc -c $(CFLAGS) -o $@ $< 
 
 $(BIN)/%: %.c $(OBJS)
-	gcc -o $@ $^ 
+	gcc $(CFLAGS) -o $@ $^ 
 clean:
 	rm -rf $(BIN)/*
 	rm -rf $(OBJ)/*

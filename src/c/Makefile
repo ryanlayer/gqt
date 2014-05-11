@@ -14,7 +14,8 @@ PROG=and_speed_test \
 	int_to_ubin \
 	or_gt_fields_from_ubin \
 	or_gt_records_from_ubin \
-	test_int_genotype_reader 
+	test_int_genotype_reader \
+	or_gt_records_from_uint
 
 LIST=$(addprefix $(BIN)/, $(PROG))
 

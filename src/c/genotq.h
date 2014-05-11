@@ -6,6 +6,22 @@ struct ubin_file {
     unsigned int num_fields, num_records;
 };
 
+struct uint_file {
+    FILE *file;
+    unsigned int num_fields, num_records;
+    char *line;
+    int line_len;
+};
+
+struct uint_file init_uint_file(char *file_name, 
+                                int num_records,
+                                int num_fields);
+
+int or_uint_records(struct uint_file u_file, 
+                    int num_r,
+                    int *record_ids,
+                    unsigned int **r);
+
 struct ubin_file init_ubin_file(char *file_name);
 
 void init_int_genotype_reader(char *file_name, int num_gt);

@@ -69,6 +69,27 @@ int get_next_int_genotype(int *line_num, int *gt_num, int *gt)
 }
 //}}}
 
+struct uint_file init_uint_file(char *file_name, 
+                                int num_records,
+                                int num_fields)
+{
+    struct uint_file uf;
+    uf.line_len = num_fields*2 + 1;
+    uf.line = (char *) malloc(line_len*sizeof(char));
+    uf.file = fopen(file_name, "rb");
+
+    return uf;
+}
+
+int or_uint_records(struct uint_file u_file, 
+                    int num_r,
+                    int *record_ids,
+                    unsigned int **r)
+{
+    return 0;
+}
+
+
 //{{{ struct ubin_file init_ubin_file(char *file_name)
 struct ubin_file init_ubin_file(char *file_name)
 {
@@ -160,7 +181,7 @@ int or_ubin_fields(struct ubin_file u_file,
 }
 //}}}
 
-//{{{ int get_ubin_genotypes(FILE *file,
+//{{{ int or_ubin_records(struct ubin_file u_file, 
 int or_ubin_records(struct ubin_file u_file, 
                     int num_r,
                     int *record_ids,

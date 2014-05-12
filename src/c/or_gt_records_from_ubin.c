@@ -68,7 +68,7 @@ int main(int argc, char **argv)
 
     struct ubin_file u_file = init_ubin_file(in_file_name);
 
-    printf("%d %d\n", u_file.num_fields, u_file.num_records);
+    //printf("%d %d\n", u_file.num_fields, u_file.num_records);
 
     unsigned int *r;
     or_ubin_records(u_file, num_r, R, &r);
@@ -80,6 +80,7 @@ int main(int argc, char **argv)
     int i,j,k=0;
     for (i = 0; i < num_ints_per_record; ++i) {
         unsigned int c = r[i];
+        //printf("\n%u\n", c);
         for (j = 0; j < 16; ++j) {
             if (k == u_file.num_fields)
                 break;
@@ -93,4 +94,5 @@ int main(int argc, char **argv)
     }
     printf("\n");
 
+    return 0;
 }

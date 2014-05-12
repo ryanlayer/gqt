@@ -75,9 +75,8 @@ struct uint_file init_uint_file(char *file_name,
                                 int num_fields)
 {
     struct uint_file uf;
-    uf.line_len = num_fields*2 + 1;
-    uf.line = (char *) malloc(line_len*sizeof(char));
-    uf.file = fopen(file_name, "rb");
+    uf.line_len = num_fields*2+1;
+    uf.file = fopen(file_name, "r");
 
     if (uf.file == NULL) {
         printf("Could not open %s\n", file_name);
@@ -91,63 +90,73 @@ struct uint_file init_uint_file(char *file_name,
 }
 //}}}
 
+//{{{int or_uint_records(struct uint_file u_file, 
 int or_uint_records(struct uint_file u_file, 
                     int num_r,
                     int *record_ids,
                     unsigned int **r)
 {
-    //*r = (unsigned int *) calloc(u_file.num_fields, sizeof(unsigned int));
-
-    //unsigned int *b =
-            //(unsigned int *) calloc(u_file.num_fields, sizeof(unsigned int));
-    //unsigned int b[u_file.num_fields];
-    //unsigned int *b = (unsigned int *)
-            //malloc(u_file.num_fields*sizeof(unsigned int));
-    //unsigned int *b = (unsigned int *)
-            //malloc(253*sizeof(unsigned int));
-    //unsigned int b[u_file.num_fields];
-    unsigned int *b = (unsigned int *) 
-            malloc(u_file.num_fields*sizeof(unsigned int));
+    *r = (unsigned int *) calloc(u_file.num_fields, sizeof(unsigned int));
 
     int a = 0;
     int i,j;
-    char *pch;
+    char *pch, *ret;
+    char *l = (char *) malloc(u_file.line_len*sizeof(char));
     for (i = 0; i < num_r; ++i) {
         fseek(u_file.file,u_file.num_fields*2 * record_ids[i],SEEK_SET);
-        char *ret = fgets(u_file.line, u_file.line_len, u_file.file);
-
-        printf("%d\t%s", record_ids[i], u_file.line);
-
-        pch = strtok(u_file.line," ");
-        for (j = 0; j < u_file.num_fields; ++j){
-            fprintf(stderr, "%d %d\t", j,u_file.num_fields);
-            //(*r)[j] = (*r)[j] || atoi(pch);
-            b[j] = b[j] || atoi(pch);
-            a = a || atoi(pch);
-            fprintf(stderr, "%d\n", atoi(pch));
-            pch = strtok(NULL," ");
+        char *ret = fgets(l,
+                          u_file.line_len*sizeof(char),
+                          u_file.file);
+        
+        if (ret == NULL) {
+            printf("NULL\n");
+            return 1;
         }
 
-    /*
-
-        // skip to the target record and read in the full record
-        fseek(u_file.file, 
-                    record_ids[i]*num_bytes_per_record, // skip to the reccord
-                    SEEK_SET);
-        fread(c,sizeof(unsigned int),num_bytes_per_record,u_file.file);
-
-        //and it
-        for (j = 0; j < num_ints_per_record; ++j) {
-            (*r)[j] = (*r)[j] | c[j];
-        }
-    */
+        for (j = 0; j < u_file.num_fields; ++j)
+            (*r)[j] = (*r)[j] | ((int)l[j*2] - 48);
     }
 
-
-
-    return a;
+    return 0;
 }
+//}}}
 
+//{{{int or_uint_records(struct uint_file u_file, 
+int or_uint_fields(struct uint_file u_file, 
+                    int num_f,
+                    int *field_ids,
+                    unsigned int **r)
+{
+    *r = (unsigned int *) calloc(u_file.num_records, sizeof(unsigned int));
+
+    int a = 0;
+    int i,j;
+    char *pch, *ret;
+    char *l = (char *) malloc(u_file.line_len*sizeof(char));
+
+    for (i = 0; i < u_file.num_records; ++i) {
+        //fprintf(stderr, "%d/%d\t",i,u_file.num_records);
+        char *ret = fgets(l,
+                          u_file.line_len*sizeof(char),
+                          u_file.file);
+        
+        if (ret == NULL) {
+            printf("NULL\n");
+            return 1;
+        }
+
+
+        for (j = 0; j < num_f; ++j) {
+            //fprintf(stderr, "%d ",((int)l[field_ids[j]*2] - 48)); 
+            (*r)[i] = (*r)[i] | ((int)l[field_ids[j]*2] - 48);
+        }
+
+        //fprintf(stderr, "\n");
+    }
+
+    return 0;
+}
+//}}}
 
 //{{{ struct ubin_file init_ubin_file(char *file_name)
 struct ubin_file init_ubin_file(char *file_name)
@@ -210,16 +219,50 @@ int or_ubin_fields(struct ubin_file u_file,
                    int *field_ids,
                    unsigned int **r)
 {
+    int num_ints_per_record = 1 + ((u_file.num_fields - 1) / 16);
+    int num_bytes_per_record = num_ints_per_record * 4;
 
+    // create enough space in r, and set all the values to zero
+    *r = (unsigned int *) calloc(u_file.num_records, sizeof(unsigned int));
+
+    unsigned int *c = (unsigned int *)
+        malloc(num_ints_per_record*sizeof(unsigned int));
+
+    //unsigned int c[num_ints_per_record];
+    
+    int i,j;
+    unsigned int target_int;
+    for (i = 0; i < u_file.num_records; ++i) {
+
+        fread(c,sizeof(unsigned int),num_ints_per_record,u_file.file);
+
+        for (j = 0; j < num_f; ++j) {
+            int field_int_id = field_ids[i]/16;
+            int field_offset = field_ids[i] - field_int_id*16;
+
+            target_int = c[field_int_id];
+            (*r)[i] = (*r)[i] | (target_int >> (30 - field_offset*2)) & 3;
+        }
+
+    }
+
+    return 0;
+
+
+
+
+    /*
 
     int i,j;
     *r = (unsigned int *) malloc(u_file.num_records*sizeof(unsigned int));
     int *record_ids = (int *) malloc(num_f*sizeof(int));
     int *gts = (int *) malloc(num_f*sizeof(int));
+
+   for (j = 0; j < num_f; ++j) {
+    record_ids[j] = i;
+   }
+
     for (i = 0; i < u_file.num_records; ++i) {
-        for (j = 0; j < num_f; ++j) {
-            record_ids[j] = i;
-        }
 
         get_ubin_genotypes(u_file,
                            num_f,
@@ -237,6 +280,7 @@ int or_ubin_fields(struct ubin_file u_file,
     free(record_ids);
 
     return 0;
+    */
 }
 //}}}
 
@@ -255,6 +299,8 @@ int or_ubin_records(struct ubin_file u_file,
     unsigned int *c = (unsigned int *)
         malloc(num_ints_per_record*sizeof(unsigned int));
 
+    //unsigned int c[num_ints_per_record];
+    
     int i,j;
     for (i = 0; i < num_r; ++i) {
 
@@ -262,12 +308,15 @@ int or_ubin_records(struct ubin_file u_file,
         fseek(u_file.file, 8 + // skip the record and field size field
                     record_ids[i]*num_bytes_per_record, // skip to the reccord
                     SEEK_SET);
-        fread(c,sizeof(unsigned int),num_bytes_per_record,u_file.file);
+        fread(c,sizeof(unsigned int),num_ints_per_record,u_file.file);
 
         //and it
         for (j = 0; j < num_ints_per_record; ++j) {
+            //printf("%u\t%u\t", (*r)[j], c[j]); 
             (*r)[j] = (*r)[j] | c[j];
+            //printf("%u\n", (*r)[j]); 
         }
+
     }
 
     return 0;

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "genotq.h"
 
 static int test_1 = 0;
@@ -8,6 +9,730 @@ static char *line;
 static int line_len;
 static FILE *file;
 static int read_state = 0;
+
+//{{{ unsigned int bin_char_to_int(char *bin)
+unsigned int bin_char_to_int(char *bin)
+{
+    unsigned int i = 0;
+    int j = 0;
+
+    while (bin[j] != '\0') {
+        i = i << 1;
+        if (bin[j] == '1')
+            i += 1;
+        j+=1;
+    }
+
+    return i;
+}
+//}}}
+
+//{{{ struct plt_file init_plt_file(char *file_name)
+struct plt_file init_plt_file(char *file_name)
+{
+    struct plt_file plt_f;
+
+    plt_f.file = fopen(file_name, "r");
+
+    if (!plt_f.file) {
+        fprintf(stderr, "Unable to open %s\n", file_name);
+        abort();
+    }
+
+    char *line = NULL;
+    size_t len = 0;
+    char *pch;
+    ssize_t read;
+    int gt;
+
+    read = getline(&line, &len, plt_f.file);
+
+    plt_f.num_fields = atoi(line);
+
+
+    read = getline(&line, &len, plt_f.file);
+
+    plt_f.num_records = atoi(line);
+
+    plt_f.header_offset = ftell(plt_f.file);
+
+    free(line);
+
+    return plt_f;
+}
+///}}}
+
+//{{{ int or_records_plt(struct plt_file pf,
+int or_records_plt(struct plt_file pf,
+                   int *record_ids,
+                   int num_r,
+                   int *G)
+{
+
+    char *line = NULL;
+    size_t len = 0;
+    char *pch;
+    ssize_t read;
+
+    long line_len = pf.num_fields*2*sizeof(char);
+    int i,j;
+    for (i = 0; i < num_r; ++i) {
+        fseek(pf.file, pf.header_offset + line_len*record_ids[i], SEEK_SET);
+
+        read = getline(&line, &len, pf.file);
+
+        for (j = 0; j < pf.num_fields; ++j)
+            G[j] = G[j] | ((int)line[j*2] - 48);
+    }
+
+    free(line);
+
+    return pf.num_fields;
+}
+//}}}
+
+//{{{ int or_fields_plt(struct plt_file pf,
+int or_fields_plt(struct plt_file pf,
+                  int *field_ids,
+                  int num_f,
+                  int *G)
+{
+    char *line = NULL;
+    size_t len = 0;
+    char *pch;
+    ssize_t read;
+    long line_len = pf.num_fields*2*sizeof(char);
+    int i,j;
+
+    // jump past the header
+    fseek(pf.file, pf.header_offset, SEEK_SET);
+
+    for (i = 0; i < pf.num_records; ++i) {
+        read = getline(&line, &len, pf.file);
+        G[i] = 0;
+        for (j = 0; j < num_f; ++j) 
+            G[i] = G[i] | ((int)line[j*2] - 48);
+    }
+
+    free(line);
+
+    return pf.num_records;
+}
+//}}}
+
+//{{{unsigned int pack_2_bit_ints(int *ints, int num_ints)
+unsigned int pack_2_bit_ints(int *ints, int num_ints)
+{
+    int i;
+    unsigned int r = 0;
+    for (i = 0; i < num_ints; ++i) {
+       r = r | ((ints[i] & 3) << (30 - i*2));
+    }
+    
+    return r;
+}
+//}}}
+
+//{{{unsigned int *unpack_2_bit_ints(int packed_int)
+int *unpack_2_bit_ints(unsigned int packed_ints)
+{
+    int *r = (int *) malloc (16*sizeof(int));
+
+    int i;
+    for (i = 0; i < 16; ++i) 
+        r[i] = (packed_ints >> (30 - i*2)) & 3;
+    
+    return r;
+}
+//}}}
+
+//{{{ void plt_to_ubin(char *in_file_name, char *out_file_name);
+int plt_by_name_to_ubin(char *in_file_name, char *out_file_name)
+{
+
+    struct plt_file pf = init_plt_file(in_file_name);
+    int r = plt_to_ubin(pf, out_file_name);
+    fclose(pf.file);
+    return r;
+}
+
+int plt_to_ubin(struct plt_file pf, char *out_file_name)
+{
+
+    // jump past the header
+    fseek(pf.file, pf.header_offset, SEEK_SET);
+    int i,j,count;
+    size_t len;
+    ssize_t read;
+    int g[16];
+    unsigned int *packed_ints;
+    int num_packed_ints;
+
+    FILE *o_file = fopen(out_file_name, "wb");
+    if (!o_file) {
+        fprintf(stderr, "Unable to open %s\n",out_file_name);
+        return 1;
+    }
+
+    // First value is the number of fields per record
+    fwrite(&(pf.num_fields), sizeof(int), 1, o_file);
+
+    // Second value is the number of records
+    fwrite(&(pf.num_records), sizeof(int), 1, o_file);
+
+
+    for (i = 0; i < pf.num_records; ++i) {
+        read = getline(&line, &len, pf.file);
+        int r = plt_line_to_packed_ints(line,
+                                        pf.num_fields,
+                                        &packed_ints,
+                                        &num_packed_ints);
+
+        for (j = 0; j < num_packed_ints; ++j)
+            fwrite(&(packed_ints[j]), sizeof(unsigned int), 1, o_file);
+
+        free(packed_ints);
+    }
+
+    fclose(o_file);
+
+    return 0;
+}
+//}}}
+
+//{{{ int plt_line_to_packed_ints(char *line,
+int plt_line_to_packed_ints(char *line,
+                             int num_fields, 
+                             unsigned int **packed_ints,
+                             int *len)
+{
+    *len = 1 + ((num_fields - 1) / 16);
+    *packed_ints = (unsigned *) malloc((*len)*sizeof(unsigned int));
+    int i, two_bit_count, pack_int_count = 0;
+
+    int g[16];
+
+    memset(g,0,sizeof(g));
+    two_bit_count = 0;
+    for (i = 0; i < num_fields; ++i) {
+        g[i%16] = ((int)line[i*2] - 48);
+
+        two_bit_count +=1;
+
+        if (two_bit_count == 16) {
+            (*packed_ints)[pack_int_count] = pack_2_bit_ints(g, 16);
+            pack_int_count += 1;
+            memset(g,0,sizeof(g));
+            two_bit_count = 0;
+        }
+        
+    }
+
+    if (two_bit_count > 0)
+        (*packed_ints)[pack_int_count] = pack_2_bit_ints(g, 16);
+
+    return 0;
+}
+//}}}
+
+//{{{ struct ubin_file init_ubin_file(char *file_name)
+struct ubin_file init_ubin_file(char *file_name)
+{
+    struct ubin_file uf;
+
+    uf.file = fopen(file_name, "rb");
+
+    if (!uf.file) {
+        fprintf(stderr, "Unable to open %s\n", file_name);
+        return uf;
+    }
+
+    // Jump to the begining of the file to grab the record size
+    fseek(uf.file, 0, SEEK_SET);
+    fread(&uf.num_fields,sizeof(unsigned int),1,uf.file);
+    fread(&uf.num_records,sizeof(unsigned int),1,uf.file);
+    uf.header_offset = ftell(uf.file);
+
+    return uf;
+
+}
+//}}}
+
+//{{{ int or_records_ubin(struct ubin_file u_file, 
+int or_records_ubin(struct ubin_file uf, 
+                    int *record_ids,
+                    int num_r,
+                    unsigned int **G)
+{
+
+    int num_ints_per_record = 1 + ((uf.num_fields - 1) / 16);
+    int num_bytes_per_record = num_ints_per_record * 4;
+
+    // create enough space in r, and set all the values to zero
+    *G = (unsigned int *) calloc(num_ints_per_record, sizeof(unsigned int));
+
+    unsigned int *c = (unsigned int *)
+        malloc(num_ints_per_record*sizeof(unsigned int));
+
+    int i,j;
+    for (i = 0; i < num_r; ++i) {
+
+        // skip to the target record and read in the full record
+        fseek(uf.file, uf.header_offset + // skip the record and field size field
+                    record_ids[i]*num_bytes_per_record, // skip to the reccord
+                    SEEK_SET);
+        fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
+
+        for (j = 0; j < num_ints_per_record; ++j)
+            (*G)[j] = (*G)[j] | c[j];
+    }
+
+    free(c);
+
+    return num_ints_per_record;
+}
+//}}}
+
+//{{{ int or_fields_ubin(struct ubin_file u_file, 
+/*
+ *  This one is a little trickey.  To keep in like with the other opperations
+ *  on ubin, we want G to be an array of packed ints, but since we are looking
+ *  at each row and filling each two-bit value of the result we need to track both
+ *  the current packed int and the possition within that int.
+ *  The total number of two-bit values will be equal to the number of records.
+ */
+int or_fields_ubin(struct ubin_file uf, 
+                   int *field_ids,
+                   int num_f,
+                   unsigned int **G)
+{
+    int num_ints_per_record = 1 + ((uf.num_fields - 1) / 16);
+
+    int num_ints_all_recores = 1 + ((uf.num_records - 1) / 16);
+    // create enough space in r, and set all the values to zero
+    *G = (unsigned int *) calloc(num_ints_all_recores, sizeof(unsigned int));
+
+    unsigned int *c = (unsigned int *)
+        malloc(num_ints_per_record*sizeof(unsigned int));
+
+    // skip the record and field size field
+    fseek(uf.file, uf.header_offset, SEEK_SET);
+
+    int int_count = 0, two_bit_count = 0;
+    unsigned int g, target_int;
+    int field_int_id, field_offset;
+    int i,j;
+    for (i = 0; i < uf.num_records; ++i) {
+        fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
+
+        g = 0;
+        for (j = 0; j < num_f; ++j) {
+            field_int_id = field_ids[j]/16;
+            field_offset = field_ids[j] - field_int_id*16;
+            target_int = c[field_int_id];
+            g = g | ((target_int >> (30 - field_offset*2)) & 3);
+        }
+
+        (*G)[int_count] = (*G)[int_count] | g << (30 - two_bit_count*2);
+
+        two_bit_count += 1;
+
+        if (two_bit_count == 16) {
+            int_count += 1;
+            two_bit_count = 0;
+        }
+    }
+
+    if (two_bit_count > 0) {
+        (*G)[int_count] = (*G)[int_count] | g << (30 - two_bit_count*2);
+    }
+
+
+    free(c);
+
+    return num_ints_per_record;
+}
+//}}}
+
+//{{{unsigned int rle(unsigned int *I, int I_len, unsigned int **O)
+unsigned int rle(unsigned int *I, int I_len, unsigned int **O)
+{
+    struct uint_ll *head=NULL,*tail=NULL;
+
+    int i,
+        j,
+        curr_bit,
+        ll_len = 0,
+        last_bit = -1;
+    unsigned int rle_v;
+    for (i = 0; i < I_len; ++i) {
+        for(j = 0; j < 32; ++j) {
+            curr_bit = ((I[i] >> (31-j)) & 1);
+
+            // first one
+            if (last_bit == -1) { 
+                rle_v = curr_bit << 31;
+            // not full, add on
+            } else if (curr_bit == last_bit) {
+                rle_v += 1;
+            // 2^31 -1, this one is full
+            } else if ( ((rle_v >> 1) == 2147483647) ||  
+                        (curr_bit != last_bit) ) { // diff bit
+
+                struct uint_ll *n = (struct uint_ll *) 
+                        malloc(sizeof(struct uint_ll));
+                n->value = rle_v;
+                n->next = NULL;
+                ll_len += 1;
+
+                if (head == NULL)
+                    head = n;
+                else
+                    tail->next = n;
+
+                tail = n;
+
+                rle_v = curr_bit << 31;
+            }
+
+            last_bit = curr_bit;
+        }
+    }
+
+    struct uint_ll *n = (struct uint_ll *) malloc(sizeof(struct uint_ll));
+    n->value = rle_v;
+    n->next = NULL;
+    ll_len += 1;
+
+    if (head == NULL)
+        head = n;
+    else
+        tail->next = n;
+
+    tail = n;
+
+    *O = (unsigned int *) malloc(ll_len*sizeof(unsigned int));
+    struct uint_ll *last, *curr = head;
+    for (i = 0; i < ll_len; ++i) {
+        (*O)[i] = curr->value;
+        last = curr;
+        curr = curr->next;
+        free(last);
+    }
+
+    return ll_len;
+}
+//}}}
+
+//{{{int map_from_32_bits_to_31_bits(unsigned int *I,
+/* 
+ * Take a list of 32 bit number and gives the list of 31-bit groups
+ * (represented by 32-bit with left padding) ints 
+ * Returns the number of 31-bit groups in O
+ */
+int map_from_32_bits_to_31_bits(unsigned int *I,
+                                int I_len,
+                                unsigned int **O,
+                                int *O_len)
+{
+    unsigned int int_i, bit_i, group_i, in_group_i;
+    unsigned int total_bits = I_len *32;
+    *O_len =  (total_bits + 31 - 1)/ 31;
+
+    *O = (unsigned int *) calloc(*O_len, sizeof(unsigned int));
+
+
+    bit_i = 1;
+    group_i = 0;
+    in_group_i = 0;
+
+    for (int_i = 0; int_i < I_len; ++int_i) {
+        for ( ;bit_i<=32*(int_i+1); ++bit_i) {
+            unsigned int bit = (I[int_i] >> (32 - (bit_i%32))) & 1;
+            (*O)[group_i] = (*O)[group_i] + (bit << (30 - in_group_i));
+
+            in_group_i += 1;
+
+            if (bit_i % 31 == 0) {
+                in_group_i = 0;
+                group_i += 1;
+            }
+        }
+    }
+    return *O_len;
+}
+//}}}
+
+//{{{ int append_bit_to_active_word(struct wah_active_word *a, int b)
+int append_bit_to_active_word(struct wah_active_word *a, int b)
+{
+    // if a litteral, just add the next bit
+    if (a->nbits < 31){ 
+        a->value = (a->value<<1) + b;
+        a->nbits += 1;
+    // if a fill that isn't full, and value bit matches, add one
+    //} else if ( (a->nbits > 31) && (((b<<30) & a->value) == b << 30)) {
+    } else if ( (a->nbits > 31) && (((a->value >> 30) & 1) == b )) {
+        if (a->nbits < pow(2,30) - 1) {
+            a->nbits += 1;
+            a->value += 1;
+        } else {
+            return 1; // can't add to current active
+        }
+    // if the litteral is full and they are all one value, make it a literal
+    } else if ( (a->value == 0) || (a->value == pow(2,31) - 1)) {
+        a->nbits = 32;
+        a->value = ((2 + b) <<30) + 32;
+    } else {
+        return 1; // can't add to current active
+    }
+
+    return 0; // added to current active
+}
+//}}}
+
+//{{{ int append_active_word(struct wah_active_word_ll **A_head,
+/*
+ * This will return 1 if a new node is added to the active word linked list,
+ * otherwise 0
+ */
+int append_active_word(struct wah_active_word_ll **A_head,
+                       struct wah_active_word_ll **A_tail,
+                       struct wah_active_word a)
+{
+    struct wah_active_word_ll *n = (struct wah_active_word_ll *)
+        malloc(sizeof(struct wah_active_word_ll));
+
+    n->value = a;
+    n->next = NULL;
+
+    if (*A_head == NULL) {
+        *A_head = n;
+        *A_tail = n;
+        return 1;
+    } else if (a.value == 0) { // all zeros
+        // The value on the tail is a litteral with all zeros
+        if ( (*A_tail)->value.value == 0 ) {
+            (*A_tail)->value.value = 0x80000002;
+            //(*A_tail)->value.value = (1<<31) + 62;
+            //(*A_tail)->value.nbits = 62;
+            return 0;
+        // The value on the tail is a fill of all zeros that is not full
+        /*
+        } else if (  ((*A_tail)->value.value >> 30 == 2) &&
+                    (((*A_tail)->value.value << 2) >> 2 < (pow(2,30)-31)) ) {
+        */
+        } else if ( ((*A_tail)->value.value >= 0x80000000) &&
+                    ((*A_tail)->value.value < 0xC0000000) ) {
+            (*A_tail)->value.value += 1;
+            //(*A_tail)->value.value += 31;
+            //(*A_tail)->value.nbits += 31;
+            return 0;
+        } else { // the zeros cannot be added to the last active word
+            (*A_tail)->next = n;
+            *A_tail = n;
+            return 1;
+        }
+    //} else if (a.value == (pow(2,31) - 1)) { // all ones
+    } else if (a.value == 0x7FFFFFFF) { // all ones
+        if ( (*A_tail)->value.value == a.value ) {
+            (*A_tail)->value.value = 0xC0000002;
+            //(*A_tail)->value.value = (3<<30) + 62;
+            //(*A_tail)->value.nbits = 62;
+            return 0;
+        /*
+        } else if (  ((*A_tail)->value.value >> 30 == 3) &&
+                    (((*A_tail)->value.value << 2) >> 2 < (pow(2,30)-31)) ) {
+        */
+        } else if ( (*A_tail)->value.value >= 0xC0000000) {
+            (*A_tail)->value.value += 1;
+            //(*A_tail)->value.value += 31;
+            //(*A_tail)->value.nbits += 31;
+            return 0;
+        } else {
+            (*A_tail)->next = n;
+            *A_tail = n;
+            return 1;
+        }
+    } else {
+        (*A_tail)->next = n;
+        *A_tail = n;
+        return 1;
+    }
+}
+//}}}
+
+//{{{
+/*
+ * The fill_size is the number of words / 31*fill_size number of bits
+ */
+int append_fill_word(struct wah_active_word_ll **A_head,
+                     struct wah_active_word_ll **A_tail,
+                     int fill_bit,
+                     unsigned int fill_size){
+    if ( (fill_size > 1) && (*A_head != NULL) ) {
+        if (fill_bit == 0) {
+            if ( ((*A_tail)->value.value >= 0x80000000) &&
+                 ((*A_tail)->value.value < 0xC0000000) ) {
+                (*A_tail)->value.value += 1;
+                return 0;
+            } else {
+                struct wah_active_word_ll *n = (struct wah_active_word_ll *)
+                    malloc(sizeof(struct wah_active_word_ll));
+                n->value.value = 0x80000000 + fill_size;
+                n->next = NULL;
+                (*A_tail)->next = n;
+                *A_tail = n;
+                return 1;
+            }
+        } else if ((*A_tail)->value.value >= 0xC0000000) {
+            (*A_tail)->value.value += 1;
+            return 0;
+        } else {
+            struct wah_active_word_ll *n = (struct wah_active_word_ll *)
+                malloc(sizeof(struct wah_active_word_ll));
+            n->value.value = 0xC0000000 + fill_size;
+            n->next = NULL;
+            (*A_tail)->next = n;
+            *A_tail = n;
+            return 1;
+        }
+    } else if (*A_head == NULL) {
+        struct wah_active_word_ll *n = (struct wah_active_word_ll *)
+            malloc(sizeof(struct wah_active_word_ll));
+
+        if (fill_bit == 0)
+            n->value.value = 0x80000000 + fill_size;
+        else
+            n->value.value = 0xC0000000 + fill_size;
+
+        n->next = NULL;
+        (*A_tail)->next = n;
+        *A_tail = n;
+        return 1;
+    } else { //only one word worth of fill bit, so its not quite a fill word
+        struct wah_active_word a;
+        a.nbits = 31;
+        a.value = (fill_bit?0x7FFFFFFF:0);
+        return append_active_word(A_head,A_tail,a);
+    }
+} 
+//}}}
+
+//{{{ int wah(unsigned int *I,
+int wah(unsigned int *I,
+        int I_len,
+        unsigned int **W,
+        int *W_len)
+{
+    unsigned int *O;
+    int O_len;
+    // split the intput up int to 31-bit groups
+    int num_31_groups = map_from_32_bits_to_31_bits(I, I_len, &O, &O_len);
+
+    // build the WAH list
+    struct wah_active_word_ll *A_head = NULL,
+                              *A_tail = NULL,
+                              *A_curr;
+    int i,c = 0;
+    struct wah_active_word a;
+    a.nbits=31;
+    for (i = 0; i < O_len; ++i) {
+        a.value = O[i];
+        c += append_active_word(&A_head,&A_tail,a);
+    }
+
+    free(O);
+
+    // Move the linked list to an array
+    *W_len = c;
+    *W = (unsigned int *) malloc(*W_len * sizeof(unsigned int));
+
+    A_curr = A_head;
+    struct wah_active_word_ll *A_tmp;
+    i = 0;
+    while (A_curr != NULL) {
+        (*W)[i] = A_curr->value.value;
+        i += 1;
+        A_tmp = A_curr;
+        A_curr = A_tmp->next;
+        free(A_tmp);
+    }
+
+    return *W_len;
+}
+//}}}
+
+//{{{ struct wah_run init_wah_run(unsigned int *words,
+struct wah_run init_wah_run(unsigned int *words,
+                            unsigned int len){
+    struct wah_run r;
+    r.words = words;
+    r.word_i = 0;
+    r.len = len;
+    r.fill = 0;
+    r.num_words = 0;
+    r.is_fill = 0;
+
+    return r;
+}
+//}}}
+
+//{{{ void wah_run_decode(struct wah_run *r)
+void wah_run_decode(struct wah_run *r)
+{
+    if (r->words[r->word_i] > 0x7FFFFFFF) {
+        r->fill = (r->words[r->word_i]>=0xC0000000?0x7FFFFFFF:0);
+        r->num_words = r->words[r->word_i] & 0x3FFFFFFF;
+        r->is_fill= 1;
+    } else {
+        r->num_words = 1;
+        r->is_fill= 0;
+    }
+}
+//}}}
+
+//{{ void wah_or(struct wah_run *x, struct wah_run *y)
+void wah_or(struct wah_run *x, struct wah_run *y)
+{
+
+#if 0
+    while ( (x->word_i < x->len) && (y->word_i < y->len) ){
+        if (x->num_words == 0) {
+            x->word_i += 1;
+            wah_run_decode(x);
+        }
+
+        if (y->num_words == 0) {
+            y->word_i += 1;
+            wah_run_decode(y);
+        }
+
+        if (x->is_fill == 1) {
+            if (y->is_fill == 1) {
+            
+            }
+        }
+
+    }
+#endif
+    /*
+    while (x->word_i < x->len) {
+        wah_run_decode(x);
+        fprintf(stderr, "%d\t%d\t%u\n", x->word_i,x->is_fill,x->num_words);
+        x->word_i += 1;
+    }
+
+    while (y->word_i < y->len) {
+        wah_run_decode(y);
+        fprintf(stderr, "%d\t%d\t%u\n", y->word_i,y->is_fill,y->num_words);
+        y->word_i += 1;
+    }
+    */
+}
+//}}}
+
+////////////////////////////////////////////////////////////////////////////////
 
 //{{{ void init_int_genotype_reader(char *file_name, int num_gt)
 void init_int_genotype_reader(char *file_name, int num_gt)
@@ -158,28 +883,6 @@ int or_uint_fields(struct uint_file u_file,
 }
 //}}}
 
-//{{{ struct ubin_file init_ubin_file(char *file_name)
-struct ubin_file init_ubin_file(char *file_name)
-{
-    struct ubin_file uf;
-
-    uf.file = fopen(file_name, "rb");
-
-    if (!uf.file) {
-        fprintf(stderr, "Unable to open %s\n", file_name);
-        return uf;
-    }
-
-    // Jump to the begining of the file to grab the record size
-    fseek(uf.file, 0, SEEK_SET);
-    fread(&uf.num_fields,sizeof(unsigned int),1,uf.file);
-    fread(&uf.num_records,sizeof(unsigned int),1,uf.file);
-
-    return uf;
-
-}
-///}}}
-
 //{{{ int get_ubin_genotypes(struct ubin_file u_file,
 int get_ubin_genotypes(struct ubin_file u_file,
                        int num_gts,
@@ -241,7 +944,7 @@ int or_ubin_fields(struct ubin_file u_file,
             int field_offset = field_ids[i] - field_int_id*16;
 
             target_int = c[field_int_id];
-            (*r)[i] = (*r)[i] | (target_int >> (30 - field_offset*2)) & 3;
+            (*r)[i] = ((*r)[i] | (target_int >> (30 - field_offset*2))) & 3;
         }
 
     }

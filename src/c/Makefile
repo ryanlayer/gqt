@@ -10,6 +10,8 @@ OBJS=$(addprefix $(OBJ)/, $(LIB))
 
 PROG=and_speed_test \
      	read_binary_uints \
+	vcf_to_plt \
+	or_records_plt \
 	get_common_genot_ind \
 	get_common_genot_var \
 	get_gt_from_ubin \

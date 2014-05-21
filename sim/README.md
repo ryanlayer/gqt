@@ -1,3 +1,11 @@
+macs is a program that generates haplotypes.  To install:
+
+    cd ~/src/
+    wget https://macs.googlecode.com/files/macs-0.5d.tar.gz
+    tar zxvf macs-0.5d.tar.gz
+    cd macs
+    make
+
 macs creates haploids that need to be converted to diploids.  To do this we
 generate 2N haploids then sum adjacent values to get N diploids:
 

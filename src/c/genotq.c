@@ -1,3 +1,11 @@
+/**
+ * @file genotq.c
+ * @Author Ryan Layer (ryan.layer@gmail.com)
+ * @date May, 2014
+ * @brief Functions for converting and opperation on various encoding
+ * strategies
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -491,17 +499,17 @@ int append_bit_to_active_word(struct wah_active_word *a, int b)
 }
 //}}}
 
-//{{{ int append_active_word(struct wah_active_word_ll **A_head,
+//{{{ int append_active_word(struct wah_ll **A_head,
 /*
  * This will return 1 if a new node is added to the active word linked list,
  * otherwise 0
  */
-int append_active_word(struct wah_active_word_ll **A_head,
-                       struct wah_active_word_ll **A_tail,
+int append_active_word(struct wah_ll **A_head,
+                       struct wah_ll **A_tail,
                        struct wah_active_word a)
 {
-    struct wah_active_word_ll *n = (struct wah_active_word_ll *)
-        malloc(sizeof(struct wah_active_word_ll));
+    struct wah_ll *n = (struct wah_ll *)
+        malloc(sizeof(struct wah_ll));
 
     n->value = a;
     n->next = NULL;
@@ -562,60 +570,48 @@ int append_active_word(struct wah_active_word_ll **A_head,
 }
 //}}}
 
-//{{{
+//{{{ int append_fill_word(struct wah_ll **A_head,
 /*
  * The fill_size is the number of words / 31*fill_size number of bits
  */
-int append_fill_word(struct wah_active_word_ll **A_head,
-                     struct wah_active_word_ll **A_tail,
+int append_fill_word(struct wah_ll **A_head,
+                     struct wah_ll **A_tail,
                      int fill_bit,
-                     unsigned int fill_size){
-    if ( (fill_size > 1) && (*A_head != NULL) ) {
-        if (fill_bit == 0) {
-            if ( ((*A_tail)->value.value >= 0x80000000) &&
-                 ((*A_tail)->value.value < 0xC0000000) ) {
-                (*A_tail)->value.value += 1;
-                return 0;
-            } else {
-                struct wah_active_word_ll *n = (struct wah_active_word_ll *)
-                    malloc(sizeof(struct wah_active_word_ll));
-                n->value.value = 0x80000000 + fill_size;
-                n->next = NULL;
-                (*A_tail)->next = n;
-                *A_tail = n;
-                return 1;
-            }
-        } else if ((*A_tail)->value.value >= 0xC0000000) {
-            (*A_tail)->value.value += 1;
-            return 0;
-        } else {
-            struct wah_active_word_ll *n = (struct wah_active_word_ll *)
-                malloc(sizeof(struct wah_active_word_ll));
-            n->value.value = 0xC0000000 + fill_size;
-            n->next = NULL;
-            (*A_tail)->next = n;
-            *A_tail = n;
-            return 1;
-        }
-    } else if (*A_head == NULL) {
-        struct wah_active_word_ll *n = (struct wah_active_word_ll *)
-            malloc(sizeof(struct wah_active_word_ll));
+                     unsigned int fill_size)
+{
 
-        if (fill_bit == 0)
-            n->value.value = 0x80000000 + fill_size;
-        else
-            n->value.value = 0xC0000000 + fill_size;
+    // if it is a fill, the bit matches, and there is room 
+    if ( (*A_head != NULL) &&
+         ((*A_tail)->value.value >> 30 == 2 + fill_bit) &&//fill & bit match
+         (((*A_tail)->value.value >> 2)+ fill_size < 0x3fffffff) ) {//room
+
+        (*A_tail)->value.value += fill_size;
+        return 0;
+
+    } else {
+        struct wah_ll *n = (struct wah_ll *)
+                malloc(sizeof(struct wah_ll));
 
         n->next = NULL;
-        (*A_tail)->next = n;
+
+        if (fill_size > 1)
+            n->value.value = ((2 + fill_bit) << 30) + fill_size;
+        else { 
+            n->value.nbits = 31;
+            n->value.value = (fill_bit?0x7FFFFFFF:0);
+        }
+
+        if (*A_head == NULL)
+            *A_head = n;
+        else
+            (*A_tail)->next = n;
+
         *A_tail = n;
+
         return 1;
-    } else { //only one word worth of fill bit, so its not quite a fill word
-        struct wah_active_word a;
-        a.nbits = 31;
-        a.value = (fill_bit?0x7FFFFFFF:0);
-        return append_active_word(A_head,A_tail,a);
     }
+    
+    return -1;
 } 
 //}}}
 
@@ -631,7 +627,7 @@ int wah(unsigned int *I,
     int num_31_groups = map_from_32_bits_to_31_bits(I, I_len, &O, &O_len);
 
     // build the WAH list
-    struct wah_active_word_ll *A_head = NULL,
+    struct wah_ll *A_head = NULL,
                               *A_tail = NULL,
                               *A_curr;
     int i,c = 0;
@@ -649,7 +645,7 @@ int wah(unsigned int *I,
     *W = (unsigned int *) malloc(*W_len * sizeof(unsigned int));
 
     A_curr = A_head;
-    struct wah_active_word_ll *A_tmp;
+    struct wah_ll *A_tmp;
     i = 0;
     while (A_curr != NULL) {
         (*W)[i] = A_curr->value.value;
@@ -695,8 +691,12 @@ void wah_run_decode(struct wah_run *r)
 //{{ void wah_or(struct wah_run *x, struct wah_run *y)
 void wah_or(struct wah_run *x, struct wah_run *y)
 {
+    //xrun.it = x.vec.begin(); xrun.decode();
+    wah_run_decode(x);
+    //yrun.it = y.vec.begin(); yrun.decode();
+    wah_run_decode(y);
 
-#if 0
+
     while ( (x->word_i < x->len) && (y->word_i < y->len) ){
         if (x->num_words == 0) {
             x->word_i += 1;
@@ -715,7 +715,8 @@ void wah_or(struct wah_run *x, struct wah_run *y)
         }
 
     }
-#endif
+
+
     /*
     while (x->word_i < x->len) {
         wah_run_decode(x);
@@ -731,6 +732,8 @@ void wah_or(struct wah_run *x, struct wah_run *y)
     */
 }
 //}}}
+
+
 
 ////////////////////////////////////////////////////////////////////////////////
 

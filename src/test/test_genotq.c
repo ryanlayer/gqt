@@ -6,6 +6,21 @@
 
 struct plt_file pltf_ind, pltf_var;
 
+int clear_list (struct wah_active_word_ll *A_head)
+{
+    int c = 0;
+    struct wah_active_word_ll *A_curr = A_head;
+    while (A_curr != NULL) {
+        struct wah_active_word_ll *A_tmp = A_curr->next;
+        free(A_curr);
+        A_curr = A_tmp;
+        c += 1;
+    }
+
+    return c;
+}
+
+
 void setUp(void)
 {
     pltf_ind = init_plt_file("data/10.1e4.ind.txt");
@@ -460,13 +475,7 @@ void test_append_active_word(void)
 
     // Add a litteral with all zeros to to list containg a litteratal with all
     // a mix of zeros/ones
-    A_curr = A_head;
-    while (A_curr != NULL) {
-        struct wah_active_word_ll *A_tmp = A_curr->next;
-        free(A_curr);
-        A_curr = A_tmp;
-    }
-
+    r = clear_list(A_head);
     A_head = NULL;
     A_tail = NULL;
 
@@ -494,13 +503,7 @@ void test_append_active_word(void)
 
     // Add a litteral with all zeros to to list containg a litteratal with all
     // zeros 
-    A_curr = A_head;
-    while (A_curr != NULL) {
-        struct wah_active_word_ll *A_tmp = A_curr->next;
-        free(A_curr);
-        A_curr = A_tmp;
-    }
-
+    r = clear_list(A_head);
     A_head = NULL;
     A_tail = NULL;
 
@@ -530,13 +533,7 @@ void test_append_active_word(void)
 
 
     // Add a litteral with all ones
-    A_curr = A_head;
-    while (A_curr != NULL) {
-        struct wah_active_word_ll *A_tmp = A_curr->next;
-        free(A_curr);
-        A_curr = A_tmp;
-    }
-
+    r = clear_list(A_head);
     A_head = NULL;
     A_tail = NULL;
 
@@ -583,13 +580,7 @@ void test_append_active_word(void)
 
 
     // Add three mixed litterals
-    A_curr = A_head;
-    while (A_curr != NULL) {
-        struct wah_active_word_ll *A_tmp = A_curr->next;
-        free(A_curr);
-        A_curr = A_tmp;
-    }
-
+    r = clear_list(A_head);
     A_head = NULL;
     A_tail = NULL;
 
@@ -879,6 +870,213 @@ void test_wah_run_decode(void)
 }
 //}}}
 
+//{{{ void test_append_fill_word(void)
+void test_append_fill_word(void)
+{
+    struct wah_active_word_ll *A_head = NULL,
+                              *A_tail = NULL,
+                              *A_curr;
+
+    struct wah_active_word a;
+    int r;
+
+
+    //{{{ append 1-fill size 1 to empty list
+    r = append_fill_word(&A_head,&A_tail,1,1);
+    TEST_ASSERT_EQUAL(1, r);
+    TEST_ASSERT_EQUAL(31, A_tail->value.nbits);
+    TEST_ASSERT_EQUAL(bin_char_to_int("1111111111111111111111111111111"),
+                      A_tail->value.value);
+
+    r = clear_list(A_head);
+    A_head = NULL;
+    A_tail = NULL;
+    TEST_ASSERT_EQUAL(1, r);
+    //}}}
+
+    //{{{ append 0-fill size 1 to empty list
+    r = append_fill_word(&A_head,&A_tail,0,1);
+    TEST_ASSERT_EQUAL(1, r);
+    TEST_ASSERT_EQUAL(31, A_tail->value.nbits);
+    TEST_ASSERT_EQUAL(bin_char_to_int("0000000000000000000000000000000"),
+                      A_tail->value.value);
+
+    r = clear_list(A_head);
+    A_head = NULL;
+    A_tail = NULL;
+    TEST_ASSERT_EQUAL(1, r);
+    //}}}
+
+    //{{{ append 1-fill size 2 to empty list
+    r = append_fill_word(&A_head,&A_tail,1,2);
+    TEST_ASSERT_EQUAL(1, r);
+    TEST_ASSERT_EQUAL(bin_char_to_int("11000000000000000000000000000010"),
+                      A_tail->value.value);
+
+    r = clear_list(A_head);
+    A_head = NULL;
+    A_tail = NULL;
+    TEST_ASSERT_EQUAL(1, r);
+    //}}}
+
+    //{{{ append 0-fill size 2 to empty list
+    r = append_fill_word(&A_head,&A_tail,0,2);
+    TEST_ASSERT_EQUAL(1, r);
+    TEST_ASSERT_EQUAL(bin_char_to_int("10000000000000000000000000000010"),
+                      A_tail->value.value);
+
+    r = clear_list(A_head);
+    A_head = NULL;
+    A_tail = NULL;
+    TEST_ASSERT_EQUAL(1, r);
+    //}}}
+   
+    //{{{ append 1-fill size 1 to a list with mixed litterals
+    a.nbits = 31;
+    a.value = bin_char_to_int("1010100011101010101111101010111");
+    r = append_active_word(&A_head,&A_tail,a);
+    TEST_ASSERT_EQUAL(1, r);
+    TEST_ASSERT_EQUAL(31, A_tail->value.nbits);
+    TEST_ASSERT_EQUAL(bin_char_to_int("1010100011101010101111101010111"),
+                      A_tail->value.value);
+
+
+    r = append_fill_word(&A_head,&A_tail,1,1);
+    TEST_ASSERT_EQUAL(1, r);
+    TEST_ASSERT_EQUAL(31, A_tail->value.nbits);
+    TEST_ASSERT_EQUAL(bin_char_to_int("1111111111111111111111111111111"),
+                      A_tail->value.value);
+
+    r = clear_list(A_head);
+    A_head = NULL;
+    A_tail = NULL;
+    TEST_ASSERT_EQUAL(2, r);
+    //}}}
+    
+    //{{{ append 1-fill size 2 to a list with mixed litterals
+    a.nbits = 31;
+    a.value = bin_char_to_int("1010100011101010101111101010111");
+    r = append_active_word(&A_head,&A_tail,a);
+    TEST_ASSERT_EQUAL(1, r);
+    TEST_ASSERT_EQUAL(31, A_tail->value.nbits);
+    TEST_ASSERT_EQUAL(bin_char_to_int("1010100011101010101111101010111"),
+                      A_tail->value.value);
+
+
+    r = append_fill_word(&A_head,&A_tail,1,2);
+    TEST_ASSERT_EQUAL(1, r);
+    TEST_ASSERT_EQUAL(bin_char_to_int("11000000000000000000000000000010"),
+                      A_tail->value.value);
+
+    r = clear_list(A_head);
+    A_head = NULL;
+    A_tail = NULL;
+    TEST_ASSERT_EQUAL(2, r);
+    //}}}
+
+    //{{{ append 0-fill size 1 to a list with mixed litterals
+    a.nbits = 31;
+    a.value = bin_char_to_int("1010100011101010101111101010111");
+    r = append_active_word(&A_head,&A_tail,a);
+    TEST_ASSERT_EQUAL(1, r);
+    TEST_ASSERT_EQUAL(31, A_tail->value.nbits);
+    TEST_ASSERT_EQUAL(bin_char_to_int("1010100011101010101111101010111"),
+                      A_tail->value.value);
+
+
+    r = append_fill_word(&A_head,&A_tail,0,1);
+    TEST_ASSERT_EQUAL(1, r);
+    TEST_ASSERT_EQUAL(31, A_tail->value.nbits);
+    TEST_ASSERT_EQUAL(bin_char_to_int("0000000000000000000000000000000"),
+                      A_tail->value.value);
+
+    r = clear_list(A_head);
+    A_head = NULL;
+    A_tail = NULL;
+    TEST_ASSERT_EQUAL(2, r);
+    //}}}
+    
+    //{{{ append 0-fill size 2 to a list with mixed litterals
+    a.nbits = 31;
+    a.value = bin_char_to_int("1010100011101010101111101010111");
+    r = append_active_word(&A_head,&A_tail,a);
+    TEST_ASSERT_EQUAL(1, r);
+    TEST_ASSERT_EQUAL(31, A_tail->value.nbits);
+    TEST_ASSERT_EQUAL(bin_char_to_int("1010100011101010101111101010111"),
+                      A_tail->value.value);
+
+
+    r = append_fill_word(&A_head,&A_tail,0,2);
+    TEST_ASSERT_EQUAL(1, r);
+    TEST_ASSERT_EQUAL(bin_char_to_int("10000000000000000000000000000010"),
+                      A_tail->value.value);
+
+    r = clear_list(A_head);
+    A_head = NULL;
+    A_tail = NULL;
+    TEST_ASSERT_EQUAL(2, r);
+    //}}}
+
+    //{{{ append 1-fill size 2 then 5  to a fill of 1s
+    a.nbits = 31;
+    a.value = bin_char_to_int("1111111111111111111111111111111");
+    r = append_active_word(&A_head,&A_tail,a);
+    TEST_ASSERT_EQUAL(1, r);
+    TEST_ASSERT_EQUAL(31, A_tail->value.nbits);
+    TEST_ASSERT_EQUAL(bin_char_to_int("1111111111111111111111111111111"),
+                      A_tail->value.value);
+    r = append_active_word(&A_head,&A_tail,a);
+    TEST_ASSERT_EQUAL(0, r);
+    TEST_ASSERT_EQUAL(bin_char_to_int("11000000000000000000000000000010"),
+                      A_tail->value.value);
+
+    r = append_fill_word(&A_head,&A_tail,1,2);
+    TEST_ASSERT_EQUAL(0, r);
+    TEST_ASSERT_EQUAL(bin_char_to_int("11000000000000000000000000000100"),
+                      A_tail->value.value);
+ 
+    r = append_fill_word(&A_head,&A_tail,1,5);
+    TEST_ASSERT_EQUAL(0, r);
+    TEST_ASSERT_EQUAL(bin_char_to_int("11000000000000000000000000001001"),
+                      A_tail->value.value);
+
+    r = clear_list(A_head);
+    A_head = NULL;
+    A_tail = NULL;
+    TEST_ASSERT_EQUAL(1, r);
+    //}}}
+
+    //{{{ append 0-fill size 2 then 5 to a fill of 0s
+    a.nbits = 31;
+    a.value = bin_char_to_int("0");
+    r = append_active_word(&A_head,&A_tail,a);
+    TEST_ASSERT_EQUAL(1, r);
+    TEST_ASSERT_EQUAL(31, A_tail->value.nbits);
+    TEST_ASSERT_EQUAL(bin_char_to_int("0"),
+                      A_tail->value.value);
+    r = append_active_word(&A_head,&A_tail,a);
+    TEST_ASSERT_EQUAL(0, r);
+    TEST_ASSERT_EQUAL(bin_char_to_int("10000000000000000000000000000010"),
+                      A_tail->value.value);
+
+    r = append_fill_word(&A_head,&A_tail,0,2);
+    TEST_ASSERT_EQUAL(0, r);
+    TEST_ASSERT_EQUAL(bin_char_to_int("10000000000000000000000000000100"),
+                      A_tail->value.value);
+ 
+    r = append_fill_word(&A_head,&A_tail,0,5);
+    TEST_ASSERT_EQUAL(0, r);
+    TEST_ASSERT_EQUAL(bin_char_to_int("10000000000000000000000000001001"),
+                      A_tail->value.value);
+
+    r = clear_list(A_head);
+    A_head = NULL;
+    A_tail = NULL;
+    TEST_ASSERT_EQUAL(1, r);
+    //}}}
+}
+//}}}
+
 void test_wah_or(void)
 {
     /*
@@ -948,6 +1146,3 @@ void test_wah_or(void)
 
 }
 
-void test_append_fill_word(void)
-{
-}

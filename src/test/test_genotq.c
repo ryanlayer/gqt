@@ -6,12 +6,12 @@
 
 struct plt_file pltf_ind, pltf_var;
 
-int clear_list (struct wah_active_word_ll *A_head)
+int clear_list (struct wah_ll *A_head)
 {
     int c = 0;
-    struct wah_active_word_ll *A_curr = A_head;
+    struct wah_ll *A_curr = A_head;
     while (A_curr != NULL) {
-        struct wah_active_word_ll *A_tmp = A_curr->next;
+        struct wah_ll *A_tmp = A_curr->next;
         free(A_curr);
         A_curr = A_tmp;
         c += 1;
@@ -337,8 +337,8 @@ void test_or_fields_ubin(void)
 }
 //}}}
 
-//{{{ void test_rle(void)
-void test_rle(void)
+//{{{ void test_ints_to_rle(void)
+void test_ints_to_rle(void)
 {
 
     // 2^31 = 2147483648
@@ -357,9 +357,9 @@ void test_rle(void)
     unsigned int A[5] = {2147483648,124,2147483649,30,2147483648};
 
     unsigned int *O;
-    int rle_ints = rle(I,5,&O);
+    int ints_to_rle_ints = ints_to_rle(I,5,&O);
 
-    TEST_ASSERT_EQUAL(5, rle_ints);
+    TEST_ASSERT_EQUAL(5, ints_to_rle_ints);
 
     int i;
     for (i= 0; i < 5; ++i)
@@ -369,9 +369,9 @@ void test_rle(void)
 
     unsigned int I2[6] = {0,0,0,0,0,0};
 
-    rle_ints = rle(I2,6,&O);
+    ints_to_rle_ints = ints_to_rle(I2,6,&O);
 
-    TEST_ASSERT_EQUAL(1, rle_ints);
+    TEST_ASSERT_EQUAL(1, ints_to_rle_ints);
     TEST_ASSERT_EQUAL(O[0], 32*6-1);
 
     free(O);
@@ -457,7 +457,7 @@ void test_append_bit_to_active_word(void)
 //{{{void test_append_active_word(void)
 void test_append_active_word(void)
 {
-    struct wah_active_word_ll *A_head = NULL,
+    struct wah_ll *A_head = NULL,
                               *A_tail = NULL,
                               *A_curr;
 
@@ -653,10 +653,9 @@ void test_map_from_32_bits_to_31_bits(void)
      */
     unsigned int A[6] = {1073741824, 0, 0, 0, 402653184, 67108864};
     unsigned int *O;
-    int l;
-    int num_31_groups = map_from_32_bits_to_31_bits(I,5,&O,&l);
+    unsigned int num_31_groups = map_from_32_bits_to_31_bits(I,5,&O);
 
-    TEST_ASSERT_EQUAL(6, l);
+    TEST_ASSERT_EQUAL(6, num_31_groups);
 
     int i;
     for (i= 0; i < 5; ++i)
@@ -710,9 +709,9 @@ void test_map_from_32_bits_to_31_bits(void)
                           1431633920,
                           0};
     
-    num_31_groups = map_from_32_bits_to_31_bits(I2,6,&O,&l);
+    num_31_groups = map_from_32_bits_to_31_bits(I2,6,&O);
 
-    TEST_ASSERT_EQUAL(7, l);
+    TEST_ASSERT_EQUAL(7, num_31_groups);
 
     for (i= 0; i < 7; ++i)
         TEST_ASSERT_EQUAL(O[i], A2[i]);
@@ -721,8 +720,8 @@ void test_map_from_32_bits_to_31_bits(void)
 }
 //}}}
 
-//{{{ void test_wah(void)
-void test_wah(void)
+//{{{ void test_ints_to_wah(void)
+void test_ints_to_wah(void)
 {
     /*
      * |-32---------------------------|
@@ -771,8 +770,7 @@ void test_wah(void)
     unsigned int A[4] = {0x40000000, 0x80000003, 0x18000000, 0x04000000};
 
     unsigned int *O;
-    int l;
-    int wah_size = wah(I,5,&O,&l);
+    unsigned int wah_size = ints_to_wah(I,5,&O);
 
     TEST_ASSERT_EQUAL(4, wah_size);
 
@@ -827,12 +825,65 @@ void test_wah(void)
     
     free(O);
 
-    wah_size = wah(I2,6,&O,&l);
+    wah_size = ints_to_wah(I2,6,&O);
 
     TEST_ASSERT_EQUAL(7, wah_size);
 
     for (i = 0; i < wah_size; ++i)
         TEST_ASSERT_EQUAL(O[i], A2[i]);
+
+    /*
+     * |-32---------------------------|
+     * 10000000000000000000000000000000 -> 
+     * 11111111111111111111111111111111 -> 
+     * 11111111111111111111111111111111 -> 
+     * 11111111111111111111111111111111 -> 
+     * 00000000000000000000000000000011 -> 
+     * 00000000000000000000000000000001 ->
+     *
+     * Regroup into 31-bit groups
+     * |-31--------------------------|
+     * 1000000000000000000000000000000
+     * 0111111111111111111111111111111
+     * 1111111111111111111111111111111
+     * 1111111111111111111111111111111
+     * 1111000000000000000000000000000
+     * 0001100000000000000000000000000
+     * 000001
+     *
+     *
+     * 01000000000000000000000000000000
+     * 00111111111111111111111111111111
+     * 11000000000000000000000000000010
+     * 01111000000000000000000000000000
+     * 00001100000000000000000000000000
+     * 00000010000000000000000000000000
+     */
+    unsigned int I3[6] = {
+            bin_char_to_int("10000000000000000000000000000000"),
+            bin_char_to_int("11111111111111111111111111111111"),
+            bin_char_to_int("11111111111111111111111111111111"),
+            bin_char_to_int("11111111111111111111111111111111"),
+            bin_char_to_int("00000000000000000000000000000011"),
+            bin_char_to_int("00000000000000000000000000000001")
+        };
+ 
+    unsigned int A3[6] = {
+            bin_char_to_int("01000000000000000000000000000000"),
+            bin_char_to_int("00111111111111111111111111111111"),
+            bin_char_to_int("11000000000000000000000000000010"),
+            bin_char_to_int("01111000000000000000000000000000"),
+            bin_char_to_int("00001100000000000000000000000000"),
+            bin_char_to_int("00000010000000000000000000000000")
+        };
+
+    free(O);
+    wah_size = ints_to_wah(I3,6,&O);
+
+    TEST_ASSERT_EQUAL(6, wah_size);
+
+    for (i = 0; i < wah_size; ++i)
+        TEST_ASSERT_EQUAL(O[i], A3[i]);
 }
 //}}}
 
@@ -843,8 +894,7 @@ void test_wah_run_decode(void)
     unsigned int A[4] = {0x40000000, 0x80000003, 0x18000000, 0x04000000};
 
     unsigned int *O;
-    int l;
-    int wah_size = wah(I,5,&O,&l);
+    unsigned int wah_size = ints_to_wah(I,5,&O);
 
     TEST_ASSERT_EQUAL(4, wah_size);
 
@@ -865,15 +915,70 @@ void test_wah_run_decode(void)
 
     r.word_i += 1;
     wah_run_decode(&r);
-    TEST_ASSERT_EQUAL(r.is_fill, 1);
+    TEST_ASSERT_EQUAL(1, r.is_fill);
     TEST_ASSERT_EQUAL(3, r.num_words);
+    TEST_ASSERT_EQUAL(0, r.fill_bit);
+
+    free(O);
+
+    unsigned int I2[6] = {
+            bin_char_to_int("10000000000000000000000000000000"),
+            bin_char_to_int("11111111111111111111111111111111"),
+            bin_char_to_int("11111111111111111111111111111111"),
+            bin_char_to_int("11111111111111111111111111111111"),
+            bin_char_to_int("00000000000000000000000000000011"),
+            bin_char_to_int("00000000000000000000000000000001")
+        };
+ 
+    unsigned int A2[6] = {
+            bin_char_to_int("01000000000000000000000000000000"),
+            bin_char_to_int("00111111111111111111111111111111"),
+            bin_char_to_int("11000000000000000000000000000010"),
+            bin_char_to_int("01111000000000000000000000000000"),
+            bin_char_to_int("00001100000000000000000000000000"),
+            bin_char_to_int("00000010000000000000000000000000")
+        };
+
+    wah_size = ints_to_wah(I2,6,&O);
+
+    TEST_ASSERT_EQUAL(6, wah_size);
+
+    for (i = 0; i < wah_size; ++i)
+        TEST_ASSERT_EQUAL(O[i], A2[i]);
+
+    r = init_wah_run(O, wah_size);
+
+    TEST_ASSERT_EQUAL(0, r.word_i);
+    TEST_ASSERT_EQUAL(wah_size, r.len);
+    TEST_ASSERT_EQUAL(0, r.fill);
+    TEST_ASSERT_EQUAL(0, r.num_words);
+    TEST_ASSERT_EQUAL(0, r.is_fill);
+
+    wah_run_decode(&r);
+    TEST_ASSERT_EQUAL(0, r.is_fill);
+
+    r.word_i += 1;
+    wah_run_decode(&r);
+    TEST_ASSERT_EQUAL(0, r.is_fill);
+    TEST_ASSERT_EQUAL(1, r.num_words);
+
+    r.word_i += 1;
+    wah_run_decode(&r);
+    TEST_ASSERT_EQUAL(1, r.is_fill);
+    TEST_ASSERT_EQUAL(2, r.num_words);
+    TEST_ASSERT_EQUAL(1, r.fill_bit);
+
+    r.word_i += 1;
+    wah_run_decode(&r);
+    TEST_ASSERT_EQUAL(0, r.is_fill);
+    TEST_ASSERT_EQUAL(1, r.num_words);
 }
 //}}}
 
 //{{{ void test_append_fill_word(void)
 void test_append_fill_word(void)
 {
-    struct wah_active_word_ll *A_head = NULL,
+    struct wah_ll *A_head = NULL,
                               *A_tail = NULL,
                               *A_curr;
 
@@ -1077,6 +1182,7 @@ void test_append_fill_word(void)
 }
 //}}}
 
+//{{{ void test_wah_or(void)
 void test_wah_or(void)
 {
     /*
@@ -1094,6 +1200,12 @@ void test_wah_or(void)
      * 11111111111111111111111111111111
      * 01000000000101010100000000000000
      * 01000000000000000001010101000000
+     * WAH
+     * 536870912
+     * 3221225474
+     * 1946244096
+     * 33554602
+     * 0
      *
      * Y
      * |--31-------------------------|
@@ -1109,8 +1221,29 @@ void test_wah_or(void)
      * 11111111111111111111111111111000
      * 00000000000000000000000000000000
      * 00000000000000000000000000001011
+     * WAH
+     * 536870912
+     * 3221225474
+     * 2147483650
+     * 738197504
+     *
+     *
+     * Result:
+     * 00100000000000000000000000000000
+     * 11000000000000000000000000000010
+     * 01110100000000010101010000000000
+     * 00000010000000000000000010101010
+     * 00101100000000000000000000000000
      */
 
+    unsigned int A[5] = 
+        { bin_char_to_int("00100000000000000000000000000000"),
+          bin_char_to_int("11000000000000000000000000000010"),
+          bin_char_to_int("01110100000000010101010000000000"),
+          bin_char_to_int("00000010000000000000000010101010"),
+          bin_char_to_int("00101100000000000000000000000000")
+        };
+ 
 
     unsigned int X[5] =
         { bin_char_to_int("01000000000000000000000000000001"),
@@ -1129,20 +1262,118 @@ void test_wah_or(void)
         };
 
     unsigned int *w_X;
-    int l_X;
-    int wah_size_X = wah(X,5,&w_X,&l_X);
+    int wah_size_X = ints_to_wah(X,5,&w_X);
     TEST_ASSERT_EQUAL(5, wah_size_X);
     struct wah_run r_X = init_wah_run(w_X, wah_size_X);
 
-
-
     unsigned int *w_Y;
-    int l_Y;
-    int wah_size_Y = wah(Y,5,&w_Y,&l_Y);
+    int wah_size_Y = ints_to_wah(Y,5,&w_Y);
     TEST_ASSERT_EQUAL(4, wah_size_Y);
     struct wah_run r_Y = init_wah_run(w_Y, wah_size_Y);
 
-    wah_or(&r_X, &r_Y);
+    unsigned int *Z;
+    unsigned int Z_len = wah_or(&r_X, &r_Y, &Z);
+
+    int i;
+    for (i = 0; i < Z_len; ++i)
+        TEST_ASSERT_EQUAL(A[i], Z[i]);
 
 }
+//}}}
 
+//{{{ void test_wah_to_ints(void)
+void test_wah_to_ints(void)
+{
+    /*
+     * |-32---------------------------|
+     * 10000000000000000000000000000000 -> 2147483648
+     * 00000000000000000000000000000000 -> 0
+     * 00000000000000000000000000000000 -> 0
+     * 00000000000000000000000000000011 -> 3
+     * 00000000000000000000000000000001 -> 1
+     *
+     * Regroup into 31-bit groups
+     *
+     * |-31--------------------------|
+     * 1000000000000000000000000000000
+     * 0000000000000000000000000000000
+     * 0000000000000000000000000000000
+     * 0000000000000000000000000000000
+     * 0011000000000000000000000000000
+     * 00001
+     *
+     * Pad them out
+     *
+     * |-31--------------------------|
+     * 1000000000000000000000000000000
+     * 0000000000000000000000000000000
+     * 0000000000000000000000000000000
+     * 0000000000000000000000000000000
+     * 0011000000000000000000000000000
+     * 0000100000000000000000000000000
+     *
+     * First one will be represented as a litteral
+     * 01000000000000000000000000000000
+     * The next three will compress to a fill of 93 zeros (3 words)
+     * 10000000000000000000000000000011
+     * Next two will also be litteral
+     * 00011000000000000000000000000000
+     * 00000100000000000000000000000000
+     *
+     * 01000000000000000000000000000000 -> 0x40000000
+     * 10000000000000000000000000000011 -> 0x80000003
+     * 00011000000000000000000000000000 -> 0x18000000
+     * 00000100000000000000000000000000 -> 0x04000000
+     *
+     */
+    unsigned int I[5] = {2147483648,0,0,3,1};
+    //unsigned int A[4] = {1073741824, 2147483741, 402653184, 67108864};
+
+    unsigned int *WAH;
+    unsigned int wah_size = ints_to_wah(I,5,&WAH);
+
+    unsigned int *INTS;
+    unsigned int ints_size = wah_to_ints(WAH,wah_size,&INTS);
+
+    unsigned int i;
+    for (i = 0; i < 5; ++i)
+        TEST_ASSERT_EQUAL(I[i], INTS[i]);
+
+    free(INTS);
+    free(WAH);
+
+    unsigned int I2[6] = {1858530986,
+                          2937432745,
+                          1579791957,
+                          3587518165,
+                          1518381141,
+                          1430257664};
+
+    wah_size = ints_to_wah(I2,6,&WAH);
+    ints_size = wah_to_ints(WAH,wah_size,&INTS);
+
+    for (i = 0; i < 6; ++i)
+        TEST_ASSERT_EQUAL(I2[i], INTS[i]);
+
+    free(INTS);
+    free(WAH);
+
+    unsigned int I3[6] = {
+            bin_char_to_int("10000000000000000000000000000000"),
+            bin_char_to_int("11111111111111111111111111111111"),
+            bin_char_to_int("11111111111111111111111111111111"),
+            bin_char_to_int("11111111111111111111111111111111"),
+            bin_char_to_int("00000000000000000000000000000011"),
+            bin_char_to_int("00000000000000000000000000000001")
+        };
+
+    wah_size = ints_to_wah(I3,6,&WAH);
+    ints_size = wah_to_ints(WAH,wah_size,&INTS);
+
+    for (i = 0; i < 6; ++i)
+        TEST_ASSERT_EQUAL(I3[i], INTS[i]);
+
+    free(INTS);
+    free(WAH);
+}
+//}}}

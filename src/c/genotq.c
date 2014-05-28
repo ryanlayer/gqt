@@ -12,6 +12,10 @@
 #include <math.h>
 #include "genotq.h"
 
+#define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
+#define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
+
+
 static int test_1 = 0;
 static char *line;
 static int line_len;
@@ -362,8 +366,8 @@ int or_fields_ubin(struct ubin_file uf,
 }
 //}}}
 
-//{{{unsigned int rle(unsigned int *I, int I_len, unsigned int **O)
-unsigned int rle(unsigned int *I, int I_len, unsigned int **O)
+//{{{unsigned int ints_to_rle(unsigned int *I, int I_len, unsigned int **O)
+unsigned int ints_to_rle(unsigned int *I, int I_len, unsigned int **O)
 {
     struct uint_ll *head=NULL,*tail=NULL;
 
@@ -432,22 +436,21 @@ unsigned int rle(unsigned int *I, int I_len, unsigned int **O)
 }
 //}}}
 
-//{{{int map_from_32_bits_to_31_bits(unsigned int *I,
+//{{{unsinged int map_from_32_bits_to_31_bits(unsigned int *I,
 /* 
  * Take a list of 32 bit number and gives the list of 31-bit groups
  * (represented by 32-bit with left padding) ints 
  * Returns the number of 31-bit groups in O
  */
-int map_from_32_bits_to_31_bits(unsigned int *I,
+unsigned int map_from_32_bits_to_31_bits(unsigned int *I,
                                 int I_len,
-                                unsigned int **O,
-                                int *O_len)
+                                unsigned int **O)
 {
     unsigned int int_i, bit_i, group_i, in_group_i;
     unsigned int total_bits = I_len *32;
-    *O_len =  (total_bits + 31 - 1)/ 31;
+    unsigned int O_len =  (total_bits + 31 - 1)/ 31;
 
-    *O = (unsigned int *) calloc(*O_len, sizeof(unsigned int));
+    *O = (unsigned int *) calloc(O_len, sizeof(unsigned int));
 
 
     bit_i = 1;
@@ -467,7 +470,73 @@ int map_from_32_bits_to_31_bits(unsigned int *I,
             }
         }
     }
-    return *O_len;
+    return O_len;
+}
+//}}}
+
+//{{{ unsigned int wah_to_ints(unsigned int *W,
+unsigned int wah_to_ints(unsigned int *W,
+                         unsigned int W_len,
+                         unsigned int **O)
+{
+
+    unsigned int wah_i;
+    unsigned int num_bits = 0;
+
+    for (wah_i = 0; wah_i < W_len; ++wah_i) {
+        if (W[wah_i] >> 31 == 1) 
+            num_bits += 31 * (W[wah_i] & 0x3fffffff); // zero out the fill bits
+        else
+            num_bits += 31;
+    }
+
+    unsigned int num_ints = (num_bits + 32 - 1) / 32;
+    *O = (unsigned int *) malloc (num_ints * sizeof(unsigned int));
+
+
+    unsigned int num_words,
+                 word_i,
+                 fill_bit,
+                 bits,
+                 bit,
+                 bit_i,
+                 int_i,
+                 int_bit_i;
+
+    int_bit_i = 1;
+    int_i = 0;
+    (*O)[int_i] = 0;
+    for (wah_i = 0; wah_i < W_len; ++wah_i) {
+
+        if (W[wah_i] >> 31 == 1) {
+                num_words = (W[wah_i] & 0x3fffffff);
+                fill_bit = (W[wah_i]>=0xC0000000?1:0);
+                bits = (fill_bit?0x7FFFFFFF:0);
+        } else {
+            num_words = 1;
+            bits = W[wah_i];
+        }
+
+        for (word_i = 0; word_i < num_words; ++word_i) {
+            for (bit_i = 0; bit_i < 31; ++bit_i) {
+                bit = (bits >> (30 - bit_i)) & 1;
+                //fprintf(stderr,"%u", bit);
+
+                (*O)[int_i] += bit << (32 - int_bit_i);
+
+                if (int_bit_i == 32) {
+                    //fprintf(stderr,"\n%u\n",(*O)[int_i]);
+                    int_i += 1;
+                    int_bit_i = 0;
+                    (*O)[int_i] = 0;
+                }
+
+                int_bit_i +=1;
+            }
+        }
+    }
+    
+    return num_ints;
 }
 //}}}
 
@@ -615,21 +684,20 @@ int append_fill_word(struct wah_ll **A_head,
 } 
 //}}}
 
-//{{{ int wah(unsigned int *I,
-int wah(unsigned int *I,
-        int I_len,
-        unsigned int **W,
-        int *W_len)
+//{{{ int ints_to_wah(unsigned int *I,
+unsigned int ints_to_wah(unsigned int *I,
+                 int I_len,
+                 unsigned int **W)
 {
+    unsigned int W_len;
     unsigned int *O;
-    int O_len;
     // split the intput up int to 31-bit groups
-    int num_31_groups = map_from_32_bits_to_31_bits(I, I_len, &O, &O_len);
+    unsigned int O_len = map_from_32_bits_to_31_bits(I, I_len, &O);
 
     // build the WAH list
     struct wah_ll *A_head = NULL,
-                              *A_tail = NULL,
-                              *A_curr;
+                   *A_tail = NULL,
+                   *A_curr;
     int i,c = 0;
     struct wah_active_word a;
     a.nbits=31;
@@ -641,8 +709,8 @@ int wah(unsigned int *I,
     free(O);
 
     // Move the linked list to an array
-    *W_len = c;
-    *W = (unsigned int *) malloc(*W_len * sizeof(unsigned int));
+    W_len = c;
+    *W = (unsigned int *) malloc(W_len * sizeof(unsigned int));
 
     A_curr = A_head;
     struct wah_ll *A_tmp;
@@ -655,7 +723,7 @@ int wah(unsigned int *I,
         free(A_tmp);
     }
 
-    return *W_len;
+    return W_len;
 }
 //}}}
 
@@ -681,6 +749,7 @@ void wah_run_decode(struct wah_run *r)
         r->fill = (r->words[r->word_i]>=0xC0000000?0x7FFFFFFF:0);
         r->num_words = r->words[r->word_i] & 0x3FFFFFFF;
         r->is_fill= 1;
+        r->fill_bit = (r->words[r->word_i]>=0xC0000000?1:0);
     } else {
         r->num_words = 1;
         r->is_fill= 0;
@@ -688,48 +757,116 @@ void wah_run_decode(struct wah_run *r)
 }
 //}}}
 
-//{{ void wah_or(struct wah_run *x, struct wah_run *y)
-void wah_or(struct wah_run *x, struct wah_run *y)
+//{{{ void wah_or(struct wah_run *x,
+unsigned int  wah_or(struct wah_run *x,
+                     struct wah_run *y,
+                     unsigned int **O)
 {
+    struct wah_active_word a;
+    unsigned int num_words;
+    struct wah_ll *Z_head = NULL,
+                  *Z_tail = NULL;
+    int Z_len = 0;
+
     //xrun.it = x.vec.begin(); xrun.decode();
     wah_run_decode(x);
     //yrun.it = y.vec.begin(); yrun.decode();
     wah_run_decode(y);
 
-
+    // WHILE (x.vec and y.vec are not exhausted) 
     while ( (x->word_i < x->len) && (y->word_i < y->len) ){
+        // IF (xrun.nWords == 0) ++xrun.it, xrun.decode();
         if (x->num_words == 0) {
             x->word_i += 1;
             wah_run_decode(x);
         }
 
+        // IF (yrun.nWords == 0) ++yrun.it, yrun.decode();
         if (y->num_words == 0) {
             y->word_i += 1;
             wah_run_decode(y);
         }
 
-        if (x->is_fill == 1) {
-            if (y->is_fill == 1) {
-            
-            }
+        if ( (x->word_i >= x->len) && (y->word_i >= y->len) )
+            break;
+        else if (x->word_i >= x->len) {
+            fprintf(stderr, "X ended before Y\n");
+            abort();
+        } else if (y->word_i >= y->len) {
+            fprintf(stderr, "Y ended before X\n");
+            abort();
         }
 
+
+        //   IF (xrun.isFill)
+        if (x->is_fill == 1) {
+            // IF (yrun.isFill)
+            if (y->is_fill == 1) {
+                //fprintf(stderr,"X Fill\tY Fill\n");
+                //nWords = min(xrun.nWords, yrun.nWords)
+                //z.appendFill(nWords, (*(xrun.it) ◦ *(yrun.it))),
+                //xrun.nWords -= nWords, yrun.nWords -= nWords;
+                num_words = MIN(x->num_words, y->num_words);
+                Z_len += append_fill_word(&Z_head,
+                                          &Z_tail,
+                                          (x->fill_bit | y->fill_bit),
+                                          num_words);
+                x->num_words -= num_words;
+                y->num_words -= num_words;
+            // ELSE
+            } else {
+                //fprintf(stderr,"X Fill\tY Litt\n");
+                //z.active.value = xrun.fill ◦ *yrun.it
+                //z.appendLiteral(),
+                //-- xrun.nWords, yrun.nWords = 0;
+                a.nbits = 31;
+                a.value = y->words[y->word_i] | x->fill;
+                Z_len += append_active_word(&Z_head,
+                                            &Z_tail,
+                                            a);
+                x->num_words -= 1;
+                y->num_words = 0;
+            }
+        //ELSEIF (yrun.isFill)
+        } else if (y->is_fill == 1) {
+            //fprintf(stderr,"X Litt\tY Fill\n");
+            //z.active.value = yrun.fill ◦ *xrun.it,
+            //z.appendLiteral(),
+            //-- yrun.nWords, xrun.nWords = 0;
+            a.nbits = 31;
+            a.value = x->words[x->word_i] | y->fill;
+
+            Z_len += append_active_word(&Z_head,
+                                        &Z_tail,
+                                        a);
+            y->num_words -= 1;
+            x->num_words = 0;
+        //ELSE
+        } else {
+            //fprintf(stderr,"X Litt\tY Litt\n");
+            a.nbits = 31;
+            a.value = x->words[x->word_i] | y->words[y->word_i];
+            Z_len += append_active_word(&Z_head,
+                                        &Z_tail,
+                                        a);
+            y->num_words = 0;
+            x->num_words = 0;
+        }
     }
 
+    *O = (unsigned int *) malloc(Z_len * sizeof(unsigned int));
 
-    /*
-    while (x->word_i < x->len) {
-        wah_run_decode(x);
-        fprintf(stderr, "%d\t%d\t%u\n", x->word_i,x->is_fill,x->num_words);
-        x->word_i += 1;
+    struct wah_ll *Z_tmp, *Z_curr = Z_head;
+    int i = 0;
+    while (Z_curr != NULL) {
+        (*O)[i] = Z_curr->value.value;
+        i += 1;
+        Z_tmp = Z_curr;
+        Z_curr = Z_tmp->next;
+        free(Z_tmp);
     }
 
-    while (y->word_i < y->len) {
-        wah_run_decode(y);
-        fprintf(stderr, "%d\t%d\t%u\n", y->word_i,y->is_fill,y->num_words);
-        y->word_i += 1;
-    }
-    */
+    return Z_len;
 }
 //}}}
 

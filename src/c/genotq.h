@@ -1,6 +1,7 @@
 #ifndef __GENOTQ_H__
 #define __GENOTQ_H__
 
+
 struct plt_file {
     FILE *file;
     unsigned int num_fields, num_records;
@@ -32,6 +33,7 @@ struct wah_run {
     unsigned int len,
                  word_i,
                  fill, // one word-long version of the fill
+                 fill_bit, // if it is a fill, set this bit
                  num_words, // number of words in the run
                  is_fill; //is it a fill run
 };
@@ -75,7 +77,17 @@ int or_fields_ubin(struct ubin_file uf,
                    unsigned int **G);
 
 
-unsigned int rle(unsigned int *I, int I_len, unsigned int **O);
+/**
+ * @brief   Compress an array of integers encoded binary digits using
+ *          run-length encoding.
+ *
+ * @param I     Array of integers
+ * @param I_len Number of elements in I
+ * @param O     Array containing the run-length encoding of I
+ *
+ * @retval number of elements in O
+ */
+unsigned int ints_to_rle(unsigned int *I, int I_len, unsigned int **O);
 
 /**
  * @brief   Convert an array of 32-bit integers to WAH encoding
@@ -84,11 +96,10 @@ unsigned int rle(unsigned int *I, int I_len, unsigned int **O);
  * @param I_len     The number of intergers in I
  * @param W         The resulting array of WAH words (memory allocted in 
  *                  function, value set in function)
- * @param W_len     The size of W (set in function)
  *
  * @ingroup WAH
  *
- * @retval          Size of W, will equal W_len
+ * @retval          Size of W
  *
  * Example Usage:
  * @code
@@ -100,14 +111,12 @@ unsigned int rle(unsigned int *I, int I_len, unsigned int **O);
  *            bin_char_to_int("01000000000000000001010101000000")
  *          };
  *      unsigned int *w_X;
- *      int l_X;
- *      int wah_size_X = wah(X,5,&w_X,&l_X);
+ *      unsigned int wah_size_X = ints_to_wah(X,5,&w_X);
  * @endcode
  */
-int wah(unsigned int *I,
-        int I_len,
-        unsigned int **W,
-        int *W_len);
+unsigned int ints_to_wah(unsigned int *I,
+                         int I_len,
+                         unsigned int **W);
 
 /**
  * @brief   Add a new bit to an active word
@@ -204,8 +213,7 @@ int append_fill_word(struct wah_ll **A_head,
  *              };
  *
  *      unsigned int *w_X;
- *      int l_X;
- *      int wah_size_X = wah(X,5,&w_X,&l_X);
+ *      unsigned int wah_size_X = ints_to_wah(X,5,&w_X);
  *      struct wah_run r_X = init_wah_run(w_X, wah_size_X); 
  * @endcode
  */
@@ -228,8 +236,7 @@ struct wah_run init_wah_run(unsigned int *words,
  * @code
  *      unsigned int I[5] = {2147483648,0,0,3,1};
  *      unsigned int *O;
- *      int l;
- *      int wah_size = wah(I,5,&O,&l);
+ *      unsigned int wah_size = ints_to_wah(I,5,&O);
  *      struct wah_run r = init_wah_run(O, wah_size);
  *      wah_run_decode(&r);
  * @endcode
@@ -239,22 +246,30 @@ void wah_run_decode(struct wah_run *r);
 /**
  * @brief   OR two WAH runs
  *
+ * @param x WAH run for
+ * @param y WAH run for
+ * @param O the result of x OR y 
+ *
+ * @retval  The number of elements in O
+ *
  * @ingroup WAH
  */
-void wah_or(struct wah_run *x, struct wah_run *y);
+unsigned int wah_or(struct wah_run *x,
+                    struct wah_run *y,
+                    unsigned int **O);
 
 
 /**
- * @brief   A helper function for testing
+ * @brief   A helper function to group ints encoding 32-bits to ones encoding
+ *          31-bits for WAH consideration
  *
  * @param I         An array of ints encoding 32-bits
  * @param I_len     Number of elements in I
  * @param O         The same bits from I, but encoded in 31-bit groups
- * @param O_len     Number of elements in O
  *
- * @ingroup TESTING
+ * @ingroup WAH
  *
- * @retval          size of O, will equal O_len
+ * @retval          size of O
  *
  * Example Usage:
  * @code
@@ -264,10 +279,36 @@ void wah_or(struct wah_run *x, struct wah_run *y);
  *      int num_31_groups = map_from_32_bits_to_31_bits(I,5,&O,&l);
  * @endcode
  */
-int map_from_32_bits_to_31_bits(unsigned int *I,
-                                int I_len,
-                                unsigned int **O,
-                                int *O_len);
+unsigned int map_from_32_bits_to_31_bits(unsigned int *I,
+                                         int I_len,
+                                         unsigned int **O);
+
+/**
+ * @brief Convert WAH encoding to uncompressed binary ints.
+ *
+ * Given that padding must be used to deal with the  31-bit chunks that WAH
+ * considers and the 32-bit chunks of an int, it is common to have more bits in
+ * the resulting int than were in the original.
+ *
+ * @param W     A WAH-encoded array
+ * @param W_len The number of elements in W
+ * @param O     The uncompressed binary version of W
+ *
+ * @retval size of O
+ *
+ * Example Usage:
+ * @code
+ *     unsigned int I[5] = {2147483648,0,0,3,1};
+ *     unsigned int *WAH;
+ *     unsigned int wah_size = ints_to_wah(I,5,&WAH);
+ *     unsigned int *INTS;
+ *     unsigned int ints_size = wah_to_ints(WAH,wah_size,&INTS);
+ * @endcode
+ */
+unsigned int wah_to_ints(unsigned int *W,
+                         unsigned int W_len,
+                         unsigned int **O);
+
 
 ////////////////////////////////////////////////////////////////////////
 

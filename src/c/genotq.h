@@ -57,14 +57,13 @@ unsigned int pack_2_bit_ints(int *ints, int num_ints);
 int *unpack_2_bit_ints(unsigned int packed_ints);
 
 
-int plt_by_name_to_ubin(char *in_file_name, char *out_file_name);
+int convert_file_plt_by_name_to_ubin(char *in_file_name, char *out_file_name);
 
-int plt_to_ubin(struct plt_file pf, char *out_file_name);
+int convert_file_plt_to_ubin(struct plt_file pf, char *out_file_name);
 
-int plt_line_to_packed_ints(char *line,
-                            int num_fields, 
-                            unsigned int **packed_ints,
-                            int *len);
+unsigned int plt_line_to_packed_ints(char *line,
+                                     int num_fields, 
+                                     unsigned int **packed_ints);
 
 int or_records_ubin(struct ubin_file uf, 
                     int *record_ids,
@@ -308,6 +307,118 @@ unsigned int map_from_32_bits_to_31_bits(unsigned int *I,
 unsigned int wah_to_ints(unsigned int *W,
                          unsigned int W_len,
                          unsigned int **O);
+
+/**
+ * @brief Convert an array of uncompressed binary values to a bitmap index of
+ *        the values
+ *
+ * @param U Uncompressed 2-bit binary values encoded in an array of integers
+ * @param U_len Unumber of integers in U
+ * @param B Resulting bitmap index where the index for value 0 starts at
+ *          position 0 and the index for value 1 starts at position N, value 2
+ *          at N*2, etc. Where U encodeds N (U_len*16) 2-bit values
+ * 
+ * @retval size total number of elements in B, where there bitmap index for each
+ *         value uses 1/4 of the size
+ *
+ * Example Usage:
+ * @code
+ *      unsigned int U1[4] = {
+ *              bin_char_to_int("00011011000110110001101100011011"),
+ *              bin_char_to_int("00000101010110101111000001010110"),
+ *              bin_char_to_int("00000000000000000000000000000000"),
+ *              bin_char_to_int("11111111111111111111111111111111")
+ *      };
+ *      unsigned int *B;
+ *      unsigned int B_len = ubin_to_bitmap(U1,4,u,&B);
+ * @endcode
+ */
+unsigned int  ubin_to_bitmap(unsigned int *U,
+                             unsigned int U_len,
+                             unsigned int **B);
+
+
+/**
+ * @brief Convert an array of uncompressed two-bit binary values to WAH
+ *        encoding of the bitmap index representation of the two-bit binary
+ *
+ *  In this scheme, there are 4 uniq values in the uncompressed binary
+ *  (0,1,2,3), so the WAH encoding will create 4 different sets, one for each
+ *  bitmap index
+ *
+ * @param U         Uncompressed 2-bit binary values encoded in an array of
+ *                  integers
+ * @param U_len     Unumber of integers in U
+ * @param W         The resulting array of WAH words (memory allocted in 
+ *                  function, value set in function)
+ * @param offsets   A list of 4 offsets (indicies within W) to the starting
+ *                  locations of each bitmap index.  This size of each index
+ *                  can be found by takeing the differnet of the offsets and
+ *                  the total size (returned by fuction)
+ *
+ * @retval number of ints in W
+ *
+ * Example Usage:
+ * @code
+ *    char *plt = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+ *                "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+ *                "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+ *                "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 "
+ *                "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 "
+ *                "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 "
+ *                "2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 "
+ *                "2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 "
+ *                "2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 "
+ *                "3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 "
+ *                "3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 "
+ *                "3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3";
+ *
+ *    unsigned int *ubin;
+ *    unsigned int ubin_len = plt_line_to_packed_ints(plt, 192, &ubin);
+ *
+ *    TEST_ASSERT_EQUAL(12, ubin_len);
+ *
+ *    unsigned int *wah;
+ *    unsigned int *wah_offsets;
+ *    unsigned int wah_len = ubin_to_bitmap_wah(ubin,
+ *                                              ubin_len,
+ *                                              &wah,
+ *                                              &wah_offsets);
+ * @endcode
+ */
+unsigned int ubin_to_bitmap_wah(unsigned int *U,
+                                unsigned int U_len,
+                                unsigned int **W,
+                                unsigned int **offsets);
+/**
+ * @brief Convert an string of plain text values over the alphabet [0,1,2,3]
+ *        to WAH encoding of the bitmap index representation of the two-bit
+ *        binary
+ *
+ *  In this scheme, there are 4 uniq values in plain text (0,1,2,3), so the WAH
+ *  encoding will create 4 different sets, one for each bitmap index
+ *
+ * @param P         Space-seperated string of 0,1,2, or 3
+ * @param P_len     Number of digits in P
+ * @param W         The resulting array of WAH words (memory allocted in 
+ *                  function, value set in function)
+ * @param offsets   A list of 4 offsets (indicies within W) to the starting
+ *                  locations of each bitmap index.  This size of each index
+ *                  can be found by takeing the differnet of the offsets and
+ *                  the total size (returned by fuction)
+ *
+ * @retval number of ints in W
+ *
+ * Example Usage:
+ * @code
+ *
+ * @endcode
+ */
+
+unsigned int plt_to_bitmap_wah(char *plt,
+                               unsigned int plt_len,
+                               unsigned int **W,
+                               unsigned int **offsets);
 
 
 ////////////////////////////////////////////////////////////////////////

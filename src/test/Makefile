@@ -12,7 +12,7 @@ all: clean $(TEST_NAMES) test
 
 %: %.c
 	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $@.c
-	$(CC) -g -o $@ -I$(UNITY_ROOT)/src -I$(SRC) -DTEST $(UNITY_ROOT)/src/unity.c $(SRC)/genotq.c $@.c $@_Runner.c -lm
+	$(CC) -Werror -g -o $@ -I$(UNITY_ROOT)/src -I$(SRC) -DTEST $(UNITY_ROOT)/src/unity.c $(SRC)/genotq.c $@.c $@_Runner.c -lm 
 	rm $@_Runner.c
 
 test:

@@ -158,27 +158,26 @@ int *unpack_2_bit_ints(unsigned int packed_ints)
 }
 //}}}
 
-//{{{ void plt_to_ubin(char *in_file_name, char *out_file_name);
+//{{{ void convert_file_plt_by_name_to_ubin(char *in_file_name, 
 int plt_by_name_to_ubin(char *in_file_name, char *out_file_name)
 {
 
     struct plt_file pf = init_plt_file(in_file_name);
-    int r = plt_to_ubin(pf, out_file_name);
+    int r = convert_file_plt_to_ubin(pf, out_file_name);
     fclose(pf.file);
     return r;
 }
 
-int plt_to_ubin(struct plt_file pf, char *out_file_name)
+int convert_file_plt_to_ubin(struct plt_file pf, char *out_file_name)
 {
 
     // jump past the header
     fseek(pf.file, pf.header_offset, SEEK_SET);
-    int i,j,count;
+    unsigned int i,j,count;
     size_t len;
     ssize_t read;
     int g[16];
     unsigned int *packed_ints;
-    int num_packed_ints;
 
     FILE *o_file = fopen(out_file_name, "wb");
     if (!o_file) {
@@ -195,10 +194,9 @@ int plt_to_ubin(struct plt_file pf, char *out_file_name)
 
     for (i = 0; i < pf.num_records; ++i) {
         read = getline(&line, &len, pf.file);
-        int r = plt_line_to_packed_ints(line,
-                                        pf.num_fields,
-                                        &packed_ints,
-                                        &num_packed_ints);
+        unsigned int num_packed_ints  = plt_line_to_packed_ints(line,
+                                                                pf.num_fields,
+                                                                &packed_ints);
 
         for (j = 0; j < num_packed_ints; ++j)
             fwrite(&(packed_ints[j]), sizeof(unsigned int), 1, o_file);
@@ -212,14 +210,13 @@ int plt_to_ubin(struct plt_file pf, char *out_file_name)
 }
 //}}}
 
-//{{{ int plt_line_to_packed_ints(char *line,
-int plt_line_to_packed_ints(char *line,
-                             int num_fields, 
-                             unsigned int **packed_ints,
-                             int *len)
+//{{{ unsigned int plt_line_to_packed_ints(char *line,
+unsigned int plt_line_to_packed_ints(char *line,
+                                     int num_fields, 
+                                     unsigned int **packed_ints)
 {
-    *len = 1 + ((num_fields - 1) / 16);
-    *packed_ints = (unsigned *) malloc((*len)*sizeof(unsigned int));
+    unsigned int len = 1 + ((num_fields - 1) / 16);
+    *packed_ints = (unsigned *) malloc((len)*sizeof(unsigned int));
     int i, two_bit_count, pack_int_count = 0;
 
     int g[16];
@@ -243,7 +240,7 @@ int plt_line_to_packed_ints(char *line,
     if (two_bit_count > 0)
         (*packed_ints)[pack_int_count] = pack_2_bit_ints(g, 16);
 
-    return 0;
+    return len;
 }
 //}}}
 
@@ -288,9 +285,8 @@ int or_records_ubin(struct ubin_file uf,
 
     int i,j;
     for (i = 0; i < num_r; ++i) {
-
         // skip to the target record and read in the full record
-        fseek(uf.file, uf.header_offset + // skip the record and field size field
+        fseek(uf.file, uf.header_offset + // skip the record & field size field
                     record_ids[i]*num_bytes_per_record, // skip to the reccord
                     SEEK_SET);
         fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
@@ -778,13 +774,15 @@ unsigned int  wah_or(struct wah_run *x,
         // IF (xrun.nWords == 0) ++xrun.it, xrun.decode();
         if (x->num_words == 0) {
             x->word_i += 1;
-            wah_run_decode(x);
+            if (x->word_i < x->len)
+                wah_run_decode(x);
         }
 
         // IF (yrun.nWords == 0) ++yrun.it, yrun.decode();
         if (y->num_words == 0) {
             y->word_i += 1;
-            wah_run_decode(y);
+            if (y->word_i < y->len)
+                wah_run_decode(y);
         }
 
         if ( (x->word_i >= x->len) && (y->word_i >= y->len) )
@@ -870,7 +868,123 @@ unsigned int  wah_or(struct wah_run *x,
 }
 //}}}
 
+//{{{ unsigned int ubin_to_bitmap(unsigned int *U,
+unsigned int ubin_to_bitmap(unsigned int *U,
+                            unsigned int U_len,
+                            unsigned int **B)
+{
+    // Since U encodeds a series of two-bit values, and the bitmap uses one
+    // bit per unique value in U, the bitmap for each value will reqquire 1/2 
+    // the number of ints used to encode U
+    unsigned int value_index_size = (U_len + 2 - 1) / 2;
 
+    // There are 4 unique values, so in total B will require 4x  
+    unsigned int B_len = 4 * value_index_size;
+    unsigned int two_bit, set_bit, bit_offset, B_int_i, B_two_bit_i;
+
+    B_int_i = 0;
+    B_two_bit_i = 0;
+
+    *B = (unsigned int *) calloc(B_len, sizeof(unsigned int));
+
+    unsigned int i,j,k;
+    for (i = 0; i < U_len; ++i) {
+        for (j = 0; j < 16; ++j) {
+            two_bit = ((U[i] >> (30 - (2*j)))& 3);
+            for (k = 0; k < 4; ++k) {
+                if (k == two_bit)
+                    set_bit = 1;
+                else 
+                    set_bit = 0;
+
+                bit_offset = (k * value_index_size) + B_int_i;
+                (*B)[bit_offset] +=  set_bit << (31 - B_two_bit_i);
+
+                /*
+                fprintf(stderr, "k:%u\t"
+                                "set_bit:%u\t"
+                                "two_bit:%u\t" 
+                                "B_int_i:%u\t" 
+                                "B_two_bit_i:%u\n",
+                                k,
+                                set_bit,
+                                two_bit,
+                                B_int_i,
+                                B_two_bit_i);
+                */
+            }
+            B_two_bit_i += 1;
+
+            if (B_two_bit_i == 32) {
+                B_int_i += 1;
+                B_two_bit_i = 0;
+            }
+        }
+    }
+
+    return B_len;
+}
+//}}}
+
+//{{{ unsigned int ubin_to_bitmap_wah(unsigned int *U,
+unsigned int ubin_to_bitmap_wah(unsigned int *U,
+                                unsigned int U_len,
+                                unsigned int **W,
+                                unsigned int **offsets)
+{
+    unsigned int *B;
+    unsigned int B_len = ubin_to_bitmap(U, U_len, &B);
+    unsigned int b_len = B_len / 4;  // size of each bitmap index
+
+
+    *offsets = (unsigned int *) malloc(4*sizeof(unsigned int));
+
+    unsigned int *wahs[4],
+                 wahs_size[4],
+                 i,
+                 j;
+
+    unsigned int total_wah_size = 0;
+
+    for (i = 0; i < 4; i++) {
+        wahs_size[i] = ints_to_wah( (B + (i*b_len)), b_len, &(wahs[i]));
+        (*offsets)[i] = total_wah_size;
+        total_wah_size += wahs_size[i];
+    }
+
+    unsigned int W_i = 0;
+    *W = (unsigned int *) malloc(total_wah_size*sizeof(unsigned int));
+    for (i = 0; i < 4; i++) {
+        for (j = 0; j < wahs_size[i]; j++) {
+            (*W)[W_i] = wahs[i][j];
+            W_i += 1;
+        }
+        free(wahs[i]);
+    }
+
+    return total_wah_size;
+}
+//}}}
+
+//{{{ unsigned int plt_to_bitmap_wah(unsigned int *U,
+unsigned int plt_to_bitmap_wah(char *plt,
+                               unsigned int plt_len,
+                               unsigned int **W,
+                               unsigned int **offsets)
+{
+
+    unsigned int *ubin;
+    unsigned int ubin_len = plt_line_to_packed_ints(plt, plt_len, &ubin);
+
+    unsigned int wah_len = ubin_to_bitmap_wah(ubin,
+                                              ubin_len,
+                                              W,
+                                              offsets);
+    free(ubin);
+
+    return wah_len;
+}
+//}}}
 
 ////////////////////////////////////////////////////////////////////////////////
 

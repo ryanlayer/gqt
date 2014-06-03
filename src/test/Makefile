@@ -1,5 +1,6 @@
 #ruby ../auto/generate_test_runner.rb
 UNITY_ROOT=/Users/rl6sf/src/Unity-master
+UNITY_ROOT=../unity
 CC=gcc
 SRC=../c
 TEST_SRC=$(wildcard *.c)
@@ -11,8 +12,9 @@ RUNNERS=$(addprefix $(PREFIX),$(TESTS))
 all: clean $(TEST_NAMES) test
 
 %: %.c
-	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $@.c
-	$(CC) -Werror -g -o $@ -I$(UNITY_ROOT)/src -I$(SRC) -DTEST $(UNITY_ROOT)/src/unity.c $(SRC)/genotq.c $@.c $@_Runner.c -lm 
+	#ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $@.c
+	ruby $(UNITY_ROOT)/generate_test_runner.rb $@.c
+	$(CC) -Werror -g -o $@ -I$(UNITY_ROOT) -I$(SRC) -DTEST $(UNITY_ROOT)/unity.c $(SRC)/genotq.c $@.c $@_Runner.c -lm 
 	rm $@_Runner.c
 
 test:

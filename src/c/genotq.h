@@ -14,6 +14,13 @@ struct ubin_file {
     long header_offset;
 };
 
+struct wah_file {
+    FILE *file;
+    unsigned int num_fields, num_records;
+    unsigned int *record_offsets;
+    long header_offset;
+};
+
 struct uint_ll {
     unsigned int value;
     struct uint_ll *next;
@@ -57,8 +64,44 @@ unsigned int pack_2_bit_ints(int *ints, int num_ints);
 int *unpack_2_bit_ints(unsigned int packed_ints);
 
 
+/**
+ * @brief Convert a plain text file to an uncompressed binary file
+ *
+ * @param in_file_name Plain text file name
+ * @param out_file_name Uncompressed binary file name
+ *
+ * @retval 1 if things worked
+ * @retval 0 otherwise
+ *
+ * Example Usage:
+ * @code
+ *     char *plt_file_name="data/10.1e4.ind.txt";
+ *     char *ubin_file_name="data/10.1e4.ind.ubin";
+ *
+ *     int r = convert_file_plt_by_name_to_ubin(plt_file_name,ubin_file_name);
+ * @endcode
+ */
 int convert_file_plt_by_name_to_ubin(char *in_file_name, char *out_file_name);
 
+/**
+ * @brief Convert a plain text file to an uncompressed binary file
+ *
+ * @param pf initialized plt file data structure
+ * @param out_file_name name of the uncompressed binary file
+ *
+ * @retval 1 if things worked
+ * @retval 0 otherwise
+ *
+ * Example Usage:
+ * @code
+ *     char *plt_file_name="data/10.1e4.ind.txt";
+ *     char *ubin_file_name="data/10.1e4.ind.ubin";
+ *
+ *     struct plt_file pf = init_plt_file(plt_file_name);
+ *     int r = convert_file_plt_to_ubin(pf, ubin_file_name);
+ *     fclose(pf.file);
+ * @endcode
+ */
 int convert_file_plt_to_ubin(struct plt_file pf, char *out_file_name);
 
 unsigned int plt_line_to_packed_ints(char *line,
@@ -77,6 +120,29 @@ int or_fields_ubin(struct ubin_file uf,
 
 
 /**
+ * @brief Get a pointer to the uncompressed binary encoded record
+ *
+ * @param uf The ubin data structure
+ * @param record_id The index of the record of interest
+ * @param ubin_record A pointer to the uncompressed binary record
+ *
+ * @retval number of integers in the record
+ *
+ * Example Usage:
+ * @code
+ *     char *ubin_file_name="data/10.1e4.ind.ubin";
+ *     struct ubin_file uf = init_ubin_file(ubin_file_name);
+ *
+ *     unsigned int *ints, num_ints;
+ *     unsigned int record_id = 0;
+ *     num_ints = get_ubin_record(uf, record_id, &ints);
+ * @endcode
+ */
+unsigned int get_ubin_record(struct ubin_file uf,
+                             unsigned int record_id,
+                             unsigned int **ubin_record);
+
+/**
  * @brief   Compress an array of integers encoded binary digits using
  *          run-length encoding.
  *
@@ -85,6 +151,10 @@ int or_fields_ubin(struct ubin_file uf,
  * @param O     Array containing the run-length encoding of I
  *
  * @retval number of elements in O
+ *
+ * Example Usage:
+ * @code
+ * @endcode
  */
 unsigned int ints_to_rle(unsigned int *I, int I_len, unsigned int **O);
 
@@ -351,10 +421,7 @@ unsigned int  ubin_to_bitmap(unsigned int *U,
  * @param U_len     Unumber of integers in U
  * @param W         The resulting array of WAH words (memory allocted in 
  *                  function, value set in function)
- * @param offsets   A list of 4 offsets (indicies within W) to the starting
- *                  locations of each bitmap index.  This size of each index
- *                  can be found by takeing the differnet of the offsets and
- *                  the total size (returned by fuction)
+ * @param wah_sizes A list of the 4 sizes 
  *
  * @retval number of ints in W
  *
@@ -379,17 +446,17 @@ unsigned int  ubin_to_bitmap(unsigned int *U,
  *    TEST_ASSERT_EQUAL(12, ubin_len);
  *
  *    unsigned int *wah;
- *    unsigned int *wah_offsets;
+ *    unsigned int *wah_sizes;
  *    unsigned int wah_len = ubin_to_bitmap_wah(ubin,
  *                                              ubin_len,
  *                                              &wah,
- *                                              &wah_offsets);
+ *                                              &wah_sizes);
  * @endcode
  */
 unsigned int ubin_to_bitmap_wah(unsigned int *U,
                                 unsigned int U_len,
                                 unsigned int **W,
-                                unsigned int **offsets);
+                                unsigned int **wah_sizes);
 /**
  * @brief Convert an string of plain text values over the alphabet [0,1,2,3]
  *        to WAH encoding of the bitmap index representation of the two-bit
@@ -402,36 +469,132 @@ unsigned int ubin_to_bitmap_wah(unsigned int *U,
  * @param P_len     Number of digits in P
  * @param W         The resulting array of WAH words (memory allocted in 
  *                  function, value set in function)
- * @param offsets   A list of 4 offsets (indicies within W) to the starting
- *                  locations of each bitmap index.  This size of each index
- *                  can be found by takeing the differnet of the offsets and
- *                  the total size (returned by fuction)
+ * @param offsets   A list the 4 sizes
  *
  * @retval number of ints in W
  *
  * Example Usage:
  * @code
+ *      char *plt = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+ *                  "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+ *                  "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+ *                  "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 "
+ *                  "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 "
+ *                  "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 "
+ *                  "2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 "
+ *                  "2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 "
+ *                  "2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 "
+ *                  "3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 "
+ *                  "3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 "
+ *                  "3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3";
  *
+ *      unsigned int *wah;
+ *      unsigned int *wah_sizes;
+ *      unsigned int wah_len = plt_to_bitmap_wah(plt,
+ *                                               192,
+ *                                               &wah,
+ *                                               &wah_sizes);
  * @endcode
  */
-
 unsigned int plt_to_bitmap_wah(char *plt,
                                unsigned int plt_len,
                                unsigned int **W,
-                               unsigned int **offsets);
+                               unsigned int **wah_sizes);
 
+
+/**
+ * @brief convert an uncompressed binary file to a WAH encoded bitmap index
+ *
+ * A WAH file is: 
+ * number of fields (32-bit)
+ * number of records (32-bit)
+ * Record offsets (number of records * 4 * 32-bit)
+ * 1st record 0 bitmap
+ * 1st record 1 bitmap
+ * 1st record 2 bitmap
+ * 1st record 3 bitmap
+ * 2nd record 0 bitmap
+ * 2nd record 1 bitmap
+ * 2nd record 2 bitmap
+ * 2nd record 3 bitmap
+ *
+ * @param ubin_in uncompressed binary file name
+ * @param wah_out WAH encoded bitmap index file
+ *
+ * @retval 0 if everything went right
+ * @retval 1 otherwise
+ *
+ * @code
+ *      char *plt_file_name="data/10.1e4.ind.txt";
+ *      char *ubin_file_name="data/10.1e4.ind.ubin";
+ *      char *wah_file_name="data/10.1e4.ind.wah";
+ *
+ *      convert_file_plt_by_name_to_ubin(plt_file_name, ubin_file_name);
+ *      convert_file_ubin_by_name_to_wah(ubin_file_name, wah_file_name);
+ * @endcode
+ */
+unsigned int convert_file_ubin_by_name_to_wah(char *ubin_in, char *wah_out);
+
+
+/**
+ * @brief Open a WAH-encoded bitmap index and initialize the wah_file data
+ * structure.
+ *
+ * The WAH data structure includes the number of fields, number of records, an
+ * array of offsets of the different WAH bitmaps, and an offset of the first
+ * bitmap.  Memory is allocated for the bitmap offsets within this function and
+ * must be freed when its use is complete ( free(wf.record_offsets))
+ *
+ * @param file_name The name of the WAH file
+ *
+ * @retval WAH data strucutre.
+ *
+ * Example Usage:
+ * @code
+ *      char *wah_file_name="data/10.1e4.ind.wah";
+ *      struct wah_file wf = init_wah_file(wah_file_name);
+ * @endcode
+ */
+struct wah_file init_wah_file(char *file_name);
+
+/**
+ * @brief Get a pointer to the bitmap of a particular WAH-encoded record
+ *
+ * @param wf The WAH file data structure
+ * @param wah_record The record ID
+ * @param bitmap The bitmap ID (0,1,2, or 3)
+ * @param wah_bitmap A pointer set within the fuction that points to the record
+ *                   of intrest
+ *
+ * @retval number of words in the bitmap
+ *
+ * Example Usage:
+ * @code
+ *      char *wah_file_name="data/10.1e4.ind.wah";
+ *      struct wah_file wf = init_wah_file(wah_file_name);
+ *      unsigned int *wah_bm;
+ *      unsigned int test_record = 1;
+ *      unsigned int test_bitmap = 2;
+ *      unsinged int wah_size = get_wah_bitmap(wf,
+ *                                             test_record,
+ *                                             test_bitmap,
+ *                                             &wah_bm);
+ *      unsinged int *ints;
+ *      unsigned int num_ints = wah_to_ints(wah_bm, wah_size, &ints);
+ * @endcode
+ */
+unsigned int get_wah_bitmap(struct wah_file wf,
+                            unsigned int wah_record,
+                            unsigned int bitmap,
+                            unsigned int **wah_bitmap);
 
 ////////////////////////////////////////////////////////////////////////
-
 
 struct uint_file {
     FILE *file;
     unsigned int num_fields, num_records;
     int line_len;
 };
-
-
-
 
 struct uint_file init_uint_file(char *file_name, 
                                 int num_records,

@@ -159,9 +159,8 @@ int *unpack_2_bit_ints(unsigned int packed_ints)
 //}}}
 
 //{{{ void convert_file_plt_by_name_to_ubin(char *in_file_name, 
-int plt_by_name_to_ubin(char *in_file_name, char *out_file_name)
+int convert_file_plt_by_name_to_ubin(char *in_file_name, char *out_file_name)
 {
-
     struct plt_file pf = init_plt_file(in_file_name);
     int r = convert_file_plt_to_ubin(pf, out_file_name);
     fclose(pf.file);
@@ -171,8 +170,7 @@ int plt_by_name_to_ubin(char *in_file_name, char *out_file_name)
 int convert_file_plt_to_ubin(struct plt_file pf, char *out_file_name)
 {
 
-    // jump past the header
-    fseek(pf.file, pf.header_offset, SEEK_SET);
+    char *line = NULL;
     unsigned int i,j,count;
     size_t len;
     ssize_t read;
@@ -192,8 +190,12 @@ int convert_file_plt_to_ubin(struct plt_file pf, char *out_file_name)
     fwrite(&(pf.num_records), sizeof(int), 1, o_file);
 
 
+    // jump past the header
+    fseek(pf.file, pf.header_offset, SEEK_SET);
     for (i = 0; i < pf.num_records; ++i) {
         read = getline(&line, &len, pf.file);
+        //fprintf(stderr, "read:%lu\n", read);
+        //fprintf(stderr, "%s", line);
         unsigned int num_packed_ints  = plt_line_to_packed_ints(line,
                                                                 pf.num_fields,
                                                                 &packed_ints);
@@ -360,6 +362,29 @@ int or_fields_ubin(struct ubin_file uf,
 
     return num_ints_per_record;
 }
+//}}}
+
+//{{{ unsigned int get_ubin_record(struct ubin_file uf,
+unsigned int get_ubin_record(struct ubin_file uf,
+                             unsigned int record_id,
+                             unsigned int **ubin_record)
+{
+    int num_ints_per_record = 1 + ((uf.num_fields - 1) / 16);
+
+    unsigned int ubin_offset = uf.header_offset + 
+            sizeof(unsigned int)*(record_id*num_ints_per_record);
+
+    //fprintf(stderr, "ubin_offset:%u\n", ubin_offset);
+
+    *ubin_record = (unsigned int *)
+                   malloc(sizeof(unsigned int)*num_ints_per_record);
+
+    fseek(uf.file, ubin_offset, SEEK_SET);
+    fread(*ubin_record,sizeof(unsigned int),num_ints_per_record,uf.file);
+
+    return num_ints_per_record;
+}
+
 //}}}
 
 //{{{unsigned int ints_to_rle(unsigned int *I, int I_len, unsigned int **O)
@@ -930,14 +955,14 @@ unsigned int ubin_to_bitmap(unsigned int *U,
 unsigned int ubin_to_bitmap_wah(unsigned int *U,
                                 unsigned int U_len,
                                 unsigned int **W,
-                                unsigned int **offsets)
+                                unsigned int **wah_sizes)
 {
     unsigned int *B;
     unsigned int B_len = ubin_to_bitmap(U, U_len, &B);
     unsigned int b_len = B_len / 4;  // size of each bitmap index
 
 
-    *offsets = (unsigned int *) malloc(4*sizeof(unsigned int));
+    *wah_sizes = (unsigned int *) malloc(4*sizeof(unsigned int));
 
     unsigned int *wahs[4],
                  wahs_size[4],
@@ -948,7 +973,7 @@ unsigned int ubin_to_bitmap_wah(unsigned int *U,
 
     for (i = 0; i < 4; i++) {
         wahs_size[i] = ints_to_wah( (B + (i*b_len)), b_len, &(wahs[i]));
-        (*offsets)[i] = total_wah_size;
+        (*wah_sizes)[i] = wahs_size[i];
         total_wah_size += wahs_size[i];
     }
 
@@ -970,7 +995,7 @@ unsigned int ubin_to_bitmap_wah(unsigned int *U,
 unsigned int plt_to_bitmap_wah(char *plt,
                                unsigned int plt_len,
                                unsigned int **W,
-                               unsigned int **offsets)
+                               unsigned int **wah_sizes)
 {
 
     unsigned int *ubin;
@@ -979,10 +1004,150 @@ unsigned int plt_to_bitmap_wah(char *plt,
     unsigned int wah_len = ubin_to_bitmap_wah(ubin,
                                               ubin_len,
                                               W,
-                                              offsets);
+                                              wah_sizes);
     free(ubin);
 
     return wah_len;
+}
+//}}}
+
+//{{{ unsigned int convert_file_ubin_by_name_to_wah(char *ubin_in, 
+unsigned int convert_file_ubin_by_name_to_wah(char *ubin_in, char *wah_out)
+{
+    FILE *wf = fopen(wah_out,"wb");
+
+    if (!wf) {
+        printf("Unable to open %s\n", wah_out);
+        return 1;
+    }
+
+    struct ubin_file uf = init_ubin_file(ubin_in);
+
+    //write header for WAH bitmap index file
+    fwrite(&(uf.num_fields), sizeof(int), 1, wf);
+    fwrite(&(uf.num_records), sizeof(int), 1, wf);
+    int zero = 0;
+    int k;
+    for (k = 0; k < uf.num_records*4; ++k)
+        fwrite(&zero, sizeof(int), 1, wf);
+
+    int num_ints_per_record = 1 + ((uf.num_fields - 1) / 16);
+    int num_bytes_per_record = num_ints_per_record * 4;
+
+    unsigned int *c = (unsigned int *)
+        malloc(num_ints_per_record*sizeof(unsigned int));
+
+    int i,j,wah_i = 0, offset_total  = 0;
+
+    // skip to the target record and read in the full record
+    fseek(uf.file, uf.header_offset, SEEK_SET);
+
+    for (i = 0; i < uf.num_records; ++i) {
+        fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
+         
+        unsigned int *wah;
+        unsigned int *wah_sizes;
+        unsigned int wah_len = ubin_to_bitmap_wah(c,
+                                                  num_ints_per_record,
+                                                  &wah,
+                                                  &wah_sizes);
+
+        fseek(wf,sizeof(unsigned int)* (2+4* wah_i),  SEEK_SET);
+        for (j = 0; j < 4; ++j) {
+            offset_total += wah_sizes[j];
+            fwrite(&offset_total, sizeof(unsigned int), 1, wf);
+            //fprintf(stderr,"%u\t%u\n", wah_sizes[j], offset_total);
+        }
+
+        fseek(wf,0,SEEK_END);
+        size_t ret = fwrite(wah, sizeof(unsigned int), wah_len, wf);
+        if (ret != wah_len)
+            fprintf(stderr, "ret:%zu != wah_len:%u\n", ret, wah_len);
+
+        wah_i+=1;
+        free(wah);
+        free(wah_sizes);
+    }
+
+    free(c);
+
+    fclose(wf);
+    fclose(uf.file);
+    return 0;
+}
+//}}}
+
+//{{{ struct wah_file init_wah_file(char *file_name)
+struct wah_file init_wah_file(char *file_name)
+{
+    struct wah_file wf;
+
+    wf.file = fopen(file_name, "rb");
+
+    if (!wf.file) {
+        fprintf(stderr, "Unable to open %s\n", file_name);
+        return wf;
+    }
+
+    // Jump to the begining of the file to grab the record size
+    fseek(wf.file, 0, SEEK_SET);
+    fread(&wf.num_fields,sizeof(unsigned int),1,wf.file);
+    fread(&wf.num_records,sizeof(unsigned int),1,wf.file);
+
+    wf.record_offsets = (unsigned int *) 
+            malloc(sizeof (unsigned int)*wf.num_records*4);
+
+    unsigned int i;
+    for (i = 0; i < wf.num_records*4; ++i)
+        fread(&(wf.record_offsets[i]),sizeof(unsigned int),1,wf.file);
+
+
+    wf.header_offset = ftell(wf.file);
+
+    return wf;
+}
+//}}}
+
+//{{{ unsigned int get_wah_bitmap(struct wah_file wf,
+unsigned int get_wah_bitmap(struct wah_file wf,
+                            unsigned int wah_record,
+                            unsigned int bitmap,
+                            unsigned int **wah_bitmap)
+{
+    // get the size of the WAH-encoded bitmap
+    unsigned int wah_size = 0, wah_offset = 0;
+    if ((wah_record == 0) && (bitmap == 0)) {
+        wah_size = wf.record_offsets[wah_record + bitmap];
+        wah_offset = wf.header_offset;
+    } else {
+        wah_size = wf.record_offsets[wah_record*4 + bitmap] - 
+                   wf.record_offsets[wah_record*4 + bitmap - 1];
+        /*
+        fprintf(stderr, "wf.header_offset:%lu\t"
+                        "wah_record:%u\t"
+                        "bitmap:%u\t"
+                        "wah_size:%u\t"
+                        "wf.record_offsets[]:%u\n",
+                        wf.header_offset,
+                        wah_record,
+                        bitmap,
+                        wah_size,
+                        wf.record_offsets[wah_record*4 + bitmap]);
+        */
+
+        wah_offset = wf.header_offset +
+                     sizeof(unsigned int) * 
+                        (wf.record_offsets[wah_record*4 + bitmap] - wah_size);
+    }
+
+    //fprintf(stderr, "wah_size:%u\twah_offset:%u\n", wah_size, wah_offset);
+
+
+    *wah_bitmap = (unsigned int *) malloc(sizeof(unsigned int)*wah_size);
+    fseek(wf.file, wah_offset, SEEK_SET);
+    fread(*wah_bitmap,sizeof(unsigned int),wah_size,wf.file);
+
+    return wah_size;
 }
 //}}}
 

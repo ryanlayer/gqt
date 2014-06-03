@@ -8,7 +8,7 @@ void usage(char *prog)
 {
     fprintf(stderr,
         "usage:\%s <options>\n"
-        "\t\t-i\tInput variant or individual plain text file name\n"
+        "\t\t-i\tInput variant or individual uncompressed binary file\n"
         "\t\t-o\tOuput file name\n", prog
     );
 }
@@ -53,7 +53,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    int r = convert_file_plt_by_name_to_ubin(in_file_name, out_file_name);
+    int r = convert_file_ubin_by_name_to_wah(in_file_name, out_file_name);
     
     if (r == 0)
         return 0;

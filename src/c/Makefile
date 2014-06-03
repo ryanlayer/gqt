@@ -15,7 +15,8 @@ PROG=and_speed_test \
 	get_common_genot_ind \
 	get_common_genot_var \
 	get_gt_from_ubin \
-	int_to_ubin \
+	plt_to_ubin \
+	ubin_to_wah \
 	or_gt_fields_from_ubin \
 	or_gt_records_from_ubin \
 	test_int_genotype_reader \

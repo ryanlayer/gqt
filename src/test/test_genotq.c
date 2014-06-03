@@ -270,6 +270,90 @@ void test_init_ubin_file(void)
 }
 //}}} 
 
+//{{{ void test_get_ubin_record(void)
+void test_get_ubin_record(void)
+{
+    char *ubin_file_name="data/10.1e4.ind.ubin";
+
+    unsigned int A_0[43] = {2,0,1,1,0,1,1,0,0,0,0,0,0,1,0,0,2,1,0,0,
+                            1,0,1,0,1,1,0,1,1,1,1,1,1,0,1,1,1,1,1,1,
+                            0,1,0};
+    unsigned int A_1[43] = {1,0,0,0,0,0,1,1,1,0,1,1,1,0,1,0,1,0,0,1,
+                            0,1,0,1,1,1,1,0,1,1,1,1,1,1,0,1,0,1,1,0,
+                            1,0,0};
+    unsigned int A_2[43] = {0,0,0,0,0,0,0,2,2,0,2,2,2,0,2,0,0,0,0,2,
+                            0,2,0,2,0,0,0,0,0,2,0,0,2,2,0,0,0,0,0,0,
+                            0,1,0};
+    unsigned int A_3[43] = {0,0,0,0,0,0,0,2,2,1,2,2,2,0,2,1,0,0,0,2,
+                            0,2,0,1,0,0,0,0,0,2,0,0,2,2,0,0,0,0,0,0,
+                            0,0,0};
+    unsigned int A_4[43] = {1,0,1,1,0,1,0,1,1,0,2,2,2,0,2,1,0,0,0,2,
+                            0,2,0,2,0,0,1,0,0,2,0,0,2,2,0,0,0,0,0,0,
+                            1,0,0};
+    unsigned int A_5[43] = {0,0,0,0,0,0,0,2,2,0,2,2,2,0,2,0,0,0,1,2,
+                            0,2,0,2,0,0,0,0,0,2,0,0,2,2,0,0,0,0,0,0,
+                            0,0,0};
+    unsigned int A_6[43] = {1,0,0,0,2,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,
+                            0,0,0,0,0,0,0,0,0,2,0,0,2,2,0,0,0,0,0,0,
+                            0,0,0};
+    unsigned int A_7[43] = {0,0,0,0,0,0,0,2,2,2,1,1,1,0,1,1,1,0,0,1,
+                            0,1,0,0,1,1,0,0,1,1,1,0,1,0,1,1,1,1,1,0,
+                            0,1,1};
+    struct ubin_file uf = init_ubin_file(ubin_file_name);
+
+    TEST_ASSERT_EQUAL(10, uf.num_records);
+    TEST_ASSERT_EQUAL(43, uf.num_fields);
+
+    unsigned int *ints, num_ints;
+    num_ints = get_ubin_record(uf, 0, &ints);
+
+    int num_ints_per_record = 1 + ((uf.num_fields - 1) / 16);
+
+    TEST_ASSERT_EQUAL(num_ints_per_record, num_ints);
+
+    unsigned int i,j,two_bit,int_i = 0;
+    for (i = 0; i < num_ints; ++i) {
+        for (j = 0; j < 16; ++j) {
+            two_bit = (ints[i] >> (30 - 2*j)) & 3;
+            TEST_ASSERT_EQUAL(A_0[int_i], two_bit);
+            int_i += 1;
+            if (int_i == uf.num_fields)
+                break;
+        }
+    }
+    free(ints);
+
+    num_ints = get_ubin_record(uf, 6, &ints);
+    int_i = 0;
+    for (i = 0; i < num_ints; ++i) {
+        for (j = 0; j < 16; ++j) {
+            two_bit = (ints[i] >> (30 - 2*j)) & 3;
+            TEST_ASSERT_EQUAL(A_6[int_i], two_bit);
+            int_i += 1;
+            if (int_i == uf.num_fields)
+                break;
+        }
+    }
+    free(ints);
+
+    num_ints = get_ubin_record(uf, 3, &ints);
+    int_i = 0;
+    for (i = 0; i < num_ints; ++i) {
+        for (j = 0; j < 16; ++j) {
+            two_bit = (ints[i] >> (30 - 2*j)) & 3;
+            TEST_ASSERT_EQUAL(A_3[int_i], two_bit);
+            int_i += 1;
+            if (int_i == uf.num_fields)
+                break;
+        }
+    }
+    free(ints);
+
+
+    fclose(uf.file);
+}
+//}}}
+
 //{{{ void test_or_records_plt_vs_ubin(void)
 void test_or_records_plt_vs_ubin(void)
 {
@@ -1615,7 +1699,7 @@ void test_ubin_to_wah(void)
     };
 
     unsigned int i;
-    unsigned int wah_offsets_A[4] = {0,3,8,12};
+    unsigned int wah_offsets_A[4] = {3,5,4,4};
 
     char *plt = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
                 "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
@@ -1679,7 +1763,7 @@ void test_plt_to_bitmap_wah(void)
     };
 
     unsigned int i;
-    unsigned int wah_offsets_A[4] = {0,3,8,12};
+    unsigned int wah_offsets_A[4] = {3,5,4,4};
 
     char *plt = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
                 "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
@@ -1710,3 +1794,187 @@ void test_plt_to_bitmap_wah(void)
         TEST_ASSERT_EQUAL(wah_A[i], wah[i]);
 }
 //}}}
+
+//{{{ void test_convert_file_ubin_by_name_to_wah(void)
+void test_convert_file_ubin_by_name_to_wah(void)
+{
+
+    char *plt_file_name="data/10.1e4.ind.txt";
+    char *ubin_file_name="data/10.1e4.ind.ubin";
+    char *wah_file_name="data/10.1e4.ind.wah";
+
+    convert_file_plt_to_ubin(pltf_ind, ubin_file_name);
+    convert_file_ubin_by_name_to_wah(ubin_file_name, wah_file_name);
+
+    struct wah_file wf = init_wah_file(wah_file_name);
+    struct ubin_file uf = init_ubin_file(ubin_file_name);
+
+    unsigned int test_record, test_bitmap;
+    unsigned int *ints, num_ints;
+    unsigned int *wah_bms[4], wah_sizes[4];
+    unsigned int *wah_ints[4], wah_num_ints[4];
+    unsigned int two_bit, bit, ubin_int_i, ubin_bit_i,
+                 wah_int_i, wah_bit_i, field_i;
+    for (test_record = 0; test_record < 8; ++test_record) {
+        field_i = 0;
+        num_ints = get_ubin_record(uf, test_record, &ints);
+
+        for (test_bitmap = 0; test_bitmap < 4; ++test_bitmap) {
+            wah_sizes[test_bitmap] = get_wah_bitmap(wf,
+                                                    test_record,
+                                                    test_bitmap,
+                                                    &(wah_bms[test_bitmap]));
+            wah_num_ints[test_bitmap] = wah_to_ints(wah_bms[test_bitmap],
+                                                    wah_sizes[test_bitmap],
+                                                    &(wah_ints[test_bitmap]));
+
+        }
+
+        wah_int_i = 0;
+        wah_bit_i = 0;
+
+        for (ubin_int_i = 0; ubin_int_i < num_ints; ++ubin_int_i) {
+            for (ubin_bit_i = 0; ubin_bit_i < 16; ++ubin_bit_i) {
+                two_bit = (ints[ubin_int_i] >> (30-(ubin_bit_i*2))) & 3;
+
+                for (test_bitmap = 0; test_bitmap < 4; ++test_bitmap) {
+                    bit = (wah_ints[test_bitmap][wah_int_i] >> 
+                            (31-wah_bit_i)) & 1;
+
+                    if (test_bitmap == two_bit)
+                        TEST_ASSERT_EQUAL(1,bit);
+                    else
+                        TEST_ASSERT_EQUAL(0,bit);
+                    //fprintf(stderr, "%u", bit);
+                }
+
+                //fprintf(stderr, ":%u ", two_bit);
+
+                wah_bit_i += 1;
+
+                if (wah_bit_i == 32) {
+                    wah_int_i += 1;
+                    wah_bit_i = 0;
+                }
+
+
+                field_i += 1;
+                if (field_i == wf.num_fields)
+                    break;
+            }
+            if (field_i == wf.num_fields)
+                break;
+        }
+        //fprintf(stderr, "\n");
+
+
+        free(ints);
+        for (test_bitmap = 0; test_bitmap < 4; ++test_bitmap)
+            free(wah_bms[test_bitmap]);
+    }
+
+    fclose(uf.file);
+    fclose(wf.file);
+    free(wf.record_offsets);
+}
+//}}}
+//{{{ void test_init_wah_file(void)
+void test_init_wah_file(void)
+{
+    char *wah_file_name="data/10.1e4.ind.wah";
+
+    struct wah_file wf = init_wah_file(wah_file_name);
+
+    TEST_ASSERT_EQUAL(10, wf.num_records);
+    TEST_ASSERT_EQUAL(43, wf.num_fields);
+
+
+    unsigned int A_record_offsets[40] = {
+        3,  6,  8,  9,  12, 15, 16, 17, 20, 23,
+        26, 27, 30, 32, 35, 36, 39, 42, 45, 46,
+        49, 51, 54, 55, 58, 60, 63, 64, 67, 70,
+        72, 73, 76, 79, 82, 83, 86, 89, 92, 93
+    };
+
+    unsigned int i;
+    for (i = 0; i < wf.num_records*4; ++i)
+        TEST_ASSERT_EQUAL(A_record_offsets[i], wf.record_offsets[i]);
+
+    fclose(wf.file);
+    free(wf.record_offsets);
+}
+//}}}
+
+//{{{void test_get_wah_bitmap(void)
+void test_get_wah_bitmap(void)
+{
+    char *wah_file_name="data/10.1e4.ind.wah";
+
+    unsigned int A[8][43] = {
+        {2,0,1,1,0,1,1,0,0,0,0,0,0,1,0,0,2,1,0,0,
+         1,0,1,0,1,1,0,1,1,1,1,1,1,0,1,1,1,1,1,1,
+         0,1,0},
+        {1,0,0,0,0,0,1,1,1,0,1,1,1,0,1,0,1,0,0,1,
+         0,1,0,1,1,1,1,0,1,1,1,1,1,1,0,1,0,1,1,0,
+         1,0,0},
+        {0,0,0,0,0,0,0,2,2,0,2,2,2,0,2,0,0,0,0,2,
+         0,2,0,2,0,0,0,0,0,2,0,0,2,2,0,0,0,0,0,0,
+         0,1,0},
+        {0,0,0,0,0,0,0,2,2,1,2,2,2,0,2,1,0,0,0,2,
+         0,2,0,1,0,0,0,0,0,2,0,0,2,2,0,0,0,0,0,0,
+         0,0,0},
+        {1,0,1,1,0,1,0,1,1,0,2,2,2,0,2,1,0,0,0,2,
+         0,2,0,2,0,0,1,0,0,2,0,0,2,2,0,0,0,0,0,0,
+         1,0,0},
+        {0,0,0,0,0,0,0,2,2,0,2,2,2,0,2,0,0,0,1,2,
+         0,2,0,2,0,0,0,0,0,2,0,0,2,2,0,0,0,0,0,0,
+         0,0,0},
+        {1,0,0,0,2,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,
+         0,0,0,0,0,0,0,0,0,2,0,0,2,2,0,0,0,0,0,0,
+         0,0,0},
+        {0,0,0,0,0,0,0,2,2,2,1,1,1,0,1,1,1,0,0,1,
+         0,1,0,0,1,1,0,0,1,1,1,0,1,0,1,1,1,1,1,0,
+         0,1,1},
+    };
+
+    struct wah_file wf = init_wah_file(wah_file_name);
+
+    TEST_ASSERT_EQUAL(10, wf.num_records);
+    TEST_ASSERT_EQUAL(43, wf.num_fields);
+
+    unsigned int *wah_bm, wah_size;
+    unsigned int *ints, num_ints, bit;
+    unsigned int test_record, test_bitmap, field_i, i, j;
+
+    for (test_record = 0; test_record < 8; ++test_record) {
+        for (test_bitmap = 0; test_bitmap < 4; ++test_bitmap) {
+            wah_size = get_wah_bitmap(wf,test_record,test_bitmap,&wah_bm);
+            num_ints = wah_to_ints(wah_bm, wah_size, &ints);
+
+            field_i = 0;
+            for (i = 0; i < num_ints; ++i) {
+                for (j = 32; j > 0; --j) {
+                    bit = (ints[i] >> (j-1)) & 1;
+
+                    if (A[test_record][field_i] == test_bitmap) 
+                        TEST_ASSERT_EQUAL(1, bit);
+                    else
+                        TEST_ASSERT_EQUAL(0, bit);
+
+                    field_i += 1;
+                    if (field_i == wf.num_fields)
+                        break;
+                }
+                if (field_i == wf.num_fields)
+                    break;
+            }
+
+            free(wah_bm);
+            free(ints);
+        }
+    }
+    fclose(wf.file);
+    free(wf.record_offsets);
+}
+//}}}
+

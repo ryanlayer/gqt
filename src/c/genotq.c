@@ -893,6 +893,121 @@ unsigned int  wah_or(struct wah_run *x,
 }
 //}}}
 
+//{{{ void wah_and(struct wah_run *x,
+unsigned int  wah_and(struct wah_run *x,
+                     struct wah_run *y,
+                     unsigned int **O)
+{
+    struct wah_active_word a;
+    unsigned int num_words;
+    struct wah_ll *Z_head = NULL,
+                  *Z_tail = NULL;
+    int Z_len = 0;
+
+    //xrun.it = x.vec.begin(); xrun.decode();
+    wah_run_decode(x);
+    //yrun.it = y.vec.begin(); yrun.decode();
+    wah_run_decode(y);
+
+    // WHILE (x.vec and y.vec are not exhausted) 
+    while ( (x->word_i < x->len) && (y->word_i < y->len) ){
+        // IF (xrun.nWords == 0) ++xrun.it, xrun.decode();
+        if (x->num_words == 0) {
+            x->word_i += 1;
+            if (x->word_i < x->len)
+                wah_run_decode(x);
+        }
+
+        // IF (yrun.nWords == 0) ++yrun.it, yrun.decode();
+        if (y->num_words == 0) {
+            y->word_i += 1;
+            if (y->word_i < y->len)
+                wah_run_decode(y);
+        }
+
+        if ( (x->word_i >= x->len) && (y->word_i >= y->len) )
+            break;
+        else if (x->word_i >= x->len) {
+            fprintf(stderr, "X ended before Y\n");
+            abort();
+        } else if (y->word_i >= y->len) {
+            fprintf(stderr, "Y ended before X\n");
+            abort();
+        }
+
+
+        //   IF (xrun.isFill)
+        if (x->is_fill == 1) {
+            // IF (yrun.isFill)
+            if (y->is_fill == 1) {
+                //fprintf(stderr,"X Fill\tY Fill\n");
+                //nWords = min(xrun.nWords, yrun.nWords)
+                //z.appendFill(nWords, (*(xrun.it) ◦ *(yrun.it))),
+                //xrun.nWords -= nWords, yrun.nWords -= nWords;
+                num_words = MIN(x->num_words, y->num_words);
+                Z_len += append_fill_word(&Z_head,
+                                          &Z_tail,
+                                          (x->fill_bit & y->fill_bit),
+                                          num_words);
+                x->num_words -= num_words;
+                y->num_words -= num_words;
+            // ELSE
+            } else {
+                //fprintf(stderr,"X Fill\tY Litt\n");
+                //z.active.value = xrun.fill ◦ *yrun.it
+                //z.appendLiteral(),
+                //-- xrun.nWords, yrun.nWords = 0;
+                a.nbits = 31;
+                a.value = y->words[y->word_i] & x->fill;
+                Z_len += append_active_word(&Z_head,
+                                            &Z_tail,
+                                            a);
+                x->num_words -= 1;
+                y->num_words = 0;
+            }
+        //ELSEIF (yrun.isFill)
+        } else if (y->is_fill == 1) {
+            //fprintf(stderr,"X Litt\tY Fill\n");
+            //z.active.value = yrun.fill ◦ *xrun.it,
+            //z.appendLiteral(),
+            //-- yrun.nWords, xrun.nWords = 0;
+            a.nbits = 31;
+            a.value = x->words[x->word_i] & y->fill;
+
+            Z_len += append_active_word(&Z_head,
+                                        &Z_tail,
+                                        a);
+            y->num_words -= 1;
+            x->num_words = 0;
+        //ELSE
+        } else {
+            //fprintf(stderr,"X Litt\tY Litt\n");
+            a.nbits = 31;
+            a.value = x->words[x->word_i] & y->words[y->word_i];
+            Z_len += append_active_word(&Z_head,
+                                        &Z_tail,
+                                        a);
+            y->num_words = 0;
+            x->num_words = 0;
+        }
+    }
+
+    *O = (unsigned int *) malloc(Z_len * sizeof(unsigned int));
+
+    struct wah_ll *Z_tmp, *Z_curr = Z_head;
+    int i = 0;
+    while (Z_curr != NULL) {
+        (*O)[i] = Z_curr->value.value;
+        i += 1;
+        Z_tmp = Z_curr;
+        Z_curr = Z_tmp->next;
+        free(Z_tmp);
+    }
+
+    return Z_len;
+}
+//}}}
+
 //{{{ unsigned int ubin_to_bitmap(unsigned int *U,
 unsigned int ubin_to_bitmap(unsigned int *U,
                             unsigned int U_len,
@@ -1150,6 +1265,204 @@ unsigned int get_wah_bitmap(struct wah_file wf,
     return wah_size;
 }
 //}}}
+
+//{{{ unsigned int gt_records_plt(struct plt_file pf,
+unsigned int gt_records_plt(struct plt_file pf,
+                            unsigned int *record_ids,
+                            unsigned int num_r,
+                            unsigned int test_value,
+                            unsigned int **R)
+{
+    char *line = NULL;
+    size_t len = 0;
+    char *pch;
+    ssize_t read;
+    unsigned int i,j,bit;
+
+    unsigned int num_ints_per_record = 1 + ((pf.num_fields - 1) / 32);
+
+    *R = (unsigned int *) malloc(num_ints_per_record*sizeof(unsigned int));
+
+    for (i = 0; i < num_ints_per_record; ++i)
+        (*R)[i] = -1;
+
+    unsigned int int_i, bit_i;
+
+
+    long line_len = pf.num_fields*2*sizeof(char);
+    for (i = 0; i < num_r; ++i) {
+        fseek(pf.file, pf.header_offset + line_len*record_ids[i], SEEK_SET);
+
+        read = getline(&line, &len, pf.file);
+
+        int_i = 0;
+        bit_i = 0;
+        for (j = 0; j < pf.num_fields; ++j) {
+            // clear the bit
+            if  ( !( test_value < ((unsigned int)line[j*2] - 48))) 
+                (*R)[int_i] = (*R)[int_i] & ~(1 << (31 - bit_i));
+
+            bit_i += 1;
+            if (bit_i == 32) {
+                int_i += 1;
+                bit_i = 0;
+            }
+        }
+    }
+
+    free(line);
+
+    return num_ints_per_record;
+}
+//}}}
+
+//{{{ unsigned int gt_records_ubin(struct ubin_file uf,
+unsigned int gt_records_ubin(struct ubin_file uf,
+                             unsigned int *record_ids,
+                             unsigned int num_r,
+                             unsigned int test_value,
+                             unsigned int **R)
+{
+    unsigned int num_output_ints = 1 + ((uf.num_fields - 1) / 32);
+
+    unsigned int num_ints_per_record = 1 + ((uf.num_fields - 1) / 16);
+    int num_bytes_per_record = num_ints_per_record * 4;
+
+    *R = (unsigned int *) malloc(num_output_ints*sizeof(unsigned int));
+    unsigned int i,j;
+    for (i = 0; i < num_output_ints; ++i)
+        (*R)[i] = -1;
+
+    unsigned int *c = (unsigned int *)
+        malloc(num_ints_per_record*sizeof(unsigned int));
+
+    unsigned int R_int_i, R_bit_i;
+    unsigned int c_int_i, c_two_bit_i;
+
+    for (i = 0; i < num_r; ++i) {
+        // skip to the target record and read in the full record
+        fseek(uf.file, uf.header_offset + // skip the record & field size field
+                    record_ids[i]*num_bytes_per_record, // skip to the reccord
+                    SEEK_SET);
+        fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
+
+        R_int_i = 0;
+        R_bit_i = 0;
+        c_two_bit_i = 0;
+        c_int_i = 0;
+
+        for (j = 0; j < uf.num_fields; ++j) {
+            // clear the bit
+
+            if  ( !( test_value < ((c[c_int_i] >> (30 - c_two_bit_i*2)) & 3) ) )
+                (*R)[R_int_i] = (*R)[R_int_i] & ~(1 << (31 - R_bit_i));
+
+            R_bit_i += 1;
+            if (R_bit_i == 32) {
+                R_int_i += 1;
+                R_bit_i = 0;
+            }
+
+            c_two_bit_i += 1;
+            if (c_two_bit_i == 16) {
+                c_two_bit_i = 0;
+                c_int_i += 1;
+            }
+        }
+    }
+
+    free(c);
+
+    return num_ints_per_record;
+}
+//}}}
+
+unsigned int gt_records_wah(struct wah_file wf,
+                            unsigned int *record_ids,
+                            unsigned int num_r,
+                            unsigned int test_value,
+                            unsigned int **R) 
+
+{
+
+    unsigned int *record_curr_bm = NULL,
+                 *record_new_bm = NULL,
+                 *record_tmp_bm = NULL;
+
+    unsigned int record_curr_bm_size,
+                 record_new_bm_size,
+                 record_tmp_bm_size;
+
+    unsigned int *query_curr_bm = NULL,
+                 *query_tmp_bm = NULL;
+
+    unsigned int query_curr_bm_size,
+                 query_tmp_bm_size;
+
+
+    unsigned int i,j,k;
+
+    for (i = 0; i < num_r; ++i) {
+        // or all of the bit maps for this record then and that will a 
+        // running total
+
+        record_curr_bm = NULL;
+        record_new_bm = NULL;
+        record_tmp_bm = NULL;
+
+        for (j = test_value + 1; j < 4; ++j) {
+
+            record_new_bm_size = get_wah_bitmap(wf,
+                                         record_ids[i],
+                                         j,
+                                         &record_new_bm);
+
+            if (record_curr_bm == NULL) {
+                record_curr_bm = record_new_bm;
+                record_curr_bm_size = record_new_bm_size;
+            } else {
+                struct wah_run curr_run = init_wah_run(record_curr_bm,
+                                                       record_curr_bm_size);
+                struct wah_run new_run = init_wah_run(record_new_bm,
+                                                      record_new_bm_size);
+
+                record_tmp_bm_size = wah_or(&curr_run,
+                                            &new_run,
+                                            &record_tmp_bm);
+                free(record_curr_bm);
+                free(record_new_bm);
+
+                record_curr_bm = record_tmp_bm;
+                record_curr_bm_size = record_tmp_bm_size;
+            }
+        }
+
+        if (query_curr_bm == NULL) {
+            query_curr_bm = record_curr_bm;
+            query_curr_bm_size = record_curr_bm_size;
+        } else {
+                struct wah_run record_run = init_wah_run(record_curr_bm,
+                                                         record_curr_bm_size);
+                struct wah_run query_run = init_wah_run(query_curr_bm,
+                                                        query_curr_bm_size);
+
+                query_tmp_bm_size = wah_and(&record_run,
+                                            &query_run,
+                                            &query_tmp_bm);
+                free(record_curr_bm);
+                free(query_curr_bm);
+
+                query_curr_bm = query_tmp_bm;
+                query_curr_bm_size = query_tmp_bm_size;
+        }
+    }
+
+    *R = query_curr_bm;
+    return query_curr_bm_size;
+}
+
+
+
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1446,7 +1759,7 @@ int or_ubin_records(struct ubin_file u_file,
 //}}}
 
 //{{{ void parse_cmd_line_int_csv(int *I,
-void parse_cmd_line_int_csv(int *I,
+void parse_cmd_line_int_csv(unsigned int *I,
                             int num_I,
                             char *cmd_line_arg)
 {

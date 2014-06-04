@@ -313,6 +313,48 @@ struct wah_run init_wah_run(unsigned int *words,
 void wah_run_decode(struct wah_run *r);
 
 /**
+ * @brief   AND two WAH runs
+ *
+ * @param x WAH run for
+ * @param y WAH run for
+ * @param O the result of x AND y 
+ *
+ * @retval  The number of elements in O
+ *
+ * @ingroup WAH
+ *
+ * Example Usage:
+ * @code
+ *      unsigned int X[5] = {
+ *          bin_char_to_int("01000000000000000000000000000001"),
+ *          bin_char_to_int("11111111111111111111111111111111"),
+ *          bin_char_to_int("11111111111111111111111111111111"),
+ *          bin_char_to_int("01000000000101010100000000000000"),
+ *          bin_char_to_int("01000000000000000001010101000000")
+ *      };
+ *      unsigned int Y[5] = {
+ *          bin_char_to_int("01000000000000000000000000000001"),
+ *          bin_char_to_int("11111111111111111111111111111111"),
+ *          bin_char_to_int("11111111111111111111111111111000"),
+ *          bin_char_to_int("00000000000000000000000000000000"),
+ *          bin_char_to_int("00000000000000000000000000001011")
+ *      };
+ *      unsigned int *w_X;
+ *      int wah_size_X = ints_to_wah(X,5,&w_X);
+ *      struct wah_run r_X = init_wah_run(w_X, wah_size_X);
+ *      unsigned int *w_Y;
+ *      int wah_size_Y = ints_to_wah(Y,5,&w_Y);
+ *      struct wah_run r_Y = init_wah_run(w_Y, wah_size_Y);
+ *      unsigned int *Z;
+ *      unsigned int Z_len = wah_and(&r_X, &r_Y, &Z);
+ * @endcode
+ */
+unsigned int wah_and(struct wah_run *x,
+                     struct wah_run *y,
+                     unsigned int **O);
+
+
+/**
  * @brief   OR two WAH runs
  *
  * @param x WAH run for
@@ -322,11 +364,36 @@ void wah_run_decode(struct wah_run *r);
  * @retval  The number of elements in O
  *
  * @ingroup WAH
+ *
+ * Example Usage:
+ * @code
+ *      unsigned int X[5] = {
+ *          bin_char_to_int("01000000000000000000000000000001"),
+ *          bin_char_to_int("11111111111111111111111111111111"),
+ *          bin_char_to_int("11111111111111111111111111111111"),
+ *          bin_char_to_int("01000000000101010100000000000000"),
+ *          bin_char_to_int("01000000000000000001010101000000")
+ *      };
+ *      unsigned int Y[5] = {
+ *          bin_char_to_int("01000000000000000000000000000001"),
+ *          bin_char_to_int("11111111111111111111111111111111"),
+ *          bin_char_to_int("11111111111111111111111111111000"),
+ *          bin_char_to_int("00000000000000000000000000000000"),
+ *          bin_char_to_int("00000000000000000000000000001011")
+ *      };
+ *      unsigned int *w_X;
+ *      int wah_size_X = ints_to_wah(X,5,&w_X);
+ *      struct wah_run r_X = init_wah_run(w_X, wah_size_X);
+ *      unsigned int *w_Y;
+ *      int wah_size_Y = ints_to_wah(Y,5,&w_Y);
+ *      struct wah_run r_Y = init_wah_run(w_Y, wah_size_Y);
+ *      unsigned int *Z;
+ *      unsigned int Z_len = wah_or(&r_X, &r_Y, &Z);
+ * @endcode
  */
 unsigned int wah_or(struct wah_run *x,
                     struct wah_run *y,
                     unsigned int **O);
-
 
 /**
  * @brief   A helper function to group ints encoding 32-bits to ones encoding
@@ -588,6 +655,24 @@ unsigned int get_wah_bitmap(struct wah_file wf,
                             unsigned int bitmap,
                             unsigned int **wah_bitmap);
 
+unsigned int gt_records_plt(struct plt_file pf,
+                            unsigned int *record_ids,
+                            unsigned int num_r,
+                            unsigned int test_value,
+                            unsigned int **R);
+
+unsigned int gt_records_ubin(struct ubin_file uf,
+                             unsigned int *record_ids,
+                             unsigned int num_r,
+                             unsigned int test_value,
+                             unsigned int **R);
+
+unsigned int gt_records_wah(struct wah_file pf,
+                            unsigned int *record_ids,
+                            unsigned int num_r,
+                            unsigned int test_value,
+                            unsigned int **R);
+
 ////////////////////////////////////////////////////////////////////////
 
 struct uint_file {
@@ -634,7 +719,7 @@ int or_ubin_fields(struct ubin_file u_file,
                     int *field_ids,
                     unsigned int **r);
 
-void parse_cmd_line_int_csv(int *I,
+void parse_cmd_line_int_csv(unsigned int *I,
                             int num_I,
                             char *cmd_line_arg);
 #endif

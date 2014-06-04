@@ -4,6 +4,33 @@
 #include "unity.h"
 #include <math.h>
 
+/* The itoa code is in the public domain */
+char* itoa(int value, char* str, int radix) {
+    static char dig[] =
+        "0123456789"
+        "abcdefghijklmnopqrstuvwxyz";
+    int n = 0, neg = 0;
+    unsigned int v;
+    char* p, *q;
+    char c;
+    if (radix == 10 && value < 0) {
+        value = -value;
+        neg = 1;
+    }
+    v = value;
+    do {
+        str[n++] = dig[v%radix];
+        v /= radix;
+    } while (v);
+    if (neg)
+        str[n++] = '-';
+    str[n] = '\0';
+    for (p = str, q = p + (n-1); p < q; ++p, --q)
+        c = *p, *p = *q, *q = c;
+    return str;
+}
+
+
 struct plt_file pltf_ind, pltf_var;
 
 int clear_list (struct wah_ll *A_head)
@@ -1365,6 +1392,81 @@ void test_wah_or(void)
 }
 //}}}
 
+//{{{ void test_wah_and(void)
+void test_wah_and(void)
+{
+    /*
+     * X
+     * |--32--------------------------|
+     * 01000000000000000000000000000001
+     * 11111111111111111111111111111111
+     * 11111111111111111111111111111111
+     * 01000000000101010100000000000000
+     * 01000000000000000001010101000000
+     * Y
+     * |--32--------------------------|
+     * 01000000000000000000000000000001
+     * 11111111111111111111111111111111
+     * 11111111111111111111111111111000
+     * 00000000000000000000000000000000
+     * 00000000000000000000000000001011
+     *
+     * Result:
+     * 01000000000000000000000000000001
+     * 11111111111111111111111111111111
+     * 11111111111111111111111111111000
+     * 00000000000000000000000000000000
+     * 00000000000000000000000000000000
+     */
+
+    unsigned int A[5] = 
+        { bin_char_to_int("01000000000000000000000000000001"),
+          bin_char_to_int("11111111111111111111111111111111"),
+          bin_char_to_int("11111111111111111111111111111000"),
+          bin_char_to_int("00000000000000000000000000000000"),
+          bin_char_to_int("00000000000000000000000000000000")
+        };
+ 
+
+    unsigned int X[5] =
+        { bin_char_to_int("01000000000000000000000000000001"),
+          bin_char_to_int("11111111111111111111111111111111"),
+          bin_char_to_int("11111111111111111111111111111111"),
+          bin_char_to_int("01000000000101010100000000000000"),
+          bin_char_to_int("01000000000000000001010101000000")
+        };
+
+    unsigned int Y[5] =
+        { bin_char_to_int("01000000000000000000000000000001"),
+          bin_char_to_int("11111111111111111111111111111111"),
+          bin_char_to_int("11111111111111111111111111111000"),
+          bin_char_to_int("00000000000000000000000000000000"),
+          bin_char_to_int("00000000000000000000000000001011")
+        };
+
+    unsigned int *w_X;
+    int wah_size_X = ints_to_wah(X,5,&w_X);
+    TEST_ASSERT_EQUAL(5, wah_size_X);
+    struct wah_run r_X = init_wah_run(w_X, wah_size_X);
+
+    unsigned int *w_Y;
+    int wah_size_Y = ints_to_wah(Y,5,&w_Y);
+    TEST_ASSERT_EQUAL(4, wah_size_Y);
+    struct wah_run r_Y = init_wah_run(w_Y, wah_size_Y);
+
+    unsigned int *Z;
+    unsigned int Z_len = wah_and(&r_X, &r_Y, &Z);
+
+    unsigned int *ints;
+    unsigned int ints_len = wah_to_ints(Z, Z_len, &ints);
+
+    int i;
+    for (i = 0; i < 5; ++i) 
+        TEST_ASSERT_EQUAL(A[i], ints[i]);
+
+}
+//}}}
+
 //{{{ void test_wah_to_ints(void)
 void test_wah_to_ints(void)
 {
@@ -1878,6 +1980,7 @@ void test_convert_file_ubin_by_name_to_wah(void)
     free(wf.record_offsets);
 }
 //}}}
+
 //{{{ void test_init_wah_file(void)
 void test_init_wah_file(void)
 {
@@ -1978,3 +2081,51 @@ void test_get_wah_bitmap(void)
 }
 //}}}
 
+void test_gt_records_plt_ubin_wah(void)
+{
+    char *plt_file_name="data/10.1e4.ind.txt";
+    char *ubin_file_name="data/10.1e4.ind.ubin";
+    char *wah_file_name="data/10.1e4.ind.wah";
+
+    struct plt_file pf = init_plt_file(plt_file_name);
+    struct ubin_file uf = init_ubin_file(ubin_file_name);
+    struct wah_file wf = init_wah_file(wah_file_name);
+
+    unsigned int test_records[4] = {1,2,3,4};
+
+    unsigned int *pf_R;
+    unsigned int len_pf_R = gt_records_plt(pf, test_records, 4, 0, &pf_R);
+
+    unsigned int *uf_R;
+    unsigned int len_uf_R = gt_records_ubin(uf, test_records, 4, 0, &uf_R);
+
+    unsigned int *wf_R;
+    unsigned int len_wf_R = gt_records_wah(wf, test_records, 4, 0, &wf_R);
+
+    unsigned int *ints;
+    unsigned int ints_size = wah_to_ints(wf_R,len_wf_R,&ints);
+                
+    /*
+     * 1000001110111010100101011110111111010110100
+     * 0000000220222020000202020000020022000000010
+     * 0000000221222021000202010000020022000000000
+     * 1011010110222021000202020010020022000000100
+     *
+     * 0000000110111010000101010000010011000000000
+     *
+     * 00000001101110100001010100000100 -> 28972292
+     * 11000000000                      -> 1536
+     */
+
+    unsigned int A[2] = {28972292,1536};
+    unsigned int shift[2] = {0,21};
+    unsigned int i;
+    for (i = 0; i < 2; ++i)
+        TEST_ASSERT_EQUAL(A[i] , pf_R[i] >> shift[i]);
+
+    for (i = 0; i < 2; ++i)
+        TEST_ASSERT_EQUAL(A[i] , uf_R[i] >> shift[i]);
+
+    for (i = 0; i < 2; ++i)
+        TEST_ASSERT_EQUAL(A[i] , ints[i] >> shift[i]);
+}

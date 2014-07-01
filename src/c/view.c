@@ -80,6 +80,7 @@ int view_ubin(char *in)
 }
 int view_wah(char *in)
 {
+    unsigned int num_printed = print_by_name_wah(in, NULL, 0, 0);
     return 0;
 }
 int view_wahbm(char *in)

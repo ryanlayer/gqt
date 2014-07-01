@@ -1327,6 +1327,33 @@ unsigned int get_wah_bitmap(struct wah_file wf,
 }
 //}}}
 
+//{{{ unsigned int get_wah_record(struct wah_file wf,
+unsigned int get_wah_record(struct wah_file wf,
+                            unsigned int wah_record,
+                            unsigned int **wah)
+{
+    // get the size of the WAH-encoded bitmap
+    unsigned int wah_size = 0, wah_offset = 0;
+    if ( wah_record == 0) {
+        wah_size = wf.record_offsets[wah_record];
+        wah_offset = wf.header_offset;
+    } else {
+        wah_size = wf.record_offsets[wah_record] - 
+                   wf.record_offsets[wah_record - 1];
+
+        wah_offset = wf.header_offset +
+                     sizeof(unsigned int) * 
+                        (wf.record_offsets[wah_record] - wah_size);
+    }
+
+    *wah = (unsigned int *) malloc(sizeof(unsigned int)*wah_size);
+    fseek(wf.file, wah_offset, SEEK_SET);
+    fread(*wah,sizeof(unsigned int),wah_size,wf.file);
+
+    return wah_size;
+}
+//}}}
+
 //{{{ unsigned int gt_records_plt(struct plt_file pf,
 unsigned int gt_records_plt(struct plt_file pf,
                             unsigned int *record_ids,
@@ -1794,8 +1821,72 @@ unsigned int print_by_name_wahbm(char *wahbm_file_name,
 }
 //}}} 
 
+//{{{ unsigned int print_wah(struct ubin_file wf,
+unsigned int print_wah(struct wah_file wf,
+                       unsigned int *record_ids,
+                       unsigned int num_r,
+                       unsigned int format)
+{
+    unsigned int i,j,k,wah_size,printed_bits,to_print = num_r;
+    unsigned int *wah = NULL;
 
+    if (num_r == 0)
+        to_print = wf.num_records;
 
+    for (i = 0; i < to_print; ++i) {
+
+        // get the compressed bitmap
+        if (num_r > 0)
+            wah_size = get_wah_record(wf,
+                                     record_ids[i],
+                                     &wah);
+        else
+            wah_size = get_wah_record(wf,
+                                     i,
+                                     &wah);
+
+        // decompress 
+        unsigned int *ints = NULL;
+        unsigned int ints_size = wah_to_ints(wah,wah_size,&ints);
+        printed_bits = 0;
+
+        for (j = 0; j < ints_size; ++j) {
+            if (j !=0)
+                printf(" ");
+            for (k = 0; k < 16; ++k) {
+                unsigned int val = (ints[j] >> (30 - 2*k)) & 3;
+                if (k !=0)
+                    printf(" ");
+                printf("%u", val);
+                printed_bits += 1;
+                if (printed_bits == wf.num_fields)
+                    break;
+            }
+            if (printed_bits == wf.num_fields)
+                break;
+        }
+        printf("\n");
+
+        free(ints);
+        ints = NULL;
+        free(wah);
+        wah = NULL;
+    }
+
+    return to_print;
+}
+//}}}
+
+//{{{ unsigned int print_by_name_wah(char *wahbm_file_name,
+unsigned int print_by_name_wah(char *wahbm_file_name,
+                               unsigned int *record_ids,
+                               unsigned int num_r,
+                               unsigned int format)
+{
+    struct wah_file wf = init_wah_file(wahbm_file_name);
+    return print_wah(wf, record_ids, num_r, format);
+}
+//}}} 
 
 
 

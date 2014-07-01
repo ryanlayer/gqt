@@ -4,6 +4,8 @@
 #include "unity.h"
 #include <math.h>
 
+//{{{ SETUP
+//{{{ char* itoa(int value, char* str, int radix) {
 /* The itoa code is in the public domain */
 char* itoa(int value, char* str, int radix) {
     static char dig[] =
@@ -29,10 +31,9 @@ char* itoa(int value, char* str, int radix) {
         c = *p, *p = *q, *q = c;
     return str;
 }
+//}}}
 
-
-struct plt_file pltf_ind, pltf_var;
-
+//{{{ int clear_list (struct wah_ll *A_head)
 int clear_list (struct wah_ll *A_head)
 {
     int c = 0;
@@ -46,19 +47,17 @@ int clear_list (struct wah_ll *A_head)
 
     return c;
 }
+//}}}
 
 
 void setUp(void)
 {
-    pltf_ind = init_plt_file("../data/10.1e4.ind.txt");
-    pltf_var = init_plt_file("../data/10.1e4.var.txt");
 }
 
 void tearDown(void)
 {
-    fclose(pltf_ind.file);
-    fclose(pltf_var.file);
 }
+//}}}
 
 //{{{void test_bin_char_to_int(void)
 void test_bin_char_to_int(void)
@@ -87,11 +86,15 @@ void test_bin_char_to_int(void)
 //{{{void test_init_plt_file_num_fields_and_num_records(void)
 void test_init_plt_file_num_fields_and_num_records(void)
 {
+    struct plt_file pltf_ind = init_plt_file("../data/10.1e4.ind.txt");
     TEST_ASSERT_EQUAL(43, pltf_ind.num_fields);
     TEST_ASSERT_EQUAL(10, pltf_ind.num_records);
+    fclose(pltf_ind.file);
 
+    struct plt_file pltf_var = init_plt_file("../data/10.1e4.var.txt");
     TEST_ASSERT_EQUAL(10, pltf_var.num_fields);
     TEST_ASSERT_EQUAL(43, pltf_var.num_records);
+    fclose(pltf_var.file);
 }
 //}}}
 
@@ -100,9 +103,11 @@ void test_or_records_vs_field_or(void)
 {
     int q[4] = {0,1,2,3};
     
+    struct plt_file pltf_var = init_plt_file("../data/10.1e4.var.txt");
     int *R = (int *) calloc(pltf_var.num_fields, sizeof(int));
     int r = or_records_plt(pltf_var, q, 4, R);
 
+    struct plt_file pltf_ind = init_plt_file("../data/10.1e4.ind.txt");
     int *F = (int *) calloc(pltf_ind.num_records, sizeof(int));
     int f = or_fields_plt(pltf_ind, q, 4, F);
 
@@ -124,6 +129,8 @@ void test_or_records_vs_field_or(void)
 
     free(R);
     free(F);
+    fclose(pltf_ind.file);
+    fclose(pltf_var.file);
 }
 //}}}
 
@@ -263,13 +270,16 @@ void test_convert_file_plt_to_ubin(void)
     //char *in_file_name="data/10.1e4.ind.txt";
     char *out_file_name="../data/.tmp";
 
+    struct plt_file pltf_ind = init_plt_file("../data/10.1e4.ind.txt");
     convert_file_plt_to_ubin(pltf_ind, out_file_name);
+    fclose(pltf_ind.file);
 }
 //}}}
 
 //{{{ void test_init_ubin_file(void)
 void test_init_ubin_file(void)
 {
+    struct plt_file pltf_ind = init_plt_file("../data/10.1e4.ind.txt");
     TEST_ASSERT_EQUAL(43, pltf_ind.num_fields);
     TEST_ASSERT_EQUAL(10, pltf_ind.num_records);
 
@@ -283,6 +293,7 @@ void test_init_ubin_file(void)
     fclose(uf_ind.file);
 
 
+    struct plt_file pltf_var = init_plt_file("../data/10.1e4.var.txt");
     TEST_ASSERT_EQUAL(10, pltf_var.num_fields);
     TEST_ASSERT_EQUAL(43, pltf_var.num_records);
 
@@ -294,6 +305,8 @@ void test_init_ubin_file(void)
     TEST_ASSERT_EQUAL(43, uf_var.num_records);
 
     fclose(uf_var.file);
+    fclose(pltf_ind.file);
+    fclose(pltf_var.file);
 }
 //}}} 
 
@@ -386,6 +399,7 @@ void test_or_records_plt_vs_ubin(void)
 {
     int q[4] = {0,1,2,3};
     
+    struct plt_file pltf_var = init_plt_file("../data/10.1e4.var.txt");
     int *plt_or = (int *) calloc(pltf_var.num_fields, sizeof(int));
     int plt_or_size = or_records_plt(pltf_var, q, 4, plt_or);
 
@@ -411,6 +425,7 @@ void test_or_records_plt_vs_ubin(void)
     free(plt_or);
     free(ubin_or);
     free(u);
+    fclose(pltf_var.file);
 }
 //}}}
 
@@ -419,6 +434,7 @@ void test_or_fields_ubin(void)
 {
     int q[4] = {0,1,2,3};
     
+    struct plt_file pltf_var = init_plt_file("../data/10.1e4.var.txt");
     int *plt_or = (int *) calloc(pltf_var.num_records, sizeof(int));
     int plt_or_size = or_fields_plt(pltf_var, q, 4, plt_or);
 
@@ -442,6 +458,7 @@ void test_or_fields_ubin(void)
         TEST_ASSERT_EQUAL(u[i], plt_or[i]);
     }
 
+    fclose(pltf_var.file);
     free(plt_or);
     free(ubin_or);
     free(u);
@@ -1655,7 +1672,6 @@ void test_ubin_to_bitmap(void)
 }
 //}}}
 
-
 //{{{void test_ubin_to_wah(void)
 void test_ubin_to_wah(void)
 {
@@ -1757,7 +1773,6 @@ void test_ubin_to_wah(void)
 
 }
 //}}}
-
 
 //{{{ void test_ubin_to_bitmap_wah(void)
 void test_ubin_to_bitmap_wah(void)
@@ -2007,9 +2022,9 @@ void test_convert_file_by_name_ubin_to_wahbm(void)
 
     char *plt_file_name="../data/10.1e4.ind.txt";
     char *ubin_file_name="../data/10.1e4.ind.ubin";
-    char *wah_file_name="../data/10.1e4.ind.wah";
+    char *wah_file_name="../data/10.1e4.ind.wahbm";
 
-    convert_file_by_name_plt_to_ubin(pltf_ind, ubin_file_name);
+    convert_file_by_name_plt_to_ubin(plt_file_name, ubin_file_name);
     convert_file_by_name_ubin_to_wahbm(ubin_file_name, wah_file_name);
 
     struct wah_file wf = init_wah_file(wah_file_name);
@@ -2051,10 +2066,7 @@ void test_convert_file_by_name_ubin_to_wahbm(void)
                         TEST_ASSERT_EQUAL(1,bit);
                     else
                         TEST_ASSERT_EQUAL(0,bit);
-                    //fprintf(stderr, "%u", bit);
                 }
-
-                //fprintf(stderr, ":%u ", two_bit);
 
                 wah_bit_i += 1;
 
@@ -2085,10 +2097,68 @@ void test_convert_file_by_name_ubin_to_wahbm(void)
 }
 //}}}
 
+//{{{ void test_convert_file_by_name_ubin_to_wah(void)
+void test_convert_file_by_name_ubin_to_wah(void)
+{
+
+    char *plt_file_name="../data/10.1e4.ind.txt";
+    char *ubin_file_name="../data/10.1e4.ind.ubin";
+    char *wah_file_name="../data/10.1e4.ind.wah";
+
+    convert_file_by_name_plt_to_ubin(plt_file_name, ubin_file_name);
+    convert_file_by_name_ubin_to_wah(ubin_file_name, wah_file_name);
+
+    struct wah_file wf = init_wah_file(wah_file_name);
+    struct ubin_file uf = init_ubin_file(ubin_file_name);
+
+    unsigned int field_count,
+                 i,
+                 j,
+                 test_record,
+                 num_ints,
+                 num_wahs,
+                 num_wah_ints;
+
+    unsigned int *ints = NULL, *wahs = NULL, *wah_ints = NULL;
+
+    for (test_record = 0; test_record < 8; ++test_record) {
+        num_ints = get_ubin_record(uf, test_record, &ints);
+        num_wahs = get_wah_record(wf, test_record, &wahs);
+        num_wah_ints = wah_to_ints(wahs, num_wahs, &wah_ints);
+
+        field_count = 0;
+        for (i = 0; i < num_wah_ints; ++i) {
+            for (j = 0; j < 16; ++j) {
+                unsigned int wah_v = (wah_ints[i] >> (30 - 2*j)) & 3;
+                unsigned int ubin_v = (ints[i] >> (30 - 2*j)) & 3;
+
+                TEST_ASSERT_EQUAL(wah_v, ubin_v);
+                field_count += 1;
+                if (field_count == wf.num_fields )
+                    break;
+            }
+            if (field_count == wf.num_fields ) 
+                break;
+        }
+
+        free(ints);
+        free(wahs);
+        free(wah_ints);
+        ints = NULL;
+        wahs = NULL;
+        wah_ints = NULL;
+    }
+
+    fclose(uf.file);
+    fclose(wf.file);
+    free(wf.record_offsets);
+}
+//}}}
+
 //{{{ void test_init_wah_file(void)
 void test_init_wah_file(void)
 {
-    char *wah_file_name="../data/10.1e4.ind.wah";
+    char *wah_file_name="../data/10.1e4.ind.wahbm";
 
     struct wah_file wf = init_wah_file(wah_file_name);
 
@@ -2115,7 +2185,7 @@ void test_init_wah_file(void)
 //{{{void test_get_wah_bitmap(void)
 void test_get_wah_bitmap(void)
 {
-    char *wah_file_name="../data/10.1e4.ind.wah";
+    char *wah_file_name="../data/10.1e4.ind.wahbm";
 
     unsigned int A[8][43] = {
         {2,0,1,1,0,1,1,0,0,0,0,0,0,1,0,0,2,1,0,0,
@@ -2185,12 +2255,87 @@ void test_get_wah_bitmap(void)
 }
 //}}}
 
+//{{{void test_get_wah_record(void)
+void test_get_wah_record(void)
+{
+
+    unsigned int A[8][43] = {
+        {2,0,1,1,0,1,1,0,0,0,0,0,0,1,0,0,2,1,0,0,
+         1,0,1,0,1,1,0,1,1,1,1,1,1,0,1,1,1,1,1,1,
+         0,1,0},
+        {1,0,0,0,0,0,1,1,1,0,1,1,1,0,1,0,1,0,0,1,
+         0,1,0,1,1,1,1,0,1,1,1,1,1,1,0,1,0,1,1,0,
+         1,0,0},
+        {0,0,0,0,0,0,0,2,2,0,2,2,2,0,2,0,0,0,0,2,
+         0,2,0,2,0,0,0,0,0,2,0,0,2,2,0,0,0,0,0,0,
+         0,1,0},
+        {0,0,0,0,0,0,0,2,2,1,2,2,2,0,2,1,0,0,0,2,
+         0,2,0,1,0,0,0,0,0,2,0,0,2,2,0,0,0,0,0,0,
+         0,0,0},
+        {1,0,1,1,0,1,0,1,1,0,2,2,2,0,2,1,0,0,0,2,
+         0,2,0,2,0,0,1,0,0,2,0,0,2,2,0,0,0,0,0,0,
+         1,0,0},
+        {0,0,0,0,0,0,0,2,2,0,2,2,2,0,2,0,0,0,1,2,
+         0,2,0,2,0,0,0,0,0,2,0,0,2,2,0,0,0,0,0,0,
+         0,0,0},
+        {1,0,0,0,2,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,
+         0,0,0,0,0,0,0,0,0,2,0,0,2,2,0,0,0,0,0,0,
+         0,0,0},
+        {0,0,0,0,0,0,0,2,2,2,1,1,1,0,1,1,1,0,0,1,
+         0,1,0,0,1,1,0,0,1,1,1,0,1,0,1,1,1,1,1,0,
+         0,1,1},
+    };
+
+    char *wah_file_name="../data/10.1e4.ind.wah";
+    struct wah_file wf = init_wah_file(wah_file_name);
+
+    TEST_ASSERT_EQUAL(10, wf.num_records);
+    TEST_ASSERT_EQUAL(43, wf.num_fields);
+
+    unsigned int field_count,
+                 i,
+                 j,
+                 test_record,
+                 num_wahs,
+                 num_wah_ints;
+
+    unsigned int *wahs = NULL, *wah_ints = NULL;
+
+    for (test_record = 0; test_record < 8; ++test_record) {
+        num_wahs = get_wah_record(wf, test_record, &wahs);
+        num_wah_ints = wah_to_ints(wahs, num_wahs, &wah_ints);
+
+        field_count = 0;
+        for (i = 0; i < num_wah_ints; ++i) {
+            for (j = 0; j < 16; ++j) {
+                unsigned int wah_v = (wah_ints[i] >> (30 - 2*j)) & 3;
+
+                TEST_ASSERT_EQUAL(A[test_record][field_count], wah_v);
+                field_count += 1;
+                if (field_count == wf.num_fields )
+                    break;
+            }
+            if (field_count == wf.num_fields ) 
+                break;
+        }
+
+        free(wahs);
+        free(wah_ints);
+        wahs = NULL;
+        wah_ints = NULL;
+    }
+
+    fclose(wf.file);
+    free(wf.record_offsets);
+}
+//}}}
+
 //{{{ void test_gt_records_plt_ubin_wah(void)
 void test_gt_records_plt_ubin_wah(void)
 {
     char *plt_file_name="../data/10.1e4.ind.txt";
     char *ubin_file_name="../data/10.1e4.ind.ubin";
-    char *wah_file_name="../data/10.1e4.ind.wah";
+    char *wah_file_name="../data/10.1e4.ind.wahbm";
 
     struct plt_file pf = init_plt_file(plt_file_name);
     struct ubin_file uf = init_ubin_file(ubin_file_name);

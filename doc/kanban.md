@@ -57,18 +57,17 @@
 ### Ryan
 #### Develop
 #### Document
-* WAH
-* plain text
-* uncompressed binary
+#### Verify
+
+## DONE
+* file conversion
+    * plt to ubin
+    * ubin to wah
+    * ubin to wahbm
 * file print
     * plt
     * ubin packed int
     * ubin plt
     * wahbm plt
-* file conversion
-    * plt to ubin
-    * ubin to wah
-    * ubin to wahbm
-#### Verify
+    * wah plt
 
-## DONE

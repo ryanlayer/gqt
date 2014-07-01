@@ -625,19 +625,19 @@ unsigned int convert_file_by_name_ubin_to_wahbm(char *ubin_in, char *wah_out);
 struct wah_file init_wah_file(char *file_name);
 
 /**
- * @brief Get a pointer to the bitmap of a particular WAH-encoded record
+ * @brief Get a pointer to the bitmap of a particular WAH-encoded bitmap record
  *
  * @param wf The WAH file data structure
  * @param wah_record The record ID
  * @param bitmap The bitmap ID (0,1,2, or 3)
  * @param wah_bitmap A pointer set within the fuction that points to the record
- *                   of intrest
+ *                   and bitmap of intrest
  *
  * @retval number of words in the bitmap
  *
  * Example Usage:
  * @code
- *      char *wah_file_name="data/10.1e4.ind.wah";
+ *      char *wah_file_name="data/10.1e4.ind.wahbm";
  *      struct wah_file wf = init_wah_file(wah_file_name);
  *      unsigned int *wah_bm;
  *      unsigned int test_record = 1;
@@ -654,6 +654,33 @@ unsigned int get_wah_bitmap(struct wah_file wf,
                             unsigned int wah_record,
                             unsigned int bitmap,
                             unsigned int **wah_bitmap);
+
+/**
+ * @brief Get a pointer to the bitmap of a particular WAH-encoded record
+ *
+ * @param wf The WAH file data structure
+ * @param wah_record The record ID
+ * @param wah A pointer set within the fuction that points to the record
+ *            of intrest
+ *
+ * @retval number of words in the record
+ *
+ * Example Usage:
+ * @code
+ *      char *wah_file_name="data/10.1e4.ind.wah";
+ *      struct wah_file wf = init_wah_file(wah_file_name);
+ *      unsigned int *wah;
+ *      unsinged int wah_size = get_wah(wf,
+ *                                      test_record,
+ *                                      &wah);
+ *      unsinged int *ints;
+ *      unsigned int num_ints = wah_to_ints(wah, wah_size, &ints);
+ * @endcode
+ */
+unsigned int get_wah_record(struct wah_file wf,
+                            unsigned int wah_record,
+                            unsigned int **wah);
+
 
 unsigned int gt_records_plt(struct plt_file pf,
                             unsigned int *record_ids,
@@ -774,8 +801,6 @@ unsigned int print_by_name_ubin(char *ubin_file_name,
                                unsigned int *record_ids,
                                unsigned int num_r,
                                unsigned int format);
-
-
 /**
  * @brief Print a WAH encoded bitmap file.
  *
@@ -820,6 +845,60 @@ unsigned int print_by_name_wahbm(char *wahbm_file_name,
                                unsigned int *record_ids,
                                unsigned int num_r,
                                unsigned int format);
+
+/**
+ * @brief Print a WAH encoded (non-bitmap) file.
+ *
+ * If num_r > 0, then record_ids should contain the ids of records in the file
+ * that will be displayed, otherwise all records will be displayed.
+ *
+ * @param wf An initilized WAH (non-bitmap) file 
+ * @param record_ids An array of record ids
+ * @param num_r number of records in the array
+ * @param format Output format: 0:plain text
+ *                              1:packed int
+ *                              2:packed int
+ *
+ *
+ * @returnval number of records printed 
+ */
+
+unsigned int print_wah(struct wah_file wf,
+                       unsigned int *record_ids,
+                       unsigned int num_r,
+                       unsigned int format);
+
+/**
+ * @brief Print a WAH encoded (non-bitmap) file (wrapper around print_wah). 
+ *
+ * If num_r > 0, then record_ids should contain the ids of records in the file
+ * that will be displayed, otherwise all records will be displayed.
+ *
+ * @param wf_file_name WAH (non-bitmap) file name
+ * @param record_ids An array of record ids
+ * @param num_r number of records in the array
+ * @param format Output format: 0:plain text
+ *                              1:packed int
+ *                              3:wah
+ *
+ *
+ * @returnval number of records printed 
+ */
+unsigned int print_by_name_wah(char *wahbm_file_name,
+                               unsigned int *record_ids,
+                               unsigned int num_r,
+                               unsigned int format);
+
+
+
+
+
+
+
+
+
+
+
 
 ////////////////////////////////////////////////////////////////////////
 

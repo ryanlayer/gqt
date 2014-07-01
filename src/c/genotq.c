@@ -158,8 +158,8 @@ int *unpack_2_bit_ints(unsigned int packed_ints)
 }
 //}}}
 
-//{{{ void convert_file_plt_by_name_to_ubin(char *in_file_name, 
-int convert_file_plt_by_name_to_ubin(char *in_file_name, char *out_file_name)
+//{{{ void convert_file_by_name_plt_to_ubin(char *in_file_name, 
+int convert_file_by_name_plt_to_ubin(char *in_file_name, char *out_file_name)
 {
     struct plt_file pf = init_plt_file(in_file_name);
     int r = convert_file_plt_to_ubin(pf, out_file_name);
@@ -1126,8 +1126,8 @@ unsigned int plt_to_bitmap_wah(char *plt,
 }
 //}}}
 
-//{{{ unsigned int convert_file_ubin_by_name_to_wah(char *ubin_in, 
-unsigned int convert_file_ubin_by_name_to_wah(char *ubin_in, char *wah_out)
+//{{{ unsigned int convert_file_by_name_ubin_to_wahbm(char *ubin_in, 
+unsigned int convert_file_by_name_ubin_to_wahbm(char *ubin_in, char *wah_out)
 {
     FILE *wf = fopen(wah_out,"wb");
 
@@ -1182,6 +1182,67 @@ unsigned int convert_file_ubin_by_name_to_wah(char *ubin_in, char *wah_out)
         wah_i+=1;
         free(wah);
         free(wah_sizes);
+    }
+
+    free(c);
+
+    fclose(wf);
+    fclose(uf.file);
+    return 0;
+}
+//}}}
+
+//{{{ unsigned int convert_file_by_name_ubin_to_wah(char *ubin_in,
+unsigned int convert_file_by_name_ubin_to_wah(char *ubin_in, char *wah_out)
+{
+    FILE *wf = fopen(wah_out,"wb");
+
+    if (!wf) {
+        printf("Unable to open %s\n", wah_out);
+        return 1;
+    }
+
+    struct ubin_file uf = init_ubin_file(ubin_in);
+
+    //write header for WAH bitmap index file
+    fwrite(&(uf.num_fields), sizeof(int), 1, wf);
+    fwrite(&(uf.num_records), sizeof(int), 1, wf);
+    int zero = 0;
+    int k;
+    for (k = 0; k < uf.num_records*4; ++k)
+        fwrite(&zero, sizeof(int), 1, wf);
+
+    int num_ints_per_record = 1 + ((uf.num_fields - 1) / 16);
+    int num_bytes_per_record = num_ints_per_record * 4;
+
+    unsigned int *c = (unsigned int *)
+        malloc(num_ints_per_record*sizeof(unsigned int));
+
+    int i,j,wah_i = 0, offset_total  = 0;
+
+    // skip to the target record and read in the full record
+    fseek(uf.file, uf.header_offset, SEEK_SET);
+
+    for (i = 0; i < uf.num_records; ++i) {
+        fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
+         
+        unsigned int *wah;
+        unsigned int wah_len = ints_to_wah(c,
+                                           num_ints_per_record,
+                                           &wah);
+
+        fseek(wf,sizeof(unsigned int)* (2+wah_i),  SEEK_SET);
+
+        offset_total += wah_len;
+        fwrite(&offset_total, sizeof(unsigned int), 1, wf);
+
+        fseek(wf,0,SEEK_END);
+        size_t ret = fwrite(wah, sizeof(unsigned int), wah_len, wf);
+        if (ret != wah_len)
+            fprintf(stderr, "ret:%zu != wah_len:%u\n", ret, wah_len);
+
+        wah_i+=1;
+        free(wah);
     }
 
     free(c);
@@ -1377,6 +1438,7 @@ unsigned int gt_records_ubin(struct ubin_file uf,
 }
 //}}}
 
+//{{{ unsigned int gt_records_wah(struct wah_file wf,
 unsigned int gt_records_wah(struct wah_file wf,
                             unsigned int *record_ids,
                             unsigned int num_r,
@@ -1460,6 +1522,287 @@ unsigned int gt_records_wah(struct wah_file wf,
     *R = query_curr_bm;
     return query_curr_bm_size;
 }
+//}}}
+
+//{{{ unsigned int print_plt(struct plt_file pf,
+unsigned int print_plt(struct plt_file pf,
+                       unsigned int *record_ids,
+                       unsigned int num_r)
+{
+    char *line = NULL;
+    size_t len = 0;
+    char *pch;
+    ssize_t read;
+    unsigned int i,j,bit;
+    unsigned int num_printed = 0;
+
+
+    long line_len = pf.num_fields*2*sizeof(char);
+
+    if ( (num_r == 0) || record_ids == NULL ) {
+        while ((read = getline(&line, &len, pf.file)) != -1) {
+            printf("%s", line);
+            num_printed += 1;
+        }
+    } else {
+        for (i = 0; i < num_r; ++i) {
+            fseek(pf.file,
+                  pf.header_offset + line_len*record_ids[i],
+                  SEEK_SET);
+
+            read = getline(&line, &len, pf.file);
+            printf("%s", line);
+            num_printed += 1;
+        }
+    }
+
+    free(line);
+
+    return num_printed;
+}
+//}}}
+
+//{{{unsigned int print_by_name_plt(char *pf_file_name,
+unsigned int print_by_name_plt(char *pf_file_name,
+                               unsigned int *record_ids,
+                               unsigned int num_r)
+{
+    struct plt_file pf = init_plt_file(pf_file_name);
+    return print_plt(pf, record_ids, num_r); 
+
+}
+//}}}
+
+//{{{ unsigned int print_ubin(struct ubin_file uf,
+unsigned int print_ubin(struct ubin_file uf,
+                        unsigned int *record_ids,
+                        unsigned int num_r,
+                        unsigned int format)
+{
+    unsigned int num_ints_per_record = 1 + ((uf.num_fields - 1) / 16);
+    int num_bytes_per_record = num_ints_per_record * 4;
+
+    unsigned int *c = (unsigned int *)
+        malloc(num_ints_per_record*sizeof(unsigned int));
+
+    unsigned int i, j, k, num_printed = 0;
+
+    if ( (num_r == 0) || (record_ids == NULL) ) {
+        while (fread(c,sizeof(unsigned int),num_ints_per_record,uf.file)) {
+            unsigned int printed_bits = 0;
+
+            for (j = 0; j < num_ints_per_record; ++j) {
+                if (j !=0)
+                    printf(" ");
+
+                if (format == 1) {
+                    printf("%u", c[j]);
+                } else if (format == 0) {
+                    for (k = 0; k < 16; ++k) {
+                        unsigned int bit = (c[j] >> (30 - 2*k)) & 3;
+                        if (k !=0)
+                            printf(" ");
+                        printf("%u", bit);
+                        printed_bits += 1;
+                        if (printed_bits == uf.num_fields)
+                            break;
+                    }
+                }
+                num_printed += 1;
+            }
+            printf("\n");
+        }
+    } else {
+        for (i = 0; i < num_r; ++i) {
+            fseek(uf.file, uf.header_offset + 
+                        record_ids[i]*num_bytes_per_record, 
+                        SEEK_SET);
+            fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
+
+            unsigned int printed_bits = 0;
+
+            for (j = 0; j < num_ints_per_record; ++j) {
+                if (j !=0)
+                    printf(" ");
+
+                if (format == 1) {
+                    printf("%u", c[j]);
+                } else if (format == 0) {
+                    for (k = 0; k < 16; ++k) {
+                        unsigned int bit = (c[j] >> (30 - 2*k)) & 3;
+                        if (k !=0)
+                            printf(" ");
+                        printf("%u", bit);
+                        printed_bits += 1;
+                        if (printed_bits == uf.num_fields)
+                            break;
+                    }
+                }
+                num_printed += 1;
+            }
+            printf("\n");
+        }
+    }
+
+    free(c);
+
+    return num_printed;
+}
+//}}}
+
+//{{{ unsigned int print_by_name_ubin(char *ubin_file_name,
+unsigned int print_by_name_ubin(char *ubin_file_name,
+                               unsigned int *record_ids,
+                               unsigned int num_r,
+                               unsigned int format)
+{
+    struct ubin_file uf = init_ubin_file(ubin_file_name);
+    return print_ubin(uf, record_ids, num_r, format);
+}
+//}}} 
+
+//{{{ unsigned int print_wahbm(struct ubin_file wf,
+unsigned int print_wahbm(struct wah_file wf,
+                         unsigned int *record_ids,
+                         unsigned int num_r,
+                         unsigned int format)
+{
+    unsigned int i,j,k,l, bm_size, to_print = num_r;
+    unsigned int *bm = NULL;
+
+    unsigned int num_ints_per_record = 1 + ((wf.num_fields - 1) / 16);
+
+    if (num_r == 0)
+        to_print = wf.num_records;
+
+
+    unsigned int *output_record = (unsigned int *) malloc 
+            (num_ints_per_record * sizeof(unsigned int));
+
+    unsigned int *tmp_record = (unsigned int *) malloc 
+            (num_ints_per_record * sizeof(unsigned int));
+
+    for (i = 0; i < to_print; ++i) {
+
+        memset(output_record, 0, num_ints_per_record * sizeof(unsigned int));
+
+        for (j = 0; j < 4; ++j) {
+            memset(tmp_record, 0, 
+                    num_ints_per_record * sizeof(unsigned int));
+
+            // get the compressed bitmap
+            if (num_r > 0)
+                bm_size = get_wah_bitmap(wf,
+                                         record_ids[i],
+                                         j,
+                                         &bm);
+            else
+                bm_size = get_wah_bitmap(wf,
+                                         i,
+                                         j,
+                                         &bm);
+
+            // decompress 
+            unsigned int *ints = NULL;
+            unsigned int ints_size = wah_to_ints(bm,bm_size,&ints);
+
+
+#if 0
+
+            for (k = 0; k < ints_size; ++k) {
+                if (k !=0)
+                    printf(" ");
+                for (l = 0; l < 32; ++l) {
+                    if (l !=0)
+                        printf(" ");
+                    unsigned int bit = (ints[k] >> (31 - l)) & 1;
+                    printf("%u",bit);
+                    
+                }
+            }
+            printf("\n");
+#endif
+
+
+
+#if 1
+            // loop through each bit, and set the corresponding possition to j
+            // if the bit is one
+            int int_i = 0, bit_i = 0;
+            for (k = 0; k < ints_size; ++k) {
+                for (l = 0; l < 32; ++l) {
+                    unsigned int bit = (ints[k] >> (31 - l)) & 1;
+
+                    if (bit == 1)
+                        tmp_record[int_i] += j << (30 - (bit_i * 2));
+
+                    bit_i += 1;
+                    if (bit_i == 16) {
+                        int_i += 1;
+                        bit_i = 0;
+                    }
+
+                }
+            }
+#endif
+
+            free(bm);
+            free(ints);
+            bm = NULL;
+            ints = NULL;
+
+#if 1
+            for (k = 0; k < num_ints_per_record; ++k) 
+                output_record[k] += tmp_record[k];
+#endif
+        }
+
+#if 1
+        unsigned int printed_bits = 0;
+        for (j = 0; j < num_ints_per_record; ++j) {
+            if (j !=0)
+                printf(" ");
+            for (k = 0; k < 16; ++k) {
+                unsigned int bit = (output_record[j] >> (30 - 2*k)) & 3;
+                if (k !=0)
+                    printf(" ");
+                printf("%u", bit);
+                printed_bits += 1;
+                if (printed_bits == wf.num_fields)
+                    break;
+            }
+        }
+        printf("\n");
+#endif
+    }
+
+    free(tmp_record);
+    free(output_record);
+
+    return to_print;
+}
+//}}}
+
+//{{{ unsigned int print_by_name_wahbm(char *wahbm_file_name,
+unsigned int print_by_name_wahbm(char *wahbm_file_name,
+                               unsigned int *record_ids,
+                               unsigned int num_r,
+                               unsigned int format)
+{
+    struct wah_file wf = init_wah_file(wahbm_file_name);
+    return print_wahbm(wf, record_ids, num_r, format);
+}
+//}}} 
+
+
+
+
+
+
+
+
+
+
 
 
 

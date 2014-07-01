@@ -10,7 +10,8 @@ void usage(char *prog)
         "usage:\t%s<options>\n"
         "\t\t-i\tInput variant or individual uncompressed binary file name\n"
         "\t\t-n\tNumber of records to OR\n"
-        "\t\t-r\tCSV record IDs\n",
+        "\t\t-r\tCSV record IDs\n"
+        "\t\t-q\tQuiet mode\n",
         prog
     );
 }
@@ -24,10 +25,14 @@ int main(int argc, char **argv)
     int num_r;
     int i_is_set = 0,
         r_is_set = 0, 
+        q_is_set = 0, 
         n_is_set = 0; 
 
-    while ((c = getopt (argc, argv, "i:r:n:")) != -1) {
+    while ((c = getopt (argc, argv, "i:r:n:q")) != -1) {
         switch (c) {
+            case 'q':
+                q_is_set = 1;
+                break;
             case 'n':
                 n_is_set = 1;
                 num_r = atoi(optarg);
@@ -72,6 +77,18 @@ int main(int argc, char **argv)
 
     unsigned int *pf_R;
     unsigned int len_pf_R = gt_records_plt(pf, R, num_r, 0, &pf_R);
+
+
+    if (q_is_set == 0) {
+        int i;
+        for(i = 0; i < len_pf_R; ++i) {
+            if (i != 0)
+                printf(" ");
+            printf("%u", pf_R[i]);
+        }
+        printf("\n");
+    }
+
 
     return 0;
 }

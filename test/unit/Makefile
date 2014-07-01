@@ -1,8 +1,8 @@
 #ruby ../auto/generate_test_runner.rb
 UNITY_ROOT=/Users/rl6sf/src/Unity-master
-UNITY_ROOT=../unity
+UNITY_ROOT=./unity
 CC=gcc
-SRC=../c
+SRC=../../src/c/
 TEST_SRC=$(wildcard *.c)
 TEST_NAMES=$(TEST_SRC:.c=)
 PREFIX=Runner_

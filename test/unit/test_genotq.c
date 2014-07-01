@@ -50,8 +50,8 @@ int clear_list (struct wah_ll *A_head)
 
 void setUp(void)
 {
-    pltf_ind = init_plt_file("data/10.1e4.ind.txt");
-    pltf_var = init_plt_file("data/10.1e4.var.txt");
+    pltf_ind = init_plt_file("../data/10.1e4.ind.txt");
+    pltf_var = init_plt_file("../data/10.1e4.var.txt");
 }
 
 void tearDown(void)
@@ -261,7 +261,7 @@ void test_convert_file_plt_to_ubin(void)
 {
 
     //char *in_file_name="data/10.1e4.ind.txt";
-    char *out_file_name="data/.tmp";
+    char *out_file_name="../data/.tmp";
 
     convert_file_plt_to_ubin(pltf_ind, out_file_name);
 }
@@ -273,7 +273,7 @@ void test_init_ubin_file(void)
     TEST_ASSERT_EQUAL(43, pltf_ind.num_fields);
     TEST_ASSERT_EQUAL(10, pltf_ind.num_records);
 
-    char *out_file_name_1="data/.tmp1";
+    char *out_file_name_1="../data/.tmp1";
     convert_file_plt_to_ubin(pltf_ind, out_file_name_1);
 
     struct ubin_file uf_ind = init_ubin_file(out_file_name_1);
@@ -286,7 +286,7 @@ void test_init_ubin_file(void)
     TEST_ASSERT_EQUAL(10, pltf_var.num_fields);
     TEST_ASSERT_EQUAL(43, pltf_var.num_records);
 
-    char *out_file_name_2="data/.tmp2";
+    char *out_file_name_2="../data/.tmp2";
     convert_file_plt_to_ubin(pltf_var, out_file_name_2);
 
     struct ubin_file uf_var = init_ubin_file(out_file_name_2);
@@ -300,7 +300,7 @@ void test_init_ubin_file(void)
 //{{{ void test_get_ubin_record(void)
 void test_get_ubin_record(void)
 {
-    char *ubin_file_name="data/10.1e4.ind.ubin";
+    char *ubin_file_name="../data/10.1e4.ind.ubin";
 
     unsigned int A_0[43] = {2,0,1,1,0,1,1,0,0,0,0,0,0,1,0,0,2,1,0,0,
                             1,0,1,0,1,1,0,1,1,1,1,1,1,0,1,1,1,1,1,1,
@@ -391,7 +391,7 @@ void test_or_records_plt_vs_ubin(void)
 
     TEST_ASSERT_EQUAL(plt_or_size, pltf_var.num_fields);
 
-    char *out_file_name_2="data/.tmp2";
+    char *out_file_name_2="../data/.tmp2";
     convert_file_plt_to_ubin(pltf_var, out_file_name_2);
 
     struct ubin_file uf_var = init_ubin_file(out_file_name_2);
@@ -424,7 +424,7 @@ void test_or_fields_ubin(void)
 
     TEST_ASSERT_EQUAL(plt_or_size, pltf_var.num_records);
 
-    char *out_file_name_2="data/.tmp2";
+    char *out_file_name_2="../data/.tmp2";
     convert_file_plt_to_ubin(pltf_var, out_file_name_2);
 
     struct ubin_file uf_var = init_ubin_file(out_file_name_2);
@@ -1655,8 +1655,112 @@ void test_ubin_to_bitmap(void)
 }
 //}}}
 
-//{{{ void test_ubin_to_wah(void)
+
+//{{{void test_ubin_to_wah(void)
 void test_ubin_to_wah(void)
+{
+    /*
+     * int
+     * 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+     * 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+     * 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+     * 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+     * 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+     * 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+     * 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2
+     * 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2
+     * 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2
+     * 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3
+     * 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3
+     * 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3
+     *
+     * ubin
+     * 00000000000000000000000000000000
+     * 00000000000000000000000000000000
+     * 00000000000000000000000000000000
+     * 01010101010101010101010101010101
+     * 01010101010101010101010101010101
+     * 01010101010101010101010101010101
+     * 10101010101010101010101010101010
+     * 10101010101010101010101010101010
+     * 10101010101010101010101010101010
+     * 11111111111111111111111111111111
+     * 11111111111111111111111111111111
+     * 11111111111111111111111111111111
+     *
+     * wah
+     * |---31------------------------|
+     * 0000000000000000000000000000000
+     * 0000000000000000000000000000000
+     * 0000000000000000000000000000000
+     * 0000101010101010101010101010101
+     * 0101010101010101010101010101010
+     * 1010101010101010101010101010101
+     * 0101011010101010101010101010101
+     * 0101010101010101010101010101010
+     * 1010101010101010101010101010101
+     * 0101010101111111111111111111111
+     * 1111111111111111111111111111111
+     * 1111111111111111111111111111111
+     * 1111111111110000000000000000000
+     *             ^-padding
+     * 10000000000000000000000000000011
+     * 00000101010101010101010101010101
+     * 00101010101010101010101010101010
+     * 01010101010101010101010101010101
+     * 00101011010101010101010101010101
+     * 00101010101010101010101010101010
+     * 01010101010101010101010101010101
+     * 00101010101111111111111111111111
+     * 11000000000000000000000000000010
+     * 01111111111110000000000000000000
+     */
+    char *plt = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 "
+                "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 "
+                "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 "
+                "2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 "
+                "2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 "
+                "2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 "
+                "3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 "
+                "3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 "
+                "3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3";
+    unsigned int A[10] = {
+            bin_char_to_int("10000000000000000000000000000011"),
+            bin_char_to_int("00000101010101010101010101010101"),
+            bin_char_to_int("00101010101010101010101010101010"),
+            bin_char_to_int("01010101010101010101010101010101"),
+            bin_char_to_int("00101011010101010101010101010101"),
+            bin_char_to_int("00101010101010101010101010101010"),
+            bin_char_to_int("01010101010101010101010101010101"),
+            bin_char_to_int("00101010101111111111111111111111"),
+            bin_char_to_int("11000000000000000000000000000010"),
+            bin_char_to_int("01111111111110000000000000000000")
+    };
+
+    unsigned int *ubin;
+    unsigned int ubin_len = plt_line_to_packed_ints(plt, 192, &ubin);
+
+    TEST_ASSERT_EQUAL(12, ubin_len);
+
+    unsigned int *wah;
+    unsigned int wah_len = ints_to_wah(ubin, ubin_len, &wah);
+
+    TEST_ASSERT_EQUAL(10, wah_len);
+
+    int i;
+    for (i = 0; i < wah_len; ++i)
+        TEST_ASSERT_EQUAL(A[i], wah[i]);
+
+
+}
+//}}}
+
+
+//{{{ void test_ubin_to_bitmap_wah(void)
+void test_ubin_to_bitmap_wah(void)
 {
     /*
      * int
@@ -1897,16 +2001,16 @@ void test_plt_to_bitmap_wah(void)
 }
 //}}}
 
-//{{{ void test_convert_file_ubin_by_name_to_wah(void)
-void test_convert_file_ubin_by_name_to_wah(void)
+//{{{ void test_convert_file_by_name_ubin_to_wahbm(void)
+void test_convert_file_by_name_ubin_to_wahbm(void)
 {
 
-    char *plt_file_name="data/10.1e4.ind.txt";
-    char *ubin_file_name="data/10.1e4.ind.ubin";
-    char *wah_file_name="data/10.1e4.ind.wah";
+    char *plt_file_name="../data/10.1e4.ind.txt";
+    char *ubin_file_name="../data/10.1e4.ind.ubin";
+    char *wah_file_name="../data/10.1e4.ind.wah";
 
-    convert_file_plt_to_ubin(pltf_ind, ubin_file_name);
-    convert_file_ubin_by_name_to_wah(ubin_file_name, wah_file_name);
+    convert_file_by_name_plt_to_ubin(pltf_ind, ubin_file_name);
+    convert_file_by_name_ubin_to_wahbm(ubin_file_name, wah_file_name);
 
     struct wah_file wf = init_wah_file(wah_file_name);
     struct ubin_file uf = init_ubin_file(ubin_file_name);
@@ -1984,7 +2088,7 @@ void test_convert_file_ubin_by_name_to_wah(void)
 //{{{ void test_init_wah_file(void)
 void test_init_wah_file(void)
 {
-    char *wah_file_name="data/10.1e4.ind.wah";
+    char *wah_file_name="../data/10.1e4.ind.wah";
 
     struct wah_file wf = init_wah_file(wah_file_name);
 
@@ -2011,7 +2115,7 @@ void test_init_wah_file(void)
 //{{{void test_get_wah_bitmap(void)
 void test_get_wah_bitmap(void)
 {
-    char *wah_file_name="data/10.1e4.ind.wah";
+    char *wah_file_name="../data/10.1e4.ind.wah";
 
     unsigned int A[8][43] = {
         {2,0,1,1,0,1,1,0,0,0,0,0,0,1,0,0,2,1,0,0,
@@ -2081,11 +2185,12 @@ void test_get_wah_bitmap(void)
 }
 //}}}
 
+//{{{ void test_gt_records_plt_ubin_wah(void)
 void test_gt_records_plt_ubin_wah(void)
 {
-    char *plt_file_name="data/10.1e4.ind.txt";
-    char *ubin_file_name="data/10.1e4.ind.ubin";
-    char *wah_file_name="data/10.1e4.ind.wah";
+    char *plt_file_name="../data/10.1e4.ind.txt";
+    char *ubin_file_name="../data/10.1e4.ind.ubin";
+    char *wah_file_name="../data/10.1e4.ind.wah";
 
     struct plt_file pf = init_plt_file(plt_file_name);
     struct ubin_file uf = init_ubin_file(ubin_file_name);
@@ -2129,3 +2234,4 @@ void test_gt_records_plt_ubin_wah(void)
     for (i = 0; i < 2; ++i)
         TEST_ASSERT_EQUAL(A[i] , ints[i] >> shift[i]);
 }
+//}}}

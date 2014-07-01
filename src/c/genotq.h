@@ -78,10 +78,10 @@ int *unpack_2_bit_ints(unsigned int packed_ints);
  *     char *plt_file_name="data/10.1e4.ind.txt";
  *     char *ubin_file_name="data/10.1e4.ind.ubin";
  *
- *     int r = convert_file_plt_by_name_to_ubin(plt_file_name,ubin_file_name);
+ *     int r = convert_file_by_name_plt_to_ubin(plt_file_name,ubin_file_name);
  * @endcode
  */
-int convert_file_plt_by_name_to_ubin(char *in_file_name, char *out_file_name);
+int convert_file_by_name_plt_to_ubin(char *in_file_name, char *out_file_name);
 
 /**
  * @brief Convert a plain text file to an uncompressed binary file
@@ -596,11 +596,11 @@ unsigned int plt_to_bitmap_wah(char *plt,
  *      char *ubin_file_name="data/10.1e4.ind.ubin";
  *      char *wah_file_name="data/10.1e4.ind.wah";
  *
- *      convert_file_plt_by_name_to_ubin(plt_file_name, ubin_file_name);
- *      convert_file_ubin_by_name_to_wah(ubin_file_name, wah_file_name);
+ *      convert_file_by_name_plt_to_ubin(plt_file_name, ubin_file_name);
+ *      convert_file_by_name_ubin_to_wahbm(ubin_file_name, wah_file_name);
  * @endcode
  */
-unsigned int convert_file_ubin_by_name_to_wah(char *ubin_in, char *wah_out);
+unsigned int convert_file_by_name_ubin_to_wahbm(char *ubin_in, char *wah_out);
 
 
 /**
@@ -672,6 +672,154 @@ unsigned int gt_records_wah(struct wah_file pf,
                             unsigned int num_r,
                             unsigned int test_value,
                             unsigned int **R);
+
+/**
+ * @brief convert an uncompressed binary file using WAH (no bitmaps)
+ *
+ * A WAH file is: 
+ * number of fields (32-bit)
+ * number of records (32-bit)
+ * Record offsets (number of records * 32-bit)
+ * 1st record 
+ * 2nd record 
+ * ...
+ *
+ * @param ubin_in uncompressed binary file name
+ * @param wah_out WAH encoded ubin file
+ *
+ * @retval 0 if everything went right
+ * @retval 1 otherwise
+ *
+ * @code
+ *      char *plt_file_name="data/10.1e4.ind.txt";
+ *      char *ubin_file_name="data/10.1e4.ind.ubin";
+ *      char *wah_file_name="data/10.1e4.ind.wah";
+ *
+ *      convert_file_by_name_plt_to_ubin(plt_file_name, ubin_file_name);
+ *      convert_file_by_name_ubin_to_wah(ubin_file_name, wah_file_name);
+ * @endcode
+ */
+unsigned int convert_file_by_name_ubin_to_wah(char *ubin_in, char *wah_out);
+
+
+/**
+ * @brief Print a plaint text file.
+ *
+ * If num_r > 0, then record_ids should contain the ids of records in the file
+ * that will be displayed, otherwise all records will be displayed.
+ *
+ * @param pf An intitialized plaint text file
+ * @param record_ids An array of record ids
+ * @param num_r number of records in the array
+ *
+ * @returnval number of records printed 
+ */
+unsigned int print_plt(struct plt_file pf,
+                       unsigned int *record_ids,
+                       unsigned int num_r);
+
+/**
+ * @brief Print plain text file (wrapper around print_plt). 
+ *
+ * If num_r > 0, then record_ids should contain the ids of records in the file
+ * that will be displayed, otherwise all records will be displayed.
+ *
+ * @param pf_file_name Plain text file name
+ * @param record_ids An array of record ids
+ * @param num_r number of records in the array
+ *
+ * @returnval number of records printed 
+ */
+unsigned int print_by_name_plt(char *pf_file_name,
+                               unsigned int *record_ids,
+                               unsigned int num_r);
+
+
+/**
+ * @brief Print an uncompressed binary file.
+ *
+ * If num_r > 0, then record_ids should contain the ids of records in the file
+ * that will be displayed, otherwise all records will be displayed.
+ *
+ * @param uf An intitialized uncompressed binary file
+ * @param record_ids An array of record ids
+ * @param num_r number of records in the array
+ * @param format Output format: 0:plain text
+ *                              1:packed int
+ *
+ * @returnval number of records printed 
+ */
+unsigned int print_ubin(struct ubin_file uf,
+                        unsigned int *record_ids,
+                        unsigned int num_r,
+                        unsigned int format);
+
+
+/**
+ * @brief Print uncompressed binary file (wrapper around print_ubin). 
+ *
+ * If num_r > 0, then record_ids should contain the ids of records in the file
+ * that will be displayed, otherwise all records will be displayed.
+ *
+ * @param uf_file_name Uncompressed binary file name
+ * @param record_ids An array of record ids
+ * @param num_r number of records in the array
+ * @param format Output format: 0:plain text
+ *                              1:packed int
+ *
+ *
+ * @returnval number of records printed 
+ */
+unsigned int print_by_name_ubin(char *ubin_file_name,
+                               unsigned int *record_ids,
+                               unsigned int num_r,
+                               unsigned int format);
+
+
+/**
+ * @brief Print a WAH encoded bitmap file.
+ *
+ * If num_r > 0, then record_ids should contain the ids of records in the file
+ * that will be displayed, otherwise all records will be displayed.
+ *
+ * @param wf An initilized WAH bitmap file 
+ * @param record_ids An array of record ids
+ * @param num_r number of records in the array
+ * @param format Output format: 0:plain text
+ *                              1:packed int
+ *                              2:packed int
+ *
+ *
+ * @returnval number of records printed 
+ */
+
+unsigned int print_wahbm(struct wah_file wf,
+                        unsigned int *record_ids,
+                        unsigned int num_r,
+                        unsigned int format);
+
+/**
+ * @brief Print a WAH encoded bitmap file (wrapper around print_wahbm). 
+ *
+ * If num_r > 0, then record_ids should contain the ids of records in the file
+ * that will be displayed, otherwise all records will be displayed.
+ *
+ * @param wf_file_name WAH bitmap file name
+ * @param record_ids An array of record ids
+ * @param num_r number of records in the array
+ * @param format Output format: 0:plain text
+ *                              1:packed int
+ *                              2:bm plain text
+ *                              3:bm packed int
+ *                              4:bm wah
+ *
+ *
+ * @returnval number of records printed 
+ */
+unsigned int print_by_name_wahbm(char *wahbm_file_name,
+                               unsigned int *record_ids,
+                               unsigned int num_r,
+                               unsigned int format);
 
 ////////////////////////////////////////////////////////////////////////
 

@@ -53,7 +53,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    int r = convert_file_ubin_by_name_to_wah(in_file_name, out_file_name);
+    int r = convert_file_by_name_ubin_to_wahbm(in_file_name, out_file_name);
     
     if (r == 0)
         return 0;

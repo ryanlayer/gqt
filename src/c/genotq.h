@@ -63,6 +63,27 @@ unsigned int pack_2_bit_ints(int *ints, int num_ints);
 
 int *unpack_2_bit_ints(unsigned int packed_ints);
 
+int *unpack_1_bit_ints(unsigned int packed_ints);
+
+/**
+ * @brief Convert a VCF file to a by-variant plain text file
+ *
+ * @param in_file_name VCF file name
+ * @param num_fields Number of fields in the VCF
+ * @param num_records Number of records in the VCF
+ * @param out_file_name plain text file name
+ *
+ * @retval 0 if things worked
+ * @retval 1 otherwise
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+int convert_file_by_name_vcf_to_plt(char *in_file_name,
+                                    unsigned int num_fields,
+                                    unsigned int num_records,
+                                    char *out_file_name);
 
 /**
  * @brief Convert a plain text file to an uncompressed binary file
@@ -105,7 +126,7 @@ int convert_file_by_name_plt_to_ubin(char *in_file_name, char *out_file_name);
 int convert_file_plt_to_ubin(struct plt_file pf, char *out_file_name);
 
 unsigned int plt_line_to_packed_ints(char *line,
-                                     int num_fields, 
+                                     unsigned int num_fields, 
                                      unsigned int **packed_ints);
 
 int or_records_ubin(struct ubin_file uf, 
@@ -163,6 +184,7 @@ unsigned int ints_to_rle(unsigned int *I, int I_len, unsigned int **O);
  *
  * @param I         An array of 32-bit itergers that enocde a binary string
  * @param I_len     The number of intergers in I
+ * @param used_bits The number of used bits (size minus padding)
  * @param W         The resulting array of WAH words (memory allocted in 
  *                  function, value set in function)
  *
@@ -180,11 +202,12 @@ unsigned int ints_to_rle(unsigned int *I, int I_len, unsigned int **O);
  *            bin_char_to_int("01000000000000000001010101000000")
  *          };
  *      unsigned int *w_X;
- *      unsigned int wah_size_X = ints_to_wah(X,5,&w_X);
+ *      unsigned int wah_size_X = ints_to_wah(X,5,160,&w_X);
  * @endcode
  */
 unsigned int ints_to_wah(unsigned int *I,
                          int I_len,
+                         unsigned int used_bits,
                          unsigned int **W);
 
 /**
@@ -282,7 +305,7 @@ int append_fill_word(struct wah_ll **A_head,
  *              };
  *
  *      unsigned int *w_X;
- *      unsigned int wah_size_X = ints_to_wah(X,5,&w_X);
+ *      unsigned int wah_size_X = ints_to_wah(X,5,160,&w_X);
  *      struct wah_run r_X = init_wah_run(w_X, wah_size_X); 
  * @endcode
  */
@@ -305,7 +328,7 @@ struct wah_run init_wah_run(unsigned int *words,
  * @code
  *      unsigned int I[5] = {2147483648,0,0,3,1};
  *      unsigned int *O;
- *      unsigned int wah_size = ints_to_wah(I,5,&O);
+ *      unsigned int wah_size = ints_to_wah(I,5,160,&O);
  *      struct wah_run r = init_wah_run(O, wah_size);
  *      wah_run_decode(&r);
  * @endcode
@@ -340,10 +363,10 @@ void wah_run_decode(struct wah_run *r);
  *          bin_char_to_int("00000000000000000000000000001011")
  *      };
  *      unsigned int *w_X;
- *      int wah_size_X = ints_to_wah(X,5,&w_X);
+ *      int wah_size_X = ints_to_wah(X,5,160,&w_X);
  *      struct wah_run r_X = init_wah_run(w_X, wah_size_X);
  *      unsigned int *w_Y;
- *      int wah_size_Y = ints_to_wah(Y,5,&w_Y);
+ *      int wah_size_Y = ints_to_wah(Y,5,160,&w_Y);
  *      struct wah_run r_Y = init_wah_run(w_Y, wah_size_Y);
  *      unsigned int *Z;
  *      unsigned int Z_len = wah_and(&r_X, &r_Y, &Z);
@@ -382,10 +405,10 @@ unsigned int wah_and(struct wah_run *x,
  *          bin_char_to_int("00000000000000000000000000001011")
  *      };
  *      unsigned int *w_X;
- *      int wah_size_X = ints_to_wah(X,5,&w_X);
+ *      int wah_size_X = ints_to_wah(X,5,160,&w_X);
  *      struct wah_run r_X = init_wah_run(w_X, wah_size_X);
  *      unsigned int *w_Y;
- *      int wah_size_Y = ints_to_wah(Y,5,&w_Y);
+ *      int wah_size_Y = ints_to_wah(Y,5,160,&w_Y);
  *      struct wah_run r_Y = init_wah_run(w_Y, wah_size_Y);
  *      unsigned int *Z;
  *      unsigned int Z_len = wah_or(&r_X, &r_Y, &Z);
@@ -401,6 +424,7 @@ unsigned int wah_or(struct wah_run *x,
  *
  * @param I         An array of ints encoding 32-bits
  * @param I_len     Number of elements in I
+ * @param used_bits Then number of bits used (size minus padding)
  * @param O         The same bits from I, but encoded in 31-bit groups
  *
  * @ingroup WAH
@@ -412,11 +436,12 @@ unsigned int wah_or(struct wah_run *x,
  *      unsigned int A[6] = {1073741824, 0, 0, 0, 402653184, 67108864};
  *      unsigned int *O;
  *      int l;
- *      int num_31_groups = map_from_32_bits_to_31_bits(I,5,&O,&l);
+ *      int num_31_groups = map_from_32_bits_to_31_bits(I,5,160,&O,&l);
  * @endcode
  */
 unsigned int map_from_32_bits_to_31_bits(unsigned int *I,
                                          int I_len,
+                                         unsigned int used_bits,
                                          unsigned int **O);
 
 /**
@@ -436,7 +461,7 @@ unsigned int map_from_32_bits_to_31_bits(unsigned int *I,
  * @code
  *     unsigned int I[5] = {2147483648,0,0,3,1};
  *     unsigned int *WAH;
- *     unsigned int wah_size = ints_to_wah(I,5,&WAH);
+ *     unsigned int wah_size = ints_to_wah(I,5,160,&WAH);
  *     unsigned int *INTS;
  *     unsigned int ints_size = wah_to_ints(WAH,wah_size,&INTS);
  * @endcode
@@ -447,15 +472,16 @@ unsigned int wah_to_ints(unsigned int *W,
 
 /**
  * @brief Convert an array of uncompressed binary values to a bitmap index of
- *        the values
+ *        the values.
  *
  * @param U Uncompressed 2-bit binary values encoded in an array of integers
  * @param U_len Unumber of integers in U
+ * @param used_bits Number of bits in U that are used
  * @param B Resulting bitmap index where the index for value 0 starts at
  *          position 0 and the index for value 1 starts at position N, value 2
  *          at N*2, etc. Where U encodeds N (U_len*16) 2-bit values
  * 
- * @retval size total number of elements in B, where there bitmap index for each
+ * @retval size total number of elements in B, where the bitmap index for each
  *         value uses 1/4 of the size
  *
  * Example Usage:
@@ -467,11 +493,12 @@ unsigned int wah_to_ints(unsigned int *W,
  *              bin_char_to_int("11111111111111111111111111111111")
  *      };
  *      unsigned int *B;
- *      unsigned int B_len = ubin_to_bitmap(U1,4,u,&B);
+ *      unsigned int B_len = ubin_to_bitmap(U1,4,128,u,&B);
  * @endcode
  */
 unsigned int  ubin_to_bitmap(unsigned int *U,
                              unsigned int U_len,
+                             unsigned int used_bits,
                              unsigned int **B);
 
 
@@ -486,6 +513,7 @@ unsigned int  ubin_to_bitmap(unsigned int *U,
  * @param U         Uncompressed 2-bit binary values encoded in an array of
  *                  integers
  * @param U_len     Unumber of integers in U
+ * @param num_fields    The number of fields
  * @param W         The resulting array of WAH words (memory allocted in 
  *                  function, value set in function)
  * @param wah_sizes A list of the 4 sizes 
@@ -516,12 +544,14 @@ unsigned int  ubin_to_bitmap(unsigned int *U,
  *    unsigned int *wah_sizes;
  *    unsigned int wah_len = ubin_to_bitmap_wah(ubin,
  *                                              ubin_len,
+ *                                              192,
  *                                              &wah,
  *                                              &wah_sizes);
  * @endcode
  */
 unsigned int ubin_to_bitmap_wah(unsigned int *U,
                                 unsigned int U_len,
+                                unsigned int num_fields,
                                 unsigned int **W,
                                 unsigned int **wah_sizes);
 /**
@@ -532,11 +562,11 @@ unsigned int ubin_to_bitmap_wah(unsigned int *U,
  *  In this scheme, there are 4 uniq values in plain text (0,1,2,3), so the WAH
  *  encoding will create 4 different sets, one for each bitmap index
  *
- * @param P         Space-seperated string of 0,1,2, or 3
- * @param P_len     Number of digits in P
+ * @param plt         Space-seperated string of 0,1,2, or 3
+ * @param plt_len     Number of digits in P
  * @param W         The resulting array of WAH words (memory allocted in 
  *                  function, value set in function)
- * @param offsets   A list the 4 sizes
+ * @param wah_sizes   A list the 4 sizes
  *
  * @retval number of ints in W
  *
@@ -602,7 +632,6 @@ unsigned int plt_to_bitmap_wah(char *plt,
  */
 unsigned int convert_file_by_name_ubin_to_wahbm(char *ubin_in, char *wah_out);
 
-
 /**
  * @brief Open a WAH-encoded bitmap index and initialize the wah_file data
  * structure.
@@ -611,6 +640,27 @@ unsigned int convert_file_by_name_ubin_to_wahbm(char *ubin_in, char *wah_out);
  * array of offsets of the different WAH bitmaps, and an offset of the first
  * bitmap.  Memory is allocated for the bitmap offsets within this function and
  * must be freed when its use is complete ( free(wf.record_offsets))
+ *
+ * @param file_name The name of the WAH file
+ *
+ * @retval WAH data strucutre.
+ *
+ * Example Usage:
+ * @code
+ *      char *wah_file_name="data/10.1e4.ind.wah";
+ *      struct wah_file wf = init_wah_file(wah_file_name);
+ * @endcode
+ */
+struct wah_file init_wahbm_file(char *file_name);
+
+/**
+ * @brief Open a WAH-encoded (non-bitmap) index and initialize the wah_file
+ * data structure.
+ *
+ * The WAH data structure includes the number of fields, number of records, an
+ * array of offsets of the different WAH Memory is allocated for the bitmap
+ * offsets within this function and must be freed when its use is complete (
+ * free(wf.record_offsets))
  *
  * @param file_name The name of the WAH file
  *
@@ -680,6 +730,30 @@ unsigned int get_wah_bitmap(struct wah_file wf,
 unsigned int get_wah_record(struct wah_file wf,
                             unsigned int wah_record,
                             unsigned int **wah);
+/**
+ * @brief Get a pointer to the packed int representation of a particular plain
+ * text record
+ *
+ * @param pf The initialized plain text file data structure
+ * @param plt_record The record ID
+ * @param plt A pointer set within the fuction that points to the record
+ *            of intrest
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ *      char *plt_file_name="data/10.1e4.ind.txt";
+ *      struct plt_file pf = init_wah_file(plt_file_name);
+ *      unsigned int *plt;
+ *      unsinged int plt_size = get_plt_record(pf,
+ *                                             test_record,
+ *                                             &plt);
+ * @endcode
+ */
+unsigned int get_plt_record(struct plt_file pf,
+                            unsigned int plt_record,
+                            unsigned int **plt);
 
 
 unsigned int gt_records_plt(struct plt_file pf,
@@ -694,11 +768,11 @@ unsigned int gt_records_ubin(struct ubin_file uf,
                              unsigned int test_value,
                              unsigned int **R);
 
-unsigned int gt_records_wah(struct wah_file pf,
-                            unsigned int *record_ids,
-                            unsigned int num_r,
-                            unsigned int test_value,
-                            unsigned int **R);
+unsigned int gt_records_wahbm(struct wah_file pf,
+                              unsigned int *record_ids,
+                              unsigned int num_r,
+                              unsigned int test_value,
+                              unsigned int **R);
 
 /**
  * @brief convert an uncompressed binary file using WAH (no bitmaps)
@@ -739,7 +813,7 @@ unsigned int convert_file_by_name_ubin_to_wah(char *ubin_in, char *wah_out);
  * @param record_ids An array of record ids
  * @param num_r number of records in the array
  *
- * @returnval number of records printed 
+ * @retval number of records printed 
  */
 unsigned int print_plt(struct plt_file pf,
                        unsigned int *record_ids,
@@ -755,7 +829,7 @@ unsigned int print_plt(struct plt_file pf,
  * @param record_ids An array of record ids
  * @param num_r number of records in the array
  *
- * @returnval number of records printed 
+ * @retval number of records printed 
  */
 unsigned int print_by_name_plt(char *pf_file_name,
                                unsigned int *record_ids,
@@ -774,7 +848,7 @@ unsigned int print_by_name_plt(char *pf_file_name,
  * @param format Output format: 0:plain text
  *                              1:packed int
  *
- * @returnval number of records printed 
+ * @retval number of records printed 
  */
 unsigned int print_ubin(struct ubin_file uf,
                         unsigned int *record_ids,
@@ -788,14 +862,14 @@ unsigned int print_ubin(struct ubin_file uf,
  * If num_r > 0, then record_ids should contain the ids of records in the file
  * that will be displayed, otherwise all records will be displayed.
  *
- * @param uf_file_name Uncompressed binary file name
+ * @param ubin_file_name Uncompressed binary file name
  * @param record_ids An array of record ids
  * @param num_r number of records in the array
  * @param format Output format: 0:plain text
  *                              1:packed int
  *
  *
- * @returnval number of records printed 
+ * @retval number of records printed 
  */
 unsigned int print_by_name_ubin(char *ubin_file_name,
                                unsigned int *record_ids,
@@ -815,7 +889,7 @@ unsigned int print_by_name_ubin(char *ubin_file_name,
  *                              2:packed int
  *
  *
- * @returnval number of records printed 
+ * @retval number of records printed 
  */
 
 unsigned int print_wahbm(struct wah_file wf,
@@ -829,7 +903,7 @@ unsigned int print_wahbm(struct wah_file wf,
  * If num_r > 0, then record_ids should contain the ids of records in the file
  * that will be displayed, otherwise all records will be displayed.
  *
- * @param wf_file_name WAH bitmap file name
+ * @param wahbm_file_name WAH bitmap file name
  * @param record_ids An array of record ids
  * @param num_r number of records in the array
  * @param format Output format: 0:plain text
@@ -839,7 +913,7 @@ unsigned int print_wahbm(struct wah_file wf,
  *                              4:bm wah
  *
  *
- * @returnval number of records printed 
+ * @retval number of records printed 
  */
 unsigned int print_by_name_wahbm(char *wahbm_file_name,
                                unsigned int *record_ids,
@@ -860,7 +934,7 @@ unsigned int print_by_name_wahbm(char *wahbm_file_name,
  *                              2:packed int
  *
  *
- * @returnval number of records printed 
+ * @retval number of records printed 
  */
 
 unsigned int print_wah(struct wah_file wf,
@@ -874,7 +948,7 @@ unsigned int print_wah(struct wah_file wf,
  * If num_r > 0, then record_ids should contain the ids of records in the file
  * that will be displayed, otherwise all records will be displayed.
  *
- * @param wf_file_name WAH (non-bitmap) file name
+ * @param wahbm_file_name WAH (non-bitmap) file name
  * @param record_ids An array of record ids
  * @param num_r number of records in the array
  * @param format Output format: 0:plain text
@@ -882,7 +956,7 @@ unsigned int print_wah(struct wah_file wf,
  *                              3:wah
  *
  *
- * @returnval number of records printed 
+ * @retval number of records printed 
  */
 unsigned int print_by_name_wah(char *wahbm_file_name,
                                unsigned int *record_ids,

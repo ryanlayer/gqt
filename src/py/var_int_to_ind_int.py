@@ -34,4 +34,3 @@ for l in f:
 
 for i in I:
     print ' '.join(i)
-

@@ -27,15 +27,17 @@
     * vcf
     * bcf
 
+
 * Funcitonal Tests
-    * WAH
-        * Convert to WAH
+    * Convert to WAH
     * RLE
     * plain text
     * grabix
     * uncompressed binary
     * vcf
     * bcf
+
+* invert major from (records -> fields/ fiels -> records)
 
 ### Improvements
 
@@ -50,12 +52,14 @@
     * This may be a very good GPU target
 
 ## QUEUE
+
 * grabix
 
 ## IN PROGRESS
 
 ### Ryan
 #### Develop
+* greater than query
 #### Document
 #### Verify
 
@@ -64,10 +68,10 @@
     * plt to ubin
     * ubin to wah
     * ubin to wahbm
+    * vcf to plt
 * file print
     * plt
     * ubin packed int
     * ubin plt
     * wahbm plt
     * wah plt
-

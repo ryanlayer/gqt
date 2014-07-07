@@ -76,7 +76,7 @@ int main(int argc, char **argv)
     struct wah_file wf = init_wah_file(in_file_name);
 
     unsigned int *wf_R;
-    unsigned int len_wf_R = gt_records_wah(wf, R, num_r, 0, &wf_R);
+    unsigned int len_wf_R = gt_records_wahbm(wf, R, num_r, 0, &wf_R);
 
     if (q_is_set == 0) {
     }

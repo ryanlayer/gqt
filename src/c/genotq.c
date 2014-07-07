@@ -145,6 +145,19 @@ unsigned int pack_2_bit_ints(int *ints, int num_ints)
 }
 //}}}
 
+//{{{unsigned int *unpack_1_bit_ints(int packed_int)
+int *unpack_1_bit_ints(unsigned int packed_ints)
+{
+    int *r = (int *) malloc (16*sizeof(int));
+
+    int i;
+    for (i = 0; i < 32; ++i) 
+        r[i] = (packed_ints >> (31 - i)) & 1;
+    
+    return r;
+}
+//}}}
+
 //{{{unsigned int *unpack_2_bit_ints(int packed_int)
 int *unpack_2_bit_ints(unsigned int packed_ints)
 {
@@ -155,6 +168,77 @@ int *unpack_2_bit_ints(unsigned int packed_ints)
         r[i] = (packed_ints >> (30 - i*2)) & 3;
     
     return r;
+}
+//}}}
+
+//{{{int convert_file_by_name_vcf_to_plt(char *in_file_name, char
+int convert_file_by_name_vcf_to_plt(char *in_file_name,
+                                    unsigned int num_fields,
+                                    unsigned int num_records,
+                                    char *out_file_name)
+{
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t read;
+    char *pch;
+    int gt;
+
+    FILE *i_file = fopen(in_file_name, "r");
+    if (!i_file) {
+        fprintf(stderr, "Unable to open %s\n",in_file_name);
+        return 1;
+    }
+
+    FILE *o_file = fopen(out_file_name, "w");
+    if (!o_file) {
+        fprintf(stderr, "Unable to open %s\n",out_file_name);
+        return 1;
+    }
+
+
+    fprintf(o_file, "%u\n%u\n", num_fields, num_records);
+
+    while ((read = getline(&line, &len, i_file)) != -1) {
+        if (line[0] != '#') {
+
+            // Skip the first 9 fields
+            
+            int i;
+            pch = strtok(line, "\t");
+            for  (i =0; i < 8; ++i) {
+                pch = strtok(NULL, "\t");
+            }
+            
+            // get the first genotype
+            pch = strtok(NULL, "\t");
+            i = 0;
+            while (pch != NULL) {
+                if ((pch[0] == '0') && (pch[2] == '0'))
+                    gt = 0;
+                else if ((pch[0] == '1') && (pch[2] == '0'))
+                    gt = 1;
+                else if ((pch[0] == '0') && (pch[2] == '1'))
+                    gt = 1;
+                else if ((pch[0] == '1') && (pch[2] == '1'))
+                    gt = 2;
+                else
+                    gt = 3;
+
+                if (i != 0)
+                    fprintf(o_file, " ");
+
+                fprintf(o_file, "%d", gt);
+                pch = strtok(NULL, "\t");
+                i+=1;
+            }
+            fprintf(o_file, "\n");
+        }
+    }
+
+    free(line);
+    fclose(i_file);
+    fclose(o_file);
+    return 0;
 }
 //}}}
 
@@ -214,23 +298,32 @@ int convert_file_plt_to_ubin(struct plt_file pf, char *out_file_name)
 
 //{{{ unsigned int plt_line_to_packed_ints(char *line,
 unsigned int plt_line_to_packed_ints(char *line,
-                                     int num_fields, 
+                                     unsigned int num_fields, 
                                      unsigned int **packed_ints)
 {
     unsigned int len = 1 + ((num_fields - 1) / 16);
     *packed_ints = (unsigned *) malloc((len)*sizeof(unsigned int));
     int i, two_bit_count, pack_int_count = 0;
 
+    //printf("%s\n", line);
+    
     int g[16];
 
     memset(g,0,sizeof(g));
     two_bit_count = 0;
     for (i = 0; i < num_fields; ++i) {
         g[i%16] = ((int)line[i*2] - 48);
+        //printf("%d %d %c\n", i, i*2, line[i*2]);
 
         two_bit_count +=1;
 
         if (two_bit_count == 16) {
+            int j;
+            /*
+            for (j = 0; j < two_bit_count; ++j) 
+                printf("%d ", g[j]);
+            printf("\n");
+            */
             (*packed_ints)[pack_int_count] = pack_2_bit_ints(g, 16);
             pack_int_count += 1;
             memset(g,0,sizeof(g));
@@ -238,6 +331,13 @@ unsigned int plt_line_to_packed_ints(char *line,
         }
         
     }
+
+
+    /*
+    for (i = 0; i < two_bit_count; ++i) 
+        printf("%d ", g[i]);
+    printf("\n");
+    */
 
     if (two_bit_count > 0)
         (*packed_ints)[pack_int_count] = pack_2_bit_ints(g, 16);
@@ -464,12 +564,13 @@ unsigned int ints_to_rle(unsigned int *I, int I_len, unsigned int **O)
  * Returns the number of 31-bit groups in O
  */
 unsigned int map_from_32_bits_to_31_bits(unsigned int *I,
-                                int I_len,
-                                unsigned int **O)
+                                         int I_len,
+                                         unsigned int used_bits,
+                                         unsigned int **O)
 {
     unsigned int int_i, bit_i, group_i, in_group_i;
-    unsigned int total_bits = I_len *32;
-    unsigned int O_len =  (total_bits + 31 - 1)/ 31;
+    unsigned int O_len =  (used_bits + 31 - 1)/ 31;
+    //unsigned int O_len =  (I_len*32 + 31 - 1)/ 31;
 
     *O = (unsigned int *) calloc(O_len, sizeof(unsigned int));
 
@@ -489,7 +590,11 @@ unsigned int map_from_32_bits_to_31_bits(unsigned int *I,
                 in_group_i = 0;
                 group_i += 1;
             }
+            if (bit_i == used_bits)
+                break;
         }
+        if (bit_i == used_bits)
+            break;
     }
     return O_len;
 }
@@ -707,13 +812,14 @@ int append_fill_word(struct wah_ll **A_head,
 
 //{{{ int ints_to_wah(unsigned int *I,
 unsigned int ints_to_wah(unsigned int *I,
-                 int I_len,
-                 unsigned int **W)
+                         int I_len,
+                         unsigned int used_bits,
+                         unsigned int **W)
 {
     unsigned int W_len;
     unsigned int *O;
     // split the intput up int to 31-bit groups
-    unsigned int O_len = map_from_32_bits_to_31_bits(I, I_len, &O);
+    unsigned int O_len = map_from_32_bits_to_31_bits(I, I_len, used_bits, &O);
 
     // build the WAH list
     struct wah_ll *A_head = NULL,
@@ -1011,34 +1117,47 @@ unsigned int  wah_and(struct wah_run *x,
 //{{{ unsigned int ubin_to_bitmap(unsigned int *U,
 unsigned int ubin_to_bitmap(unsigned int *U,
                             unsigned int U_len,
+                            unsigned int used_bits,
                             unsigned int **B)
 {
     // Since U encodeds a series of two-bit values, and the bitmap uses one
-    // bit per unique value in U, the bitmap for each value will reqquire 1/2 
-    // the number of ints used to encode U
+    // bit per unique value in U, the bitmap for each value will require 1/2 
+    // (rounded up) the number of ints used to encode U
     unsigned int value_index_size = (U_len + 2 - 1) / 2;
-
     // There are 4 unique values, so in total B will require 4x  
     unsigned int B_len = 4 * value_index_size;
-    unsigned int two_bit, set_bit, bit_offset, B_int_i, B_two_bit_i;
+    *B = (unsigned int *) calloc(B_len, sizeof(unsigned int));
+
+    unsigned int two_bit, set_bit, bit_offset, B_int_i, B_two_bit_i, B_bit_i;
 
     B_int_i = 0;
     B_two_bit_i = 0;
+    B_bit_i = 0;
 
-    *B = (unsigned int *) calloc(B_len, sizeof(unsigned int));
 
     unsigned int i,j,k;
     for (i = 0; i < U_len; ++i) {
         for (j = 0; j < 16; ++j) {
             two_bit = ((U[i] >> (30 - (2*j)))& 3);
             for (k = 0; k < 4; ++k) {
+
                 if (k == two_bit)
                     set_bit = 1;
                 else 
                     set_bit = 0;
 
+                /* 
+                 * B consists of 4 bit arrays laid out consecutively.
+                 * As we loop over the two bit values, a single bit must be
+                 * set in all 4 bit arrays.  The first bit array is at
+                 * B_int_i, and each bit array has value_index_size values
+                 *
+                 */
+
                 bit_offset = (k * value_index_size) + B_int_i;
+
                 (*B)[bit_offset] +=  set_bit << (31 - B_two_bit_i);
+                
 
                 /*
                 fprintf(stderr, "k:%u\t"
@@ -1054,12 +1173,18 @@ unsigned int ubin_to_bitmap(unsigned int *U,
                 */
             }
             B_two_bit_i += 1;
+            B_bit_i += 2;
 
             if (B_two_bit_i == 32) {
                 B_int_i += 1;
                 B_two_bit_i = 0;
             }
+
+            if (B_bit_i >= used_bits)
+                break;
         }
+        if (B_bit_i >= used_bits)
+            break;
     }
 
     return B_len;
@@ -1069,13 +1194,14 @@ unsigned int ubin_to_bitmap(unsigned int *U,
 //{{{ unsigned int ubin_to_bitmap_wah(unsigned int *U,
 unsigned int ubin_to_bitmap_wah(unsigned int *U,
                                 unsigned int U_len,
+                                unsigned int num_fields,
                                 unsigned int **W,
                                 unsigned int **wah_sizes)
 {
     unsigned int *B;
-    unsigned int B_len = ubin_to_bitmap(U, U_len, &B);
+    // two bits per field
+    unsigned int B_len = ubin_to_bitmap(U, U_len, num_fields*2, &B);
     unsigned int b_len = B_len / 4;  // size of each bitmap index
-
 
     *wah_sizes = (unsigned int *) malloc(4*sizeof(unsigned int));
 
@@ -1087,7 +1213,10 @@ unsigned int ubin_to_bitmap_wah(unsigned int *U,
     unsigned int total_wah_size = 0;
 
     for (i = 0; i < 4; i++) {
-        wahs_size[i] = ints_to_wah( (B + (i*b_len)), b_len, &(wahs[i]));
+        wahs_size[i] = ints_to_wah( (B + (i*b_len)), 
+                                    b_len, 
+                                    num_fields, // 1 bit per field
+                                    &(wahs[i]));
         (*wah_sizes)[i] = wahs_size[i];
         total_wah_size += wahs_size[i];
     }
@@ -1118,6 +1247,7 @@ unsigned int plt_to_bitmap_wah(char *plt,
 
     unsigned int wah_len = ubin_to_bitmap_wah(ubin,
                                               ubin_len,
+                                              plt_len, // one bit per field
                                               W,
                                               wah_sizes);
     free(ubin);
@@ -1164,6 +1294,7 @@ unsigned int convert_file_by_name_ubin_to_wahbm(char *ubin_in, char *wah_out)
         unsigned int *wah_sizes;
         unsigned int wah_len = ubin_to_bitmap_wah(c,
                                                   num_ints_per_record,
+                                                  uf.num_fields,
                                                   &wah,
                                                   &wah_sizes);
 
@@ -1209,7 +1340,7 @@ unsigned int convert_file_by_name_ubin_to_wah(char *ubin_in, char *wah_out)
     fwrite(&(uf.num_records), sizeof(int), 1, wf);
     int zero = 0;
     int k;
-    for (k = 0; k < uf.num_records*4; ++k)
+    for (k = 0; k < uf.num_records; ++k)
         fwrite(&zero, sizeof(int), 1, wf);
 
     int num_ints_per_record = 1 + ((uf.num_fields - 1) / 16);
@@ -1229,6 +1360,7 @@ unsigned int convert_file_by_name_ubin_to_wah(char *ubin_in, char *wah_out)
         unsigned int *wah;
         unsigned int wah_len = ints_to_wah(c,
                                            num_ints_per_record,
+                                           uf.num_fields*2,
                                            &wah);
 
         fseek(wf,sizeof(unsigned int)* (2+wah_i),  SEEK_SET);
@@ -1253,8 +1385,8 @@ unsigned int convert_file_by_name_ubin_to_wah(char *ubin_in, char *wah_out)
 }
 //}}}
 
-//{{{ struct wah_file init_wah_file(char *file_name)
-struct wah_file init_wah_file(char *file_name)
+//{{{ struct wah_file init_wahbm_file(char *file_name)
+struct wah_file init_wahbm_file(char *file_name)
 {
     struct wah_file wf;
 
@@ -1275,6 +1407,37 @@ struct wah_file init_wah_file(char *file_name)
 
     unsigned int i;
     for (i = 0; i < wf.num_records*4; ++i)
+        fread(&(wf.record_offsets[i]),sizeof(unsigned int),1,wf.file);
+
+
+    wf.header_offset = ftell(wf.file);
+
+    return wf;
+}
+//}}}
+
+//{{{ struct wah_file init_wah_file(char *file_name)
+struct wah_file init_wah_file(char *file_name)
+{
+    struct wah_file wf;
+
+    wf.file = fopen(file_name, "rb");
+
+    if (!wf.file) {
+        fprintf(stderr, "Unable to open %s\n", file_name);
+        return wf;
+    }
+
+    // Jump to the begining of the file to grab the record size
+    fseek(wf.file, 0, SEEK_SET);
+    fread(&wf.num_fields,sizeof(unsigned int),1,wf.file);
+    fread(&wf.num_records,sizeof(unsigned int),1,wf.file);
+
+    wf.record_offsets = (unsigned int *) 
+            malloc(sizeof (unsigned int)*wf.num_records);
+
+    unsigned int i;
+    for (i = 0; i < wf.num_records; ++i)
         fread(&(wf.record_offsets[i]),sizeof(unsigned int),1,wf.file);
 
 
@@ -1351,6 +1514,35 @@ unsigned int get_wah_record(struct wah_file wf,
     fread(*wah,sizeof(unsigned int),wah_size,wf.file);
 
     return wah_size;
+}
+//}}}
+
+//{{{ unsigned int get_plt_record(struct plt_file pf,
+unsigned int get_plt_record(struct plt_file pf,
+                            unsigned int plt_record,
+                            unsigned int **plt)
+{
+
+    char *line = NULL;
+    size_t len = 0;
+    char *pch;
+    ssize_t read;
+    unsigned int i,j,bit;
+
+    unsigned int num_ints_per_record = 1 + ((pf.num_fields - 1) / 32);
+
+    *plt = (unsigned int *) calloc(num_ints_per_record, sizeof(unsigned int));
+
+    long line_len = pf.num_fields*2*sizeof(char);
+
+    fseek(pf.file, pf.header_offset + line_len*plt_record, SEEK_SET);
+    read = getline(&line, &len, pf.file);
+
+    unsigned int plt_size = plt_line_to_packed_ints(line,
+                                                    pf.num_fields, 
+                                                    plt);
+    free(line);
+    return plt_size;
 }
 //}}}
 
@@ -1465,15 +1657,43 @@ unsigned int gt_records_ubin(struct ubin_file uf,
 }
 //}}}
 
-//{{{ unsigned int gt_records_wah(struct wah_file wf,
-unsigned int gt_records_wah(struct wah_file wf,
+//{{{ unsigned int gt_records_wahbm(struct wah_file wf,
+unsigned int gt_records_wahbm(struct wah_file wf,
                             unsigned int *record_ids,
                             unsigned int num_r,
                             unsigned int test_value,
                             unsigned int **R) 
 
 {
+    unsigned int i,j,k,l;
+    for (i = 0; i < num_r; ++i) {
+        //for (j = test_value + 1; j < 4; ++j) {
+        for (j = 0; j < 4; ++j) {
+            unsigned int *record_new_bm;
+            unsigned int record_new_bm_size = get_wah_bitmap(wf,
+                                                             record_ids[i],
+                                                             j,
+                                                             &record_new_bm);
+            unsigned int *ints;
+            unsigned int ints_size = wah_to_ints(record_new_bm,
+                                                 record_new_bm_size,
+                                                 &ints);
+            for (k = 0; k < ints_size; ++k) {
+                if (k != 0) printf(" ");
+                int *r = unpack_1_bit_ints(ints[k]);
+                for (l = 0; l < 32; ++l) {
+                    if (l != 0) printf(" ");
+                    printf("%d",r[l]);
+                }
+            }
+            printf("\n");
+            free(record_new_bm);
+            free(ints);
+        }
+        printf("\n");
+    }
 
+#if 0
     unsigned int *record_curr_bm = NULL,
                  *record_new_bm = NULL,
                  *record_tmp_bm = NULL;
@@ -1489,7 +1709,7 @@ unsigned int gt_records_wah(struct wah_file wf,
                  query_tmp_bm_size;
 
 
-    unsigned int i,j,k;
+    unsigned int i,j,k,l;
 
     for (i = 0; i < num_r; ++i) {
         // or all of the bit maps for this record then and that will a 
@@ -1502,9 +1722,9 @@ unsigned int gt_records_wah(struct wah_file wf,
         for (j = test_value + 1; j < 4; ++j) {
 
             record_new_bm_size = get_wah_bitmap(wf,
-                                         record_ids[i],
-                                         j,
-                                         &record_new_bm);
+                                                record_ids[i],
+                                                j,
+                                                &record_new_bm);
 
             if (record_curr_bm == NULL) {
                 record_curr_bm = record_new_bm;
@@ -1548,6 +1768,8 @@ unsigned int gt_records_wah(struct wah_file wf,
 
     *R = query_curr_bm;
     return query_curr_bm_size;
+#endif
+    return 1;
 }
 //}}}
 
@@ -1816,7 +2038,7 @@ unsigned int print_by_name_wahbm(char *wahbm_file_name,
                                unsigned int num_r,
                                unsigned int format)
 {
-    struct wah_file wf = init_wah_file(wahbm_file_name);
+    struct wah_file wf = init_wahbm_file(wahbm_file_name);
     return print_wahbm(wf, record_ids, num_r, format);
 }
 //}}} 
@@ -1888,16 +2110,10 @@ unsigned int print_by_name_wah(char *wahbm_file_name,
 }
 //}}} 
 
-
-
-
-
-
-
-
-
-
-
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
 //{{{ void init_int_genotype_reader(char *file_name, int num_gt)

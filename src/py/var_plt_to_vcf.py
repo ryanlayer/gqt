@@ -34,9 +34,6 @@ pos = 1
 for l in f:
     if num_fields == -1:
         num_fields = int(l)
-    elif num_records == -1:
-        num_records = int(l)
-    elif header == 0:
         print '#CHROM\t' + \
               'POS\t' + \
               'ID\t' + \
@@ -47,7 +44,8 @@ for l in f:
               'INFO\t' + \
               'FORMAT\t' + \
               '\t'.join([ 'I' + str(i) for i in range(num_fields)])
-        header = 1
+    elif num_records == -1:
+        num_records = int(l)
     else:
         A = l.rstrip().split()
 

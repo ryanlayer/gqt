@@ -1581,7 +1581,8 @@ void test_wah_to_ints(void)
 }
 //}}}
 
-//{{{ void test_ubin_to_bitmap(void)
+//{{{ void test_igned int *ints;
+//    unsigned int int_len = plt_line_to_packed_ints(plt, 43, &ints);bin_to_bitmap(void)
 void test_ubin_to_bitmap(void)
 {
     /*
@@ -2447,7 +2448,6 @@ void test_get_plt_record(void)
 //{{{ void test_gt_records_plt_ubin_wahbm(void)
 void test_gt_records_plt_ubin_wahbm(void)
 {
-#if 0
     char *plt_file_name="../data/10.1e4.ind.txt";
     char *ubin_file_name="../data/10.1e4.ind.ubin";
     char *wah_file_name="../data/10.1e4.ind.wahbm";
@@ -2493,7 +2493,6 @@ void test_gt_records_plt_ubin_wahbm(void)
 
     for (i = 0; i < 2; ++i)
         TEST_ASSERT_EQUAL(A[i] , ints[i] >> shift[i]);
-#endif
 }
 //}}}
 
@@ -2527,6 +2526,34 @@ void test_padding_fix(void)
      * |-32---------------------------| |-32---------------------------|
      *                                             |--22 bit int pad---|
      *
+     * 31-bit groups: 
+     * 1:
+     * 0100100111111011001101010010000
+     * 0010000001010000000000000000000
+     * 2:
+     * 0011011000000100010010101101111
+     * 1101111110100000000000000000000
+     * 3:
+     * 1000000000000000100000000000000
+     * 0000000000000000000000000000000
+     * 4:
+     * 0000000000000000000000000000000
+     * 0000000000000000000000000000000
+     * |-31--------------------------|
+     *
+     * WAH
+     * 1:
+     * 00100100111111011001101010010000 -> 
+     * 00010000001010000000000000000000
+     * 2:
+     * 00011011000000100010010101101111
+     * 01101111110100000000000000000000
+     * 3:
+     * 01000000000000000100000000000000
+     * 00000000000000000000000000000000
+     * 4:
+     * 10000000000000000000000000000010
+     * 
      */
 
     unsigned int i,j;
@@ -2543,6 +2570,16 @@ void test_padding_fix(void)
             0,
             0,
             0};
+
+    unsigned int wahs_A[7] = {
+            bin_char_to_int("00100100111111011001101010010000"),
+            bin_char_to_int("00010000001010000000000000000000"),
+            bin_char_to_int("00011011000000100010010101101111"),
+            bin_char_to_int("01101111110100000000000000000000"),
+            bin_char_to_int("01000000000000000100000000000000"),
+            bin_char_to_int("00000000000000000000000000000000"),
+            bin_char_to_int("10000000000000000000000000000010")
+    };
     
     unsigned int *ints;
     unsigned int int_len = plt_line_to_packed_ints(plt, 43, &ints);
@@ -2563,8 +2600,8 @@ void test_padding_fix(void)
         wah_lens[i] = ints_to_wah(&(int_bm[i*2]), bm_len, 43, &(wahs[i]));
 
     for (i = 0; i < 4; ++i) {
-        fprintf(stderr, "wah_lens:%u\n", wah_lens[i]);
-        for (j = 0; j < wah_lens; ++j) {
+        for (j = 0; j < wah_lens[i]; ++j) {
+            TEST_ASSERT_EQUAL(wahs_A[i*2+j], wahs[i][j]);
         }
     }
 

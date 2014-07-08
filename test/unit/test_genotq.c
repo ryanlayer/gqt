@@ -2469,6 +2469,7 @@ void test_gt_records_plt_ubin_wahbm(void)
 
     unsigned int *ints;
     unsigned int ints_size = wah_to_ints(wf_R,len_wf_R,&ints);
+
                 
     /*
      * 1000001110111010100101011110111111010110100
@@ -2495,6 +2496,308 @@ void test_gt_records_plt_ubin_wahbm(void)
         TEST_ASSERT_EQUAL(A[i] , ints[i] >> shift[i]);
 }
 //}}}
+
+//{{{ void test_gte_records_plt_ubin_wahbm(void)
+void test_gte_records_plt_ubin_wahbm(void)
+{
+    char *plt_file_name="../data/10.1e4.ind.txt";
+    //char *ubin_file_name="../data/10.1e4.ind.ubin";
+    char *wah_file_name="../data/10.1e4.ind.wahbm";
+
+    struct plt_file pf = init_plt_file(plt_file_name);
+    //struct ubin_file uf = init_ubin_file(ubin_file_name);
+    struct wah_file wf = init_wahbm_file(wah_file_name);
+
+    unsigned int test_records[4] = {1,2,3,4};
+
+    unsigned int *pf_R;
+    unsigned int len_pf_R = gte_records_plt(pf, test_records, 4, 1, &pf_R);
+
+    //unsigned int *uf_R;
+    //unsigned int len_uf_R = gt_records_ubin(uf, test_records, 4, 0, &uf_R);
+
+    unsigned int *wf_R;
+    unsigned int len_wf_R = gte_records_wahbm(wf, test_records, 4, 1, &wf_R);
+
+    unsigned int *ints;
+    unsigned int ints_size = wah_to_ints(wf_R,len_wf_R,&ints);
+                
+    /*
+     * 1000001110111010100101011110111111010110100
+     * 0000000220222020000202020000020022000000010
+     * 0000000221222021000202010000020022000000000
+     * 1011010110222021000202020010020022000000100
+     *
+     * 0000000110111010000101010000010011000000000
+     *
+     * 00000001101110100001010100000100 -> 28972292
+     * 11000000000                      -> 1536
+     */
+
+    unsigned int A[2] = {28972292,1536};
+    unsigned int shift[2] = {0,21};
+    unsigned int i;
+    for (i = 0; i < 2; ++i)
+        TEST_ASSERT_EQUAL(A[i] , pf_R[i] >> shift[i]);
+
+    //for (i = 0; i < 2; ++i)
+    //    TEST_ASSERT_EQUAL(A[i] , uf_R[i] >> shift[i]);
+
+    for (i = 0; i < 2; ++i)
+        TEST_ASSERT_EQUAL(A[i] , ints[i] >> shift[i]);
+}
+//}}}
+
+//{{{ void test_lt_records_plt_ubin_wahbm(void)
+void test_lt_records_plt_ubin_wahbm(void)
+{
+    char *plt_file_name="../data/10.1e4.ind.txt";
+    //char *ubin_file_name="../data/10.1e4.ind.ubin";
+    char *wah_file_name="../data/10.1e4.ind.wahbm";
+
+    struct plt_file pf = init_plt_file(plt_file_name);
+    //struct ubin_file uf = init_ubin_file(ubin_file_name);
+    struct wah_file wf = init_wahbm_file(wah_file_name);
+
+    unsigned int test_records[4] = {1,2,3,4};
+
+    unsigned int *pf_R;
+    unsigned int len_pf_R = lt_records_plt(pf, test_records, 4, 3, &pf_R);
+
+    //unsigned int *uf_R;
+    //unsigned int len_uf_R = gt_records_ubin(uf, test_records, 4, 3, &uf_R);
+
+    unsigned int *wf_R;
+    unsigned int len_wf_R = lt_records_wahbm(wf, test_records, 4, 3, &wf_R);
+
+    unsigned int *ints;
+    unsigned int ints_size = wah_to_ints(wf_R,len_wf_R,&ints);
+
+    /*
+    * genotype vectors
+    * 1000001110111010100101011110111111010110100
+    * 0000000220222020000202020000020022000000010
+    * 0000000221222021000202010000020022000000000
+    * 1011010110222021000202020010020022000000100               
+    * 
+    * lt(3)
+    * 1111111111111111111111111111111111111111111
+    *
+    * 1111111111111111111111111111111111111111111000000000000000000000
+    * |-32---------------------------||-32---------------------------|
+    *                                            |-pad---------------|
+    *
+    * 11111111111111111111111111111111111111111110000000000000000000
+    * |-31--------------------------||-31--------------------------|
+    *                                            |-pad-------------|
+    *
+    * 1111111111111111111111111111111 -> 
+    * 1111111111110000000000000000000
+    * |-31--------------------------|
+    *
+    * WAH
+    * 01111111111111111111111111111111 -> 2147483647
+    * 01111111111110000000000000000000 -> 2146959360
+    *
+    * need to stitch the WAH together. second bit of second WAH block is tacked to first int
+    *
+    * 11111111111111111111111111111111 -> 4294967295
+    * 11111111111000000000000000000000 -> 4292870144
+    */
+
+    unsigned int i;
+    unsigned int A[2] = {4294967295,4292870144};
+    unsigned int shift[2] = {0,0};
+    for (i = 0; i < 2; ++i) {
+        TEST_ASSERT_EQUAL(A[i] , pf_R[i] & A[i]);
+    }
+
+    //for (i = 0; i < 2; ++i)
+    //    TEST_ASSERT_EQUAL(A[i] , uf_R[i] >> shift[i]);
+
+    for (i = 0; i < 2; ++i)
+        TEST_ASSERT_EQUAL(A[i] , ints[i]);
+}
+//}}}
+
+//{{{ void test_lte_records_plt_ubin_wahbm(void)
+void test_lte_records_plt_ubin_wahbm(void)
+{
+    char *plt_file_name="../data/10.1e4.ind.txt";
+    //char *ubin_file_name="../data/10.1e4.ind.ubin";
+    char *wah_file_name="../data/10.1e4.ind.wahbm";
+
+    struct plt_file pf = init_plt_file(plt_file_name);
+    //struct ubin_file uf = init_ubin_file(ubin_file_name);
+    struct wah_file wf = init_wahbm_file(wah_file_name);
+
+    unsigned int test_records[4] = {1,2,3,4};
+
+    unsigned int *pf_R;
+    unsigned int len_pf_R = lte_records_plt(pf, test_records, 4, 2, &pf_R);
+
+    //unsigned int *uf_R;
+    //unsigned int len_uf_R = gt_records_ubin(uf, test_records, 4, 3, &uf_R);
+
+    unsigned int *wf_R;
+    unsigned int len_wf_R = lte_records_wahbm(wf, test_records, 4, 2, &wf_R);
+
+    unsigned int *ints;
+    unsigned int ints_size = wah_to_ints(wf_R,len_wf_R,&ints);
+
+    /*
+    * genotype vectors
+    * 1000001110111010100101011110111111010110100
+    * 0000000220222020000202020000020022000000010
+    * 0000000221222021000202010000020022000000000
+    * 1011010110222021000202020010020022000000100               
+    * 
+    * lte(2)
+    * 1111111111111111111111111111111111111111111
+    *
+    * 1111111111111111111111111111111111111111111000000000000000000000
+    * |-32---------------------------||-32---------------------------|
+    *                                            |-pad---------------|
+    *
+    * 11111111111111111111111111111111111111111110000000000000000000
+    * |-31--------------------------||-31--------------------------|
+    *                                            |-pad-------------|
+    *
+    * 1111111111111111111111111111111 -> 
+    * 1111111111110000000000000000000
+    * |-31--------------------------|
+    *
+    * WAH
+    * 01111111111111111111111111111111 -> 2147483647
+    * 01111111111110000000000000000000 -> 2146959360
+    *
+    * need to stitch the WAH together. second bit of second WAH block is tacked to first int
+    *
+    * 11111111111111111111111111111111 -> 4294967295
+    * 11111111111000000000000000000000 -> 4292870144
+    */
+
+    unsigned int i;
+    unsigned int A[2] = {4294967295,4292870144};
+    unsigned int shift[2] = {0,0};
+    for (i = 0; i < 2; ++i) {
+        TEST_ASSERT_EQUAL(A[i] , pf_R[i] & A[i]);
+    }
+
+    //for (i = 0; i < 2; ++i)
+    //    TEST_ASSERT_EQUAL(A[i] , uf_R[i] >> shift[i]);
+
+    for (i = 0; i < 2; ++i)
+        TEST_ASSERT_EQUAL(A[i] , ints[i]);
+}
+//}}}
+
+//{{{ void test_eq_records_plt_ubin_wahbm(void)
+void test_eq_records_plt_ubin_wahbm(void)
+{
+    char *plt_file_name="../data/10.1e4.ind.txt";
+    //char *ubin_file_name="../data/10.1e4.ind.ubin";
+    char *wah_file_name="../data/10.1e4.ind.wahbm";
+
+    struct plt_file pf = init_plt_file(plt_file_name);
+    //struct ubin_file uf = init_ubin_file(ubin_file_name);
+    struct wah_file wf = init_wahbm_file(wah_file_name);
+
+    unsigned int test_records[4] = {1,2,3,4};
+
+    unsigned int *pf_R;
+    unsigned int len_pf_R = eq_records_plt(pf, test_records, 4, 0, &pf_R);
+
+    //unsigned int *uf_R;
+    //unsigned int len_uf_R = gt_records_ubin(uf, test_records, 4, 3, &uf_R);
+
+    unsigned int *wf_R;
+    unsigned int len_wf_R = eq_records_wahbm(wf, test_records, 4, 0, &wf_R);
+
+    unsigned int *ints;
+    unsigned int ints_size = wah_to_ints(wf_R,len_wf_R,&ints);
+
+    /*
+    * genotype vectors
+    * 1000001110111010100101011110111111010110100
+    * 0000000220222020000202020000020022000000010
+    * 0000000221222021000202010000020022000000000
+    * 1011010110222021000202020010020022000000100               
+    *
+    * eq(0)
+    * 0100100000000100011010100001000000101001001
+    *
+    * 01001000000001000110101000010000 -> 1208248848
+    * 00101001001                      -> 329
+    */
+
+    unsigned int i;
+    unsigned int A[2] = {1208248848,329};
+    unsigned int shift[2] = {0,21};
+    for (i = 0; i < 2; ++i)
+        TEST_ASSERT_EQUAL(A[i] , pf_R[i] >> shift[i]);
+
+    //for (i = 0; i < 2; ++i)
+    //    TEST_ASSERT_EQUAL(A[i] , uf_R[i] >> shift[i]);
+
+    for (i = 0; i < 2; ++i)
+        TEST_ASSERT_EQUAL(A[i] , ints[i] >> shift[i]);
+}
+//}}}
+
+//{{{ void test_ne_records_plt_ubin_wahbm(void)
+void test_ne_records_plt_ubin_wahbm(void)
+{
+    char *plt_file_name="../data/10.1e4.ind.txt";
+    //char *ubin_file_name="../data/10.1e4.ind.ubin";
+    char *wah_file_name="../data/10.1e4.ind.wahbm";
+
+    struct plt_file pf = init_plt_file(plt_file_name);
+    //struct ubin_file uf = init_ubin_file(ubin_file_name);
+    struct wah_file wf = init_wahbm_file(wah_file_name);
+
+    unsigned int test_records[4] = {1,2,3,4};
+
+    unsigned int *pf_R;
+    unsigned int len_pf_R = ne_records_plt(pf, test_records, 4, 1, &pf_R);
+
+    //unsigned int *uf_R;
+    //unsigned int len_uf_R = gt_records_ubin(uf, test_records, 4, 3, &uf_R);
+
+    unsigned int *wf_R;
+    unsigned int len_wf_R = ne_records_wahbm(wf, test_records, 4, 1, &wf_R);
+
+    unsigned int *ints;
+    unsigned int ints_size = wah_to_ints(wf_R,len_wf_R,&ints);
+
+    /*
+    * genotype vectors
+    * 1000001110111010100101011110111111010110100
+    * 0000000220222020000202020000020022000000010
+    * 0000000221222021000202010000020022000000000
+    * 1011010110222021000202020010020022000000100               
+    * 
+    * ne(1)
+    * 0100100000000100011010100001000000101001001
+    *
+    * 01001000000000000110101000010000 -> 1208248848
+    * 00101001001                      -> 329
+    */
+
+    unsigned int i;
+    unsigned int A[2] = {1208248848,329};
+    unsigned int shift[2] = {0,21};
+    //for (i = 0; i < 2; ++i)
+    //    TEST_ASSERT_EQUAL(A[i] , pf_R[i] >> shift[i]);
+
+    //for (i = 0; i < 2; ++i)
+    //    TEST_ASSERT_EQUAL(A[i] , uf_R[i] >> shift[i]);
+
+    for (i = 0; i < 2; ++i)
+        TEST_ASSERT_EQUAL(A[i] , ints[i] >> shift[i]);
+}
+//}}}
+
 
 //{{{void test_padding_fix(void)
 void test_padding_fix(void)

@@ -2607,3 +2607,106 @@ void test_padding_fix(void)
 
 }
 //}}}
+
+//{{{void test_get_wah_bitmap_in_place(void)
+void test_get_wah_bitmap_in_place(void)
+{
+    unsigned int i,j,k;
+
+    char *wah_file_name="../data/10.1e4.ind.wahbm";
+    struct wah_file wf1 = init_wahbm_file(wah_file_name);
+    struct wah_file wf2 = init_wahbm_file(wah_file_name);
+
+    unsigned int *wah_bm1;
+
+    unsigned int max_wah_size = (wf2.num_fields + 31 - 1)/ 31;
+    unsigned int *wah_bm2 = (unsigned int *) malloc(sizeof(unsigned int)*max_wah_size);
+
+
+    for (i = 0; i < 10; ++i) {
+        for (j = 0; j < 4; ++j) {
+            unsigned int wah_size1 = get_wah_bitmap(wf1,i,j,&wah_bm1);
+            unsigned int wah_size2 = get_wah_bitmap_in_place(wf2,i,j,&wah_bm2);
+
+            TEST_ASSERT_EQUAL(wah_size1, wah_size2);
+
+            for (k = 0; k < wah_size2; ++k)
+                TEST_ASSERT_EQUAL(wah_bm1[k],wah_bm2[k]);
+
+            free(wah_bm1);
+        }
+    }
+
+    free(wah_bm2);
+}
+//}}}
+
+//{{{ void test_get_wah_bitmap_in_place_then_or(void)
+void test_get_wah_bitmap_in_place_then_or(void)
+{
+    unsigned int i,j,k;
+
+    char *wah_file_name="../data/10.1e4.ind.wahbm";
+    struct wah_file wf = init_wahbm_file(wah_file_name);
+
+    unsigned int max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+
+    unsigned int *wah_ip_bm1 = (unsigned int *) malloc(sizeof(unsigned int)*max_wah_size);
+    unsigned int *wah_ip_bm2 = (unsigned int *) malloc(sizeof(unsigned int)*max_wah_size);
+
+    unsigned int wah_ip_size1 = get_wah_bitmap_in_place(wf,1,2,&wah_ip_bm1);
+    unsigned int wah_ip_size2 = get_wah_bitmap_in_place(wf,2,2,&wah_ip_bm2);
+
+    struct wah_run r_ip_bm1 = init_wah_run(wah_ip_bm1, wah_ip_size1);
+    struct wah_run r_ip_bm2 = init_wah_run(wah_ip_bm2, wah_ip_size2);
+
+    unsigned int *wah_bm1, *wah_bm2;
+
+    unsigned int wah_size1 = get_wah_bitmap(wf,1,2,&wah_bm1);
+    unsigned int wah_size2 = get_wah_bitmap(wf,2,2,&wah_bm2);
+
+    struct wah_run r_bm1 = init_wah_run(wah_bm1, wah_size1);
+    struct wah_run r_bm2 = init_wah_run(wah_bm2, wah_size2);
+
+
+    unsigned int *r_ip;
+    unsigned int r_ip_len = wah_or(&r_ip_bm1, &r_ip_bm2, &r_ip);
+    
+    unsigned int *r;
+    unsigned int r_len = wah_or(&r_bm1, &r_bm2, &r);
+
+    TEST_ASSERT_EQUAL(r_len, r_ip_len);
+
+    for (i = 0; i < r_len; ++i) {
+        fprintf(stderr, "%u\t%u\n", r[i], r_ip[i]);
+        TEST_ASSERT_EQUAL(r[i], r_ip[i]);
+    }
+}
+//}}}
+
+//{{{ void test_gt_records_in_place_wahbm(void)
+void test_gt_records_in_place_wahbm(void)
+{
+    unsigned int test_records[4] = {1,2,3,4};
+
+    char *wah_file_name="../data/10.1e4.ind.wahbm";
+    struct wah_file wf1 = init_wahbm_file(wah_file_name);
+    struct wah_file wf2 = init_wahbm_file(wah_file_name);
+
+
+    unsigned int *wf_R1;
+    unsigned int len_wf_R1 = gt_records_wahbm(wf1, test_records, 4, 0, &wf_R1);
+
+    unsigned int *wf_R2;
+    unsigned int len_wf_R2 = gt_records_in_place_wahbm(wf2, test_records, 4, 0, &wf_R2);
+
+    unsigned int i;
+    for (i = 0; i < len_wf_R2; ++i)
+        TEST_ASSERT_EQUAL(wf_R1[i], wf_R2[i]);
+
+    /*
+    for (i = 0; i < 2; ++i)
+        TEST_ASSERT_EQUAL(A[i] , ints[i] >> shift[i]);
+    */
+}
+//}}}

@@ -25,6 +25,9 @@ PROG=read_binary_uints \
 LIST=$(addprefix $(BIN)/, $(PROG))
 
 all: $(LIST)
+	# make the "obj/" and "bin/" directories, if they don't exist
+	@mkdir -p $(OBJ)
+	@mkdir -p $(BIN)
 
 $(OBJ)/%.o: %.c 
 	$(CC) -c $(CFLAGS) -o $@ $< 

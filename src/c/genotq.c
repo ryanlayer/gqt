@@ -1837,8 +1837,73 @@ unsigned int get_plt_record(struct plt_file pf,
 }
 //}}}
 
+//{{{ unsigned int range_records_plt(struct plt_file pf,
+unsigned int range_records_plt(struct plt_file pf,
+                              unsigned int *record_ids,
+                              unsigned int num_r,
+                              unsigned int start_test_value,
+                              unsigned int end_test_value,
+                              unsigned int **R)
+{
+    char *line = NULL;
+    size_t len = 0;
+    char *pch;
+    ssize_t read;
+    unsigned int i,j,bit;
+
+    unsigned int num_ints_per_record = 1 + ((pf.num_fields - 1) / 32);
+
+    *R = (unsigned int *) malloc(num_ints_per_record*sizeof(unsigned int));
+
+    for (i = 0; i < num_ints_per_record; ++i)
+        (*R)[i] = -1;
+
+    unsigned int int_i, bit_i;
+
+
+    long line_len = pf.num_fields*2*sizeof(char);
+    for (i = 0; i < num_r; ++i) {
+        fseek(pf.file, pf.header_offset + line_len*record_ids[i], SEEK_SET);
+
+        read = getline(&line, &len, pf.file);
+
+        int_i = 0;
+        bit_i = 0;
+        for (j = 0; j < pf.num_fields; ++j) {
+            // clear the bit if fails criteria
+            unsigned int val = (unsigned int)line[j*2] - 48;            
+            if (!(val >= start_test_value && val < end_test_value))
+                (*R)[int_i] = (*R)[int_i] & ~(1 << (31 - bit_i));
+
+            bit_i += 1;
+            if (bit_i == 32) {
+                int_i += 1;
+                bit_i = 0;
+            }
+        }
+    }
+
+    free(line);
+
+    return num_ints_per_record;
+}
+//}}}
+
+
 //{{{ unsigned int gt_records_plt(struct plt_file pf,
-unsigned int gt_records_plt(struct plt_file pf,
+unsigned int eq_records_plt(struct plt_file pf,
+                            unsigned int *record_ids,
+                            unsigned int num_r,
+                            unsigned int test_value,
+                            unsigned int **R)
+{
+    // TODO: need constants for upper bound.
+    return range_records_plt(pf, record_ids, num_r, test_value, test_value+1, R);
+}
+//}}}
+
+//{{{ unsigned int gt_records_plt(struct plt_file pf,
+unsigned int ne_records_plt(struct plt_file pf,
                             unsigned int *record_ids,
                             unsigned int num_r,
                             unsigned int test_value,
@@ -1870,7 +1935,8 @@ unsigned int gt_records_plt(struct plt_file pf,
         bit_i = 0;
         for (j = 0; j < pf.num_fields; ++j) {
             // clear the bit
-            if  ( !( test_value < ((unsigned int)line[j*2] - 48))) 
+            unsigned int val = ((unsigned int)line[j*2] - 48);
+            if  (!(val != test_value))
                 (*R)[int_i] = (*R)[int_i] & ~(1 << (31 - bit_i));
 
             bit_i += 1;
@@ -1886,6 +1952,56 @@ unsigned int gt_records_plt(struct plt_file pf,
     return num_ints_per_record;
 }
 //}}}
+
+//{{{ unsigned int gt_records_plt(struct plt_file pf,
+unsigned int gt_records_plt(struct plt_file pf,
+                            unsigned int *record_ids,
+                            unsigned int num_r,
+                            unsigned int test_value,
+                            unsigned int **R)
+{
+    // TODO: need constants for upper bound.
+    return range_records_plt(pf, record_ids, num_r, test_value+1, 4, R);
+}
+//}}}
+
+//{{{ unsigned int gt_records_plt(struct plt_file pf,
+unsigned int gte_records_plt(struct plt_file pf,
+                            unsigned int *record_ids,
+                            unsigned int num_r,
+                            unsigned int test_value,
+                            unsigned int **R)
+{
+    // TODO: need constants for upper bound.
+    return range_records_plt(pf, record_ids, num_r, test_value, 4, R);
+}
+//}}}
+
+//{{{ unsigned int gt_records_plt(struct plt_file pf,
+unsigned int lt_records_plt(struct plt_file pf,
+                            unsigned int *record_ids,
+                            unsigned int num_r,
+                            unsigned int test_value,
+                            unsigned int **R)
+{
+    // TODO: need constants for upper bound.
+    return range_records_plt(pf, record_ids, num_r, 0, test_value, R);
+}
+//}}}
+
+//{{{ unsigned int gt_records_plt(struct plt_file pf,
+unsigned int lte_records_plt(struct plt_file pf,
+                            unsigned int *record_ids,
+                            unsigned int num_r,
+                            unsigned int test_value,
+                            unsigned int **R)
+{
+    // TODO: need constants for upper bound.
+    return range_records_plt(pf, record_ids, num_r, 0, test_value+1, R);
+}
+//}}}
+
+
 
 //{{{ unsigned int gt_records_ubin(struct ubin_file uf,
 unsigned int gt_records_ubin(struct ubin_file uf,
@@ -1948,11 +2064,12 @@ unsigned int gt_records_ubin(struct ubin_file uf,
 }
 //}}}
 
-//{{{ unsigned int gt_records_wahbm(struct wah_file wf,
-unsigned int gt_records_wahbm(struct wah_file wf,
+//{{{ unsigned int range_records_wahbm(struct wah_file wf,
+unsigned int range_records_wahbm(struct wah_file wf,
                               unsigned int *record_ids,
                               unsigned int num_r,
-                              unsigned int test_value,
+                              unsigned int start_test_value,
+                              unsigned int end_test_value,
                               unsigned int **R) 
 
 {
@@ -1981,7 +2098,7 @@ unsigned int gt_records_wahbm(struct wah_file wf,
         record_new_bm = NULL;
         record_tmp_bm = NULL;
 
-        for (j = test_value + 1; j < 4; ++j) {
+        for (j = start_test_value; j < end_test_value; ++j) {
 
             record_new_bm_size = get_wah_bitmap(wf,
                                                 record_ids[i],
@@ -2030,6 +2147,176 @@ unsigned int gt_records_wahbm(struct wah_file wf,
 
     *R = query_curr_bm;
     return query_curr_bm_size;
+}
+//}}}
+
+unsigned int range_records_w_exclude_wahbm(struct wah_file wf,
+                              unsigned int *record_ids,
+                              unsigned int num_r,
+                              unsigned int start_test_value,
+                              unsigned int end_test_value,
+                              unsigned int exclude_value,
+                              unsigned int **R) 
+
+{
+    unsigned int *record_curr_bm = NULL,
+                 *record_new_bm = NULL,
+                 *record_tmp_bm = NULL;
+
+    unsigned int record_curr_bm_size,
+                 record_new_bm_size,
+                 record_tmp_bm_size;
+
+    unsigned int *query_curr_bm = NULL,
+                 *query_tmp_bm = NULL;
+
+    unsigned int query_curr_bm_size,
+                 query_tmp_bm_size;
+
+
+    unsigned int i,j,k,l;
+
+    for (i = 0; i < num_r; ++i) {
+        // or all of the bit maps for this record then and that will a 
+        // running total
+
+        record_curr_bm = NULL;
+        record_new_bm = NULL;
+        record_tmp_bm = NULL;
+
+        for (j = start_test_value; j < end_test_value; ++j) {
+
+            if (j == exclude_value)
+            {
+                continue;
+            }
+
+            record_new_bm_size = get_wah_bitmap(wf,
+                                                record_ids[i],
+                                                j,
+                                                &record_new_bm);
+
+            if (record_curr_bm == NULL) {
+                record_curr_bm = record_new_bm;
+                record_curr_bm_size = record_new_bm_size;
+            } else {
+                struct wah_run curr_run = init_wah_run(record_curr_bm,
+                                                       record_curr_bm_size);
+                struct wah_run new_run = init_wah_run(record_new_bm,
+                                                      record_new_bm_size);
+
+                record_tmp_bm_size = wah_or(&curr_run,
+                                            &new_run,
+                                            &record_tmp_bm);
+                free(record_curr_bm);
+                free(record_new_bm);
+
+                record_curr_bm = record_tmp_bm;
+                record_curr_bm_size = record_tmp_bm_size;
+            }
+        }
+
+        if (query_curr_bm == NULL) {
+            query_curr_bm = record_curr_bm;
+            query_curr_bm_size = record_curr_bm_size;
+        } else {
+                struct wah_run record_run = init_wah_run(record_curr_bm,
+                                                         record_curr_bm_size);
+                struct wah_run query_run = init_wah_run(query_curr_bm,
+                                                        query_curr_bm_size);
+
+                query_tmp_bm_size = wah_and(&record_run,
+                                            &query_run,
+                                            &query_tmp_bm);
+                free(record_curr_bm);
+                free(query_curr_bm);
+
+                query_curr_bm = query_tmp_bm;
+                query_curr_bm_size = query_tmp_bm_size;
+        }
+    }
+
+    *R = query_curr_bm;
+    return query_curr_bm_size;
+}
+//}}}
+
+//{{{ unsigned int eq_records_wahbm(struct wah_file wf,
+unsigned int eq_records_wahbm(struct wah_file wf,
+                              unsigned int *record_ids,
+                              unsigned int num_r,
+                              unsigned int test_value,
+                              unsigned int **R) 
+
+{
+    // TODO: need constants for upper bound.
+    return range_records_wahbm(wf, record_ids, num_r, test_value, test_value+1, R);
+}
+//}}}
+
+//{{{ unsigned int eq_records_wahbm(struct wah_file wf,
+unsigned int ne_records_wahbm(struct wah_file wf,
+                              unsigned int *record_ids,
+                              unsigned int num_r,
+                              unsigned int test_value,
+                              unsigned int **R) 
+
+{
+    // TODO: need constants for lower bound and upper bound.
+    // exclude the test_value
+    return range_records_w_exclude_wahbm(wf, record_ids, num_r, 0, 4, test_value, R);
+}
+//}}}
+
+//{{{ unsigned int gt_records_wahbm(struct wah_file wf,
+unsigned int gt_records_wahbm(struct wah_file wf,
+                              unsigned int *record_ids,
+                              unsigned int num_r,
+                              unsigned int test_value,
+                              unsigned int **R) 
+
+{
+    // TODO: need constants for upper bound.
+    return range_records_wahbm(wf, record_ids, num_r, test_value+1, 4, R);
+}
+//}}}
+
+//{{{ unsigned int gte_records_wahbm(struct wah_file wf,
+unsigned int gte_records_wahbm(struct wah_file wf,
+                              unsigned int *record_ids,
+                              unsigned int num_r,
+                              unsigned int test_value,
+                              unsigned int **R) 
+
+{
+    // TODO: need constants for upper bound.
+    return range_records_wahbm(wf, record_ids, num_r, test_value, 4, R);
+}
+//}}}
+
+//{{{ unsigned int lt_records_wahbm(struct wah_file wf,
+unsigned int lt_records_wahbm(struct wah_file wf,
+                              unsigned int *record_ids,
+                              unsigned int num_r,
+                              unsigned int test_value,
+                              unsigned int **R) 
+
+{
+    // TODO: need constants for upper bound.
+    return range_records_wahbm(wf, record_ids, num_r, 0, test_value, R);
+}
+//}}}
+
+//{{{ unsigned int lt_records_wahbm(struct wah_file wf,
+unsigned int lte_records_wahbm(struct wah_file wf,
+                              unsigned int *record_ids,
+                              unsigned int num_r,
+                              unsigned int test_value,
+                              unsigned int **R) 
+
+{
+    // TODO: need constants for upper bound.
+    return range_records_wahbm(wf, record_ids, num_r, 0, test_value+1, R);
 }
 //}}}
 

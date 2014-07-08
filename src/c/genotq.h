@@ -966,23 +966,157 @@ unsigned int get_plt_record(struct plt_file pf,
                             unsigned int plt_record,
                             unsigned int **plt);
 
+
 /**
- * @brief
+ * @brief Return records whose values are >= start_test_value and < end_test_value
  *
- * @param
+ * @param pf The initialized plain text encoded file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to test fields against
+ * @param R result with 
  *
- * @returnval
+ * @retval number of ints in the record
  *
  * Example Usage:
  * @code
  * @endcode
  */
+ unsigned int range_records_plt(struct plt_file pt,
+                              unsigned int *record_ids,
+                              unsigned int num_r,
+                              unsigned int start_test_value,
+                              unsigned int end_test_value,
+                              unsigned int **R);
 
+/**
+ * @brief Return records whose value is equal to the test value
+ *
+ * @param pf The initialized plain text encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to test fields against
+ * @param R result with 
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int eq_records_plt(struct plt_file pf,
+                            unsigned int *record_ids,
+                            unsigned int num_r,
+                            unsigned int test_value,
+                            unsigned int **R);
+
+/**
+ * @brief Return records whose value is NOT equal to the test value
+ *
+ * @param pf The initialized plain text encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to test fields against
+ * @param R result with 
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int ne_records_plt(struct plt_file pf,
+                            unsigned int *record_ids,
+                            unsigned int num_r,
+                            unsigned int test_value,
+                            unsigned int **R);
+
+/**
+ * @brief Return records whose value are greater than the test value
+ *
+ * @param pf The initialized plain text encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to test fields against
+ * @param R result with 
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
 unsigned int gt_records_plt(struct plt_file pf,
                             unsigned int *record_ids,
                             unsigned int num_r,
                             unsigned int test_value,
                             unsigned int **R);
+
+/**
+ * @brief Return records whose value are greater than or equal to the test value
+ *
+ * @param pf The initialized plain text encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to test fields against
+ * @param R result with 
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int gte_records_plt(struct plt_file pf,
+                            unsigned int *record_ids,
+                            unsigned int num_r,
+                            unsigned int test_value,
+                            unsigned int **R);
+
+
+/**
+ * @brief Return records whose value are less than the test value
+ *
+ * @param pf The initialized plain text encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to test fields against
+ * @param R result with 
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int lt_records_plt(struct plt_file pf,
+                            unsigned int *record_ids,
+                            unsigned int num_r,
+                            unsigned int test_value,
+                            unsigned int **R);
+
+/**
+ * @brief Return records whose value are less or equal to the test value
+ *
+ * @param pf The initialized plain text encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to test fields against
+ * @param R result with 
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int lte_records_plt(struct plt_file pf,
+                            unsigned int *record_ids,
+                            unsigned int num_r,
+                            unsigned int test_value,
+                            unsigned int **R);
+
+
 /**
  * @brief
  *
@@ -1001,8 +1135,98 @@ unsigned int gt_records_ubin(struct ubin_file uf,
                              unsigned int test_value,
                              unsigned int **R);
 
+
 /**
- * @brief 
+ * @brief Return records whose values are >= start_test_value and < end_test_value
+ *
+ * @param wf The initialized WAH-encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param start_test_value is the lower bound value to test fields against (inclusive)
+ * @param end_test_value is the upper bound value to test fields against (exclusive)
+ * @param R result with 
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+ unsigned int range_records_wahbm(struct wah_file wf,
+                              unsigned int *record_ids,
+                              unsigned int num_r,
+                              unsigned int start_test_value,
+                              unsigned int end_test_value,
+                              unsigned int **R);
+
+/**
+ * @brief Return records whose values are >= start_test_value,  < end_test_value and not exclude_value
+ *
+ * @param wf The initialized WAH-encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param start_test_value is the lower bound value to test fields against
+ * @param end_test_value is the upper bound value to test fields against
+ * @param R result with 
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+ unsigned int range_records_w_exclude_wahbm(struct wah_file wf,
+                              unsigned int *record_ids,
+                              unsigned int num_r,
+                              unsigned int start_test_value,
+                              unsigned int end_test_value,
+                              unsigned int exclude_value,
+                              unsigned int **R);
+
+/**
+ * @brief Return records whose value is equal to test_value
+ *
+ * @param wf The initialized WAH-encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to test fields against
+ * @param R result with 
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int eq_records_wahbm(struct wah_file wf,
+                              unsigned int *record_ids,
+                              unsigned int num_r,
+                              unsigned int test_value,
+                              unsigned int **R);
+
+/**
+ * @brief Return records whose value is NOT equal to test_value
+ *
+ * @param wf The initialized WAH-encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to exlude upon
+ * @param R result with 
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int ne_records_wahbm(struct wah_file wf,
+                              unsigned int *record_ids,
+                              unsigned int num_r,
+                              unsigned int test_value,
+                              unsigned int **R);
+
+/**
+ * @brief Return records whose value are greater than the test value
  *
  * @param wf The initialized WAH-encoded bitmap file
  * @param record_ids array of integer ids of the records to test
@@ -1017,6 +1241,69 @@ unsigned int gt_records_ubin(struct ubin_file uf,
  * @endcode
  */
 unsigned int gt_records_wahbm(struct wah_file wf,
+                              unsigned int *record_ids,
+                              unsigned int num_r,
+                              unsigned int test_value,
+                              unsigned int **R);
+
+/**
+ * @brief Return records whose value are greater or equal to the test value 
+ *
+ * @param wf The initialized WAH-encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to test fields against
+ * @param R result with 
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int gte_records_wahbm(struct wah_file wf,
+                              unsigned int *record_ids,
+                              unsigned int num_r,
+                              unsigned int test_value,
+                              unsigned int **R);
+
+/**
+ * @brief Return records whose value are less than the test value
+ *
+ * @param wf The initialized WAH-encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to test fields against
+ * @param R result with 
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int lt_records_wahbm(struct wah_file wf,
+                              unsigned int *record_ids,
+                              unsigned int num_r,
+                              unsigned int test_value,
+                              unsigned int **R);
+
+/**
+ * @brief Return records whose value are less than or equal to the test value 
+ *
+ * @param wf The initialized WAH-encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to test fields against
+ * @param R result with 
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int lte_records_wahbm(struct wah_file wf,
                               unsigned int *record_ids,
                               unsigned int num_r,
                               unsigned int test_value,

@@ -2,6 +2,17 @@
 
 ## GOALS
 
+* Support queires
+    * Get all variants where at least N of affected individuals are
+      heterozygous and no more than M of the unaffected are heterozygous
+        * Get a count of how often each variant meets a condition in a subset
+        * Conditional subtract
+            * Condition
+            * Subtract
+    * Get all varaints where the allele frequency is at least N 
+        * Summation
+    * Get variants that meet specific genotypes
+
 ### Urgent
 
 ### High Value

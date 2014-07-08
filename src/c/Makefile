@@ -1,6 +1,6 @@
 BIN=../../bin
 OBJ=../../obj
-CFLAGS=-g
+CFLAGS=-g -ltcmalloc
 GRABIX_ROOT=~/src/grabix
 CC=gcc
 

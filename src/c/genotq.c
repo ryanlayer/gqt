@@ -148,7 +148,7 @@ unsigned int pack_2_bit_ints(int *ints, int num_ints)
 //{{{unsigned int *unpack_1_bit_ints(int packed_int)
 int *unpack_1_bit_ints(unsigned int packed_ints)
 {
-    int *r = (int *) malloc (16*sizeof(int));
+    int *r = (int *) malloc (32*sizeof(int));
 
     int i;
     for (i = 0; i < 32; ++i) 
@@ -1490,6 +1490,49 @@ unsigned int get_wah_bitmap(struct wah_file wf,
 }
 //}}}
 
+//{{{ unsigned int get_wah_bitmap(struct wah_file wf,
+unsigned int get_wah_bitmap_in_place(struct wah_file wf,
+                                     unsigned int wah_record,
+                                     unsigned int bitmap,
+                                     unsigned int **wah_bitmap)
+{
+    // get the size of the WAH-encoded bitmap
+    unsigned int wah_size = 0, wah_offset = 0;
+    if ((wah_record == 0) && (bitmap == 0)) {
+        wah_size = wf.record_offsets[wah_record + bitmap];
+        wah_offset = wf.header_offset;
+    } else {
+        wah_size = wf.record_offsets[wah_record*4 + bitmap] - 
+                   wf.record_offsets[wah_record*4 + bitmap - 1];
+        /*
+        fprintf(stderr, "wf.header_offset:%lu\t"
+                        "wah_record:%u\t"
+                        "bitmap:%u\t"
+                        "wah_size:%u\t"
+                        "wf.record_offsets[]:%u\n",
+                        wf.header_offset,
+                        wah_record,
+                        bitmap,
+                        wah_size,
+                        wf.record_offsets[wah_record*4 + bitmap]);
+        */
+
+        wah_offset = wf.header_offset +
+                     sizeof(unsigned int) * 
+                        (wf.record_offsets[wah_record*4 + bitmap] - wah_size);
+    }
+
+    //fprintf(stderr, "wah_size:%u\twah_offset:%u\n", wah_size, wah_offset);
+
+
+    //*wah_bitmap = (unsigned int *) malloc(sizeof(unsigned int)*wah_size);
+    fseek(wf.file, wah_offset, SEEK_SET);
+    fread(*wah_bitmap,sizeof(unsigned int),wah_size,wf.file);
+
+    return wah_size;
+}
+//}}}
+
 //{{{ unsigned int get_wah_record(struct wah_file wf,
 unsigned int get_wah_record(struct wah_file wf,
                             unsigned int wah_record,
@@ -1659,41 +1702,12 @@ unsigned int gt_records_ubin(struct ubin_file uf,
 
 //{{{ unsigned int gt_records_wahbm(struct wah_file wf,
 unsigned int gt_records_wahbm(struct wah_file wf,
-                            unsigned int *record_ids,
-                            unsigned int num_r,
-                            unsigned int test_value,
-                            unsigned int **R) 
+                              unsigned int *record_ids,
+                              unsigned int num_r,
+                              unsigned int test_value,
+                              unsigned int **R) 
 
 {
-    unsigned int i,j,k,l;
-    for (i = 0; i < num_r; ++i) {
-        //for (j = test_value + 1; j < 4; ++j) {
-        for (j = 0; j < 4; ++j) {
-            unsigned int *record_new_bm;
-            unsigned int record_new_bm_size = get_wah_bitmap(wf,
-                                                             record_ids[i],
-                                                             j,
-                                                             &record_new_bm);
-            unsigned int *ints;
-            unsigned int ints_size = wah_to_ints(record_new_bm,
-                                                 record_new_bm_size,
-                                                 &ints);
-            for (k = 0; k < ints_size; ++k) {
-                if (k != 0) printf(" ");
-                int *r = unpack_1_bit_ints(ints[k]);
-                for (l = 0; l < 32; ++l) {
-                    if (l != 0) printf(" ");
-                    printf("%d",r[l]);
-                }
-            }
-            printf("\n");
-            free(record_new_bm);
-            free(ints);
-        }
-        printf("\n");
-    }
-
-#if 0
     unsigned int *record_curr_bm = NULL,
                  *record_new_bm = NULL,
                  *record_tmp_bm = NULL;
@@ -1768,8 +1782,99 @@ unsigned int gt_records_wahbm(struct wah_file wf,
 
     *R = query_curr_bm;
     return query_curr_bm_size;
-#endif
-    return 1;
+}
+//}}}
+
+//{{{ unsigned int gt_records_wahbm(struct wah_file wf,
+unsigned int gt_records_in_place_wahbm(struct wah_file wf,
+                                       unsigned int *record_ids,
+                                       unsigned int num_r,
+                                       unsigned int test_value,
+                                       unsigned int **R) 
+
+{
+    unsigned int *record_curr_bm = NULL,
+                 *record_new_bm = NULL,
+                 *record_tmp_bm = NULL;
+
+    unsigned int record_curr_bm_size,
+                 record_new_bm_size,
+                 record_tmp_bm_size;
+
+    unsigned int *query_curr_bm = NULL,
+                 *query_tmp_bm = NULL;
+
+    unsigned int query_curr_bm_size,
+                 query_tmp_bm_size;
+
+
+    unsigned int i,j,k,l;
+
+    // we need to allocated space assuming the maximum possible size 
+    // if there are wf.num_fields records, each takes a bit, 
+    unsigned int max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    record_new_bm = (unsigned int *) malloc(sizeof(unsigned int)*max_wah_size);
+
+    for (i = 0; i < num_r; ++i) {
+        // or all of the bit maps for this record then and that will a 
+        // running total
+
+        record_curr_bm = NULL;
+        //record_new_bm = NULL;
+        record_tmp_bm = NULL;
+
+        for (j = test_value + 1; j < 4; ++j) {
+
+            //memset(record_new_bm, 0, sizeof(unsigned int)*max_wah_size);
+            record_new_bm = (unsigned int *) calloc(sizeof(unsigned int),max_wah_size);
+
+            record_new_bm_size = get_wah_bitmap_in_place(wf,
+                                                         record_ids[i],
+                                                         j,
+                                                         &record_new_bm);
+
+            if (record_curr_bm == NULL) {
+                record_curr_bm = record_new_bm;
+                record_curr_bm_size = record_new_bm_size;
+            } else {
+                struct wah_run curr_run = init_wah_run(record_curr_bm,
+                                                       record_curr_bm_size);
+                struct wah_run new_run = init_wah_run(record_new_bm,
+                                                      record_new_bm_size);
+
+                record_tmp_bm_size = wah_or(&curr_run,
+                                            &new_run,
+                                            &record_tmp_bm);
+                free(record_curr_bm);
+                //free(record_new_bm);
+
+                record_curr_bm = record_tmp_bm;
+                record_curr_bm_size = record_tmp_bm_size;
+            }
+        }
+
+        if (query_curr_bm == NULL) {
+            query_curr_bm = record_curr_bm;
+            query_curr_bm_size = record_curr_bm_size;
+        } else {
+                struct wah_run record_run = init_wah_run(record_curr_bm,
+                                                         record_curr_bm_size);
+                struct wah_run query_run = init_wah_run(query_curr_bm,
+                                                        query_curr_bm_size);
+
+                query_tmp_bm_size = wah_and(&record_run,
+                                            &query_run,
+                                            &query_tmp_bm);
+                free(record_curr_bm);
+                free(query_curr_bm);
+
+                query_curr_bm = query_tmp_bm;
+                query_curr_bm_size = query_tmp_bm_size;
+        }
+    }
+
+    *R = query_curr_bm;
+    return query_curr_bm_size;
 }
 //}}}
 

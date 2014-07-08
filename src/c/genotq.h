@@ -706,6 +706,50 @@ unsigned int get_wah_bitmap(struct wah_file wf,
                             unsigned int **wah_bitmap);
 
 /**
+ * @brief Get a pointer to the bitmap of a particular WAH-encoded bitmap record.
+ *
+ * This is identical to get_wah_bitmap, but assumes that space for wah_bm has
+ * already been allocated.
+ *
+ * @param wf The WAH file data structure
+ * @param wah_record The record ID
+ * @param bitmap The bitmap ID (0,1,2, or 3)
+ * @param wah_bitmap A pointer set within the fuction that points to the record
+ *                   and bitmap of intrest
+ *
+ * @retval number of words in the bitmap
+ *
+ * Example Usage:
+ * @code
+ *      char *wah_file_name="data/10.1e4.ind.wahbm";
+ *      struct wah_file wf = init_wah_file(wah_file_name);
+ *      unsigned int *wah_bm;
+ *      unsigned int test_record = 1;
+ *      unsigned int test_bitmap = 2;
+ *      unsinged int wah_size = get_wah_bitmap_in_place(wf,
+ *                                                      test_record,
+ *                                                      test_bitmap,
+ *                                                      &wah_bm);
+ *      unsinged int *ints;
+ *      unsigned int num_ints = wah_to_ints(wah_bm, wah_size, &ints);
+ * @endcode
+ */
+unsigned int get_wah_bitmap_in_place(struct wah_file wf,
+                                     unsigned int wah_record,
+                                     unsigned int bitmap,
+                                     unsigned int **wah_bitmap);
+
+
+
+
+
+
+
+
+
+
+
+/**
  * @brief Get a pointer to the bitmap of a particular WAH-encoded record
  *
  * @param wf The WAH file data structure
@@ -755,12 +799,34 @@ unsigned int get_plt_record(struct plt_file pf,
                             unsigned int plt_record,
                             unsigned int **plt);
 
+/**
+ * @brief
+ *
+ * @param
+ *
+ * @returnval
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
 
 unsigned int gt_records_plt(struct plt_file pf,
                             unsigned int *record_ids,
                             unsigned int num_r,
                             unsigned int test_value,
                             unsigned int **R);
+/**
+ * @brief
+ *
+ * @param
+ *
+ * @returnval
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
 
 unsigned int gt_records_ubin(struct ubin_file uf,
                              unsigned int *record_ids,
@@ -768,11 +834,49 @@ unsigned int gt_records_ubin(struct ubin_file uf,
                              unsigned int test_value,
                              unsigned int **R);
 
-unsigned int gt_records_wahbm(struct wah_file pf,
+/**
+ * @brief 
+ *
+ * @param wf The initialized WAH-encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to test fields against
+ * @param R result with 
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int gt_records_wahbm(struct wah_file wf,
                               unsigned int *record_ids,
                               unsigned int num_r,
                               unsigned int test_value,
                               unsigned int **R);
+
+/**
+ * @brief 
+ *
+ * @param wf The initialized WAH-encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to test fields against
+ * @param R result with 
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+
+unsigned int gt_records_in_place_wahbm(struct wah_file wf,
+                                       unsigned int *record_ids,
+                                       unsigned int num_r,
+                                       unsigned int test_value,
+                                       unsigned int **R);
+
 
 /**
  * @brief convert an uncompressed binary file using WAH (no bitmaps)

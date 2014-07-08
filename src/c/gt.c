@@ -4,25 +4,30 @@
 #include <unistd.h>
 #include <ctype.h>
 #include "genotq.h"
+#include "timer.h"
 
 int gt_help();
 
 int gt_plt(char *in,
            unsigned int query_value,
            unsigned int *R,
-           unsigned int num_records);
+           unsigned int num_records,
+           int quiet);
 int gt_ubin(char *in,
             unsigned int query_value,
             unsigned int *R,
-            unsigned int num_records);
+            unsigned int num_records,
+            int quiet);
 int gt_wah(char *in,
            unsigned int query_value,
            unsigned int *R,
-           unsigned int num_records);
+           unsigned int num_records,
+           int quiet);
 int gt_wahbm(char *in,
              unsigned int query_value,
              unsigned int *R,
-             unsigned int num_records);
+             unsigned int num_records,
+             int quiet);
 
 void print_result(unsigned int len,
                   unsigned int *R,
@@ -40,9 +45,10 @@ int gt(int argc, char **argv)
     int i_is_set = 0, 
         r_is_set = 0, 
         n_is_set = 0, 
+        Q_is_set = 0, 
         q_is_set = 0; 
 
-    while ((c = getopt (argc, argv, "hi:q:r:n:")) != -1) {
+    while ((c = getopt (argc, argv, "hi:q:r:n:Q")) != -1) {
         switch (c) {
             case 'r':
                 r_is_set = 1;
@@ -59,6 +65,9 @@ int gt(int argc, char **argv)
             case 'q':
                 q_is_set = 1;
                 query_value = atoi(optarg);
+                break;
+            case 'Q':
+                Q_is_set = 1;
                 break;
             case 'h':
                 gt_help();
@@ -105,19 +114,23 @@ int gt(int argc, char **argv)
     if (strcmp(type, "plt") == 0)  return gt_plt(in,
                                                  query_value,
                                                  R,
-                                                 num_records);
+                                                 num_records,
+                                                 Q_is_set);
     else if (strcmp(type, "ubin") == 0) return gt_ubin(in,
                                                        query_value,
                                                        R,
-                                                       num_records);
+                                                       num_records,
+                                                       Q_is_set);
     else if (strcmp(type, "wah") == 0) return gt_wah(in,
                                                      query_value,
                                                      R,
-                                                     num_records);
+                                                     num_records,
+                                                     Q_is_set);
     else if (strcmp(type, "wahbm") == 0) return gt_wahbm(in,
                                                          query_value,
                                                          R,
-                                                         num_records);
+                                                         num_records,
+                                                         Q_is_set);
 
     return 1;
 }
@@ -138,18 +151,27 @@ int gt_help()
 int gt_plt(char *in,
            unsigned int query_value,
            unsigned int *R,
-           unsigned int num_records)
+           unsigned int num_records,
+           int quiet)
 {
+    start();
     struct plt_file pf = init_plt_file(in);
+    stop();
+    fprintf(stderr,"%lu\t", report());
 
+    start();
     unsigned int *pf_R;
     unsigned int len_pf_R = gt_records_plt(pf,
                                            R,
                                            num_records,
                                            query_value,
                                            &pf_R);
+    stop();
+    fprintf(stderr,"%lu\n", report());
 
-    print_result(len_pf_R, pf_R, pf.num_fields);
+    if (quiet == 0)
+        print_result(len_pf_R, pf_R, pf.num_fields);
+
 
     free(pf_R);
     fclose(pf.file);
@@ -160,19 +182,27 @@ int gt_plt(char *in,
 int gt_ubin(char *in,
             unsigned int query_value,
             unsigned int *R,
-            unsigned int num_records)
+            unsigned int num_records,
+            int quiet)
 
 {
+    start();
     struct ubin_file uf = init_ubin_file(in);
+    stop();
+    fprintf(stderr,"%lu\t", report());
 
+    start();
     unsigned int *uf_R;
     unsigned int len_uf_R = gt_records_ubin(uf,
                                            R,
                                            num_records,
                                            query_value,
                                            &uf_R);
+    stop();
+    fprintf(stderr,"%lu\n", report());
 
-    print_result(len_uf_R, uf_R, uf.num_fields);
+    if (quiet == 0)
+        print_result(len_uf_R, uf_R, uf.num_fields);
 
     free(uf_R);
     fclose(uf.file);
@@ -182,7 +212,8 @@ int gt_ubin(char *in,
 int gt_wah(char *in,
            unsigned int query_value,
            unsigned int *R,
-           unsigned int num_records)
+           unsigned int num_records,
+           int quiet)
 
 {
     return 0;
@@ -190,22 +221,38 @@ int gt_wah(char *in,
 int gt_wahbm(char *in,
              unsigned int query_value,
              unsigned int *R,
-             unsigned int num_records)
+             unsigned int num_records,
+             int quiet)
 
 {
+    start();
     struct wah_file wf = init_wahbm_file(in);
+    stop();
+    fprintf(stderr,"%lu\t", report());
 
+    start();
     unsigned int *wf_R;
     unsigned int len_wf_R = gt_records_wahbm(wf,
-                                           R,
-                                           num_records,
-                                           query_value,
-                                           &wf_R);
+                                             R,
+                                             num_records,
+                                             query_value,
+                                             &wf_R);
+    stop();
+    fprintf(stderr,"%lu\t", report());
 
-    //print_result(len_wf_R, wf_R, wf.num_fields);
+    start();
 
-    //free(wf_R);
-    //fclose(wf.file);
+    unsigned int *ints;
+    unsigned int len_ints = wah_to_ints(wf_R,len_wf_R,&ints);
+    stop();
+    fprintf(stderr,"%lu\n", report());
+
+    if (quiet == 0)
+        print_result(len_ints, ints, wf.num_fields);
+
+    free(ints);
+    free(wf_R);
+    fclose(wf.file);
 
     return 0;
 }

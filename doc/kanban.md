@@ -68,9 +68,10 @@
 
 ## IN PROGRESS
 
+### Aaron
+* >,<,>=,<= than query
 ### Ryan
 #### Develop
-* greater than query
 #### Document
 #### Verify
 

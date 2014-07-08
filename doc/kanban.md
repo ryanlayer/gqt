@@ -3,8 +3,15 @@
 ## GOALS
 
 ### Urgent
+* Test the tradeoff between compression ratio and query for WAH using 8, 16, 32, and 64 bit words.
+
 
 ### High Value
+
+* Needed operations:
+    * eq (equal) operator. for example, sample Joe is HET (1) or samples 1-M are HOM_REF (0)
+    * ne (not equal) operator. for example, sample Joe is not HET (0,2, or 3) or samples 1-M are not HOM_REF (1,2,3)
+
 
 * Get a 1KG data set to validate results
     * Download 1KG VCF

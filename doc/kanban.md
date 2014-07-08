@@ -71,12 +71,21 @@
 
 ## QUEUE
 
-* grabix
 
 ## IN PROGRESS
 
 ### Aaron
-* >,<,>=,<= than query
+#### Develop
+* grabix
+    * right now all of the genotq grabix code is in src/c/gt_records_grabix.cpp, which looks a lot like the gt_records_plt.
+      I have added a few functions to grabix (included in the latest github pull request) that allow the file to be opend,
+      lines extracted as **char, and then closed.  The goal here is to bring grabix into genotq such that it has the same 
+      set of functions that ubin, wah, plt, etc. have.  Once grabix is all C (not C++), the query functions should be very similar
+      to plt 
+* ubin >,<,>=,<= than query
+#### Document
+#### Verify
+
 ### Ryan
 #### Develop
 #### Document
@@ -94,3 +103,5 @@
     * ubin plt
     * wahbm plt
     * wah plt
+* wah >,<,>=,<= than query
+* plt >,<,>=,<= than query

@@ -3,6 +3,8 @@
 #include "genotq.h"
 #include "unity.h"
 #include <math.h>
+#include <stdio.h>
+#include <inttypes.h>
 
 //{{{ SETUP
 //{{{ char* itoa(int value, char* str, int radix) {
@@ -40,6 +42,22 @@ int clear_list (struct wah_ll *A_head)
     struct wah_ll *A_curr = A_head;
     while (A_curr != NULL) {
         struct wah_ll *A_tmp = A_curr->next;
+        free(A_curr);
+        A_curr = A_tmp;
+        c += 1;
+    }
+
+    return c;
+}
+//}}}
+
+//{{{ int clear_16list (struct wah_ll *A_head)
+int clear_16list (struct wah16_ll *A_head)
+{
+    int c = 0;
+    struct wah16_ll *A_curr = A_head;
+    while (A_curr != NULL) {
+        struct wah16_ll *A_tmp = A_curr->next;
         free(A_curr);
         A_curr = A_tmp;
         c += 1;
@@ -1582,7 +1600,6 @@ void test_wah_to_ints(void)
 //}}}
 
 //{{{ void test_igned int *ints;
-//    unsigned int int_len = plt_line_to_packed_ints(plt, 43, &ints);bin_to_bitmap(void)
 void test_ubin_to_bitmap(void)
 {
     /*
@@ -2708,5 +2725,490 @@ void test_gt_records_in_place_wahbm(void)
     for (i = 0; i < 2; ++i)
         TEST_ASSERT_EQUAL(A[i] , ints[i] >> shift[i]);
     */
+}
+//}}}
+
+//{{{ void test_map_from_32_bits_to_16_bits(void)
+void test_map_from_32_bits_to_16_bits(void)
+{
+    /*
+     * 00100100111111011001101010010000
+     * 00010000001010000000000000000000
+     * 00011011000000100010010101101111
+     * 01101111110100000000000000000000
+     * 01000000000000000100000000000000
+     * 00000000000000000000000000000000
+     * 10000000000000000000000000000010
+     * |-32---------------------------|
+     *
+     * |-15----------|
+     * 001001001111110
+     * 110011010100100
+     * 000001000000101
+     * 000000000000000
+     * 000000011011000
+     * 000100010010101
+     * 101111011011111
+     * 101000000000000
+     * 000000000100000
+     * 000000000010000
+     * 000000000000000
+     * 000000000000000
+     * 000000000000100
+     * 000000000000000
+     * 000000000000100
+     *               ^pad     
+     * 
+     */
+ 
+
+    unsigned int ints[7] = {
+            bin_char_to_int("00100100111111011001101010010000"),
+            bin_char_to_int("00010000001010000000000000000000"),
+            bin_char_to_int("00011011000000100010010101101111"),
+            bin_char_to_int("01101111110100000000000000000000"),
+            bin_char_to_int("01000000000000000100000000000000"),
+            bin_char_to_int("00000000000000000000000000000000"),
+            bin_char_to_int("10000000000000000000000000000010")
+    };
+
+    unsigned int O_A[15] = {
+        bin_char_to_int("001001001111110"),
+        bin_char_to_int("110011010100100"),
+        bin_char_to_int("000001000000101"),
+        bin_char_to_int("000000000000000"),
+        bin_char_to_int("000000011011000"),
+        bin_char_to_int("000100010010101"),
+        bin_char_to_int("101111011011111"),
+        bin_char_to_int("101000000000000"),
+        bin_char_to_int("000000000100000"),
+        bin_char_to_int("000000000010000"),
+        bin_char_to_int("000000000000000"),
+        bin_char_to_int("000000000000000"),
+        bin_char_to_int("000000000000100"),
+        bin_char_to_int("000000000000000"),
+        bin_char_to_int("000000000000100")
+    };
+
+    unsigned int i;
+    uint16_t *O;
+    unsigned int O_len = map_from_32_bits_to_15_bits(ints,
+                                                     7,
+                                                     7*32,
+                                                     &O);
+    TEST_ASSERT_EQUAL(15, O_len);
+
+    for (i = 0; i < O_len; ++i) 
+        TEST_ASSERT_EQUAL(O_A[i], O[i]);
+}
+//}}}
+
+//{{{void test_append_active_16word(void)
+void test_append_active_16word(void)
+{
+    struct wah16_ll *A_head = NULL,
+                    *A_tail = NULL,
+                    *A_curr;
+
+    struct wah16_active_word a;
+
+    // Add to empty list
+    // 100101010101010 -> 19114
+    a.nbits = 15;
+    a.value = 19114;
+
+    int r = append_active_16word(&A_head,&A_tail,a);
+
+    TEST_ASSERT_EQUAL(1, r);
+    TEST_ASSERT_EQUAL(15, A_tail->value.nbits);
+    TEST_ASSERT_EQUAL(19114, A_tail->value.value);
+
+    // Add a litteral with all zeros to to list containg a litteratal with all
+    // a mix of zeros/ones
+    r = clear_16list(A_head);
+    A_head = NULL;
+    A_tail = NULL;
+
+    a.nbits = 15;
+    //111000111000111 -> 29127
+    a.value = 29127;
+
+    r = append_active_16word(&A_head,&A_tail,a);
+    TEST_ASSERT_EQUAL(1, r);
+    TEST_ASSERT_EQUAL(15, A_tail->value.nbits);
+    TEST_ASSERT_EQUAL(29127, A_tail->value.value);
+
+    a.nbits = 15;
+    a.value = 0;
+    r = append_active_16word(&A_head,&A_tail,a);
+    TEST_ASSERT_EQUAL(1, r);
+    TEST_ASSERT_EQUAL(15, A_tail->value.nbits);
+    //10000000000000000000000000111110 -> 
+    TEST_ASSERT_EQUAL(0, A_tail->value.value);
+
+    TEST_ASSERT_EQUAL(15, A_head->value.nbits);
+    //10000000000000000000000000111110 -> 
+    TEST_ASSERT_EQUAL(29127, A_head->value.value);
+
+
+    // Add a litteral with all zeros to to list containg a litteratal with all
+    // zeros 
+    r = clear_16list(A_head);
+    A_head = NULL;
+    A_tail = NULL;
+
+    a.nbits = 15;
+    a.value = 0;
+
+    r = append_active_16word(&A_head,&A_tail,a);
+    TEST_ASSERT_EQUAL(1, r);
+    TEST_ASSERT_EQUAL(15, A_tail->value.nbits);
+    TEST_ASSERT_EQUAL(0, A_tail->value.value);
+
+    r = append_active_16word(&A_head,&A_tail,a);
+    TEST_ASSERT_EQUAL(0, r);
+    //1000000000000010 -> 0x8002
+    TEST_ASSERT_EQUAL(0x8002, A_tail->value.value);
+
+    // Add a litteral with all zeros to to list containg a fill of 62  
+    // zeros (2 words) 
+    r = append_active_16word(&A_head,&A_tail,a);
+    TEST_ASSERT_EQUAL(0, r);
+    //TEST_ASSERT_EQUAL(93, A_tail->value.nbits);
+    //10000000000000000000000000000011 -> 0x80000003
+    TEST_ASSERT_EQUAL(0x8003, A_tail->value.value);
+
+
+    // Add a litteral with all ones
+    r = clear_16list(A_head);
+    A_head = NULL;
+    A_tail = NULL;
+
+    a.nbits = 15;
+    // 111111111111111 -> 0x7fff
+    a.value = 0x7fff;
+
+    r = append_active_16word(&A_head,&A_tail,a);
+    TEST_ASSERT_EQUAL(1, r);
+    TEST_ASSERT_EQUAL(15, A_tail->value.nbits);
+    TEST_ASSERT_EQUAL(0x7fff, A_tail->value.value);
+
+    // Add a litteral with all ones where the list has a litteral with all ones
+    r = append_active_16word(&A_head,&A_tail,a);
+    TEST_ASSERT_EQUAL(0, r);
+    //TEST_ASSERT_EQUAL(62, A_tail->value.nbits);
+    // 1100000000000010 -> 0xc002
+    TEST_ASSERT_EQUAL(0xc002, A_tail->value.value);
+
+    // Add a litteral with all ones where the list has a fill of 31 ones
+    r = append_active_16word(&A_head,&A_tail,a);
+    TEST_ASSERT_EQUAL(0, r);
+    TEST_ASSERT_EQUAL(0xc003, A_tail->value.value);
+
+    // Add a mixed litter to a list with a fill of ones
+    a.nbits = 15;
+    //1010101010101010 -> 43690
+    a.value = 43690;
+
+    r = append_active_16word(&A_head,&A_tail,a);
+    TEST_ASSERT_EQUAL(1, r);
+    TEST_ASSERT_EQUAL(15, A_tail->value.nbits);
+    TEST_ASSERT_EQUAL(43690, A_tail->value.value);
+
+
+    // Add three mixed litterals
+    r = clear_16list(A_head);
+    A_head = NULL;
+    A_tail = NULL;
+
+    a.nbits = 15;
+    a.value = 4151;
+
+    r = append_active_16word(&A_head,&A_tail,a);
+    TEST_ASSERT_EQUAL(1, r);
+    TEST_ASSERT_EQUAL(15, A_tail->value.nbits);
+    TEST_ASSERT_EQUAL(4151, A_tail->value.value);
+
+    a.nbits = 15;
+    a.value = 30001;
+
+    r = append_active_16word(&A_head,&A_tail,a);
+    TEST_ASSERT_EQUAL(1, r);
+    TEST_ASSERT_EQUAL(15, A_tail->value.nbits);
+    TEST_ASSERT_EQUAL(30001, A_tail->value.value);
+
+    a.nbits = 15;
+    a.value = 15115;
+
+    r = append_active_16word(&A_head,&A_tail,a);
+    TEST_ASSERT_EQUAL(1, r);
+    TEST_ASSERT_EQUAL(15, A_tail->value.nbits);
+    TEST_ASSERT_EQUAL(15115, A_tail->value.value);
+}
+//}}}
+
+//{{{ void test_ints_to_wah16(void)
+void test_ints_to_wah16(void)
+{
+    /*
+     * |-32---------------------------|
+     * 10000000000000000000000000000000 -> 2147483648
+     * 00000000000000000000000000000000 -> 0
+     * 00000000000000000000000000000000 -> 0
+     * 00000000000000000000000000000011 -> 3
+     * 00000000000000000000000000000001 -> 1
+     *
+     * Regroup into 15-bit groups
+     *
+     *
+     * 100000000000000 
+     * 000000000000000 +
+     * 000000000000000 |
+     * 000000000000000 |
+     * 000000000000000 |
+     * 000000000000000 |
+     * 000000000000000 |
+     * 000000000000000 +
+     * 000000110000000
+     * 000000000000000
+     * 000000000100000
+     * |-15----------|
+     *           |pad|
+     *
+     * WAH:
+     * 0100000000000000 -> 16384
+     * 1000000000000111 -> 32775
+     * 0000000110000000 -> 384
+     * 0000000000000000 -> 0
+     * 0000000000100000 -> 32
+     */
+    unsigned int I[5] = {2147483648,0,0,3,1};
+    unsigned int A[5] = {16384,32775,384,0,32};
+
+    uint16_t *O;
+    unsigned int wah_size = ints_to_wah16(I,5,160,&O);
+
+    TEST_ASSERT_EQUAL(5, wah_size);
+
+    int i;
+    for (i = 0; i < wah_size; ++i)
+        TEST_ASSERT_EQUAL(O[i], A[i]);
+}
+//}}}
+
+//{{{ void test_ubin_to_bitmap_wah16(void)
+void test_ubin_to_bitmap_wah16(void)
+{
+    /*
+     * int
+     * 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+     * 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+     * 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+     * 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+     * 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+     * 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+     * 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2
+     * 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2
+     * 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2
+     * 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3
+     * 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3
+     * 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3
+     *
+     * ubin
+     * 00000000000000000000000000000000
+     * 00000000000000000000000000000000
+     * 00000000000000000000000000000000
+     * 01010101010101010101010101010101
+     * 01010101010101010101010101010101
+     * 01010101010101010101010101010101
+     * 10101010101010101010101010101010
+     * 10101010101010101010101010101010
+     * 10101010101010101010101010101010
+     * 11111111111111111111111111111111
+     * 11111111111111111111111111111111
+     * 11111111111111111111111111111111
+     *
+     * bit map
+     * 0:
+     * 11111111111111111111111111111111 -> 4294967295
+     * 11111111111111110000000000000000 -> 4294901760
+     * 00000000000000000000000000000000 -> 0
+     * 00000000000000000000000000000000 -> 0
+     * 00000000000000000000000000000000 -> 0
+     * 00000000000000000000000000000000 -> 0
+     * 1: 
+     * 00000000000000000000000000000000 -> 0
+     * 00000000000000001111111111111111 -> 65535
+     * 11111111111111111111111111111111 -> 4294967295
+     * 00000000000000000000000000000000 -> 0
+     * 00000000000000000000000000000000 -> 0
+     * 00000000000000000000000000000000 -> 0
+     * 2: 
+     * 00000000000000000000000000000000 -> 0
+     * 00000000000000000000000000000000 -> 0
+     * 00000000000000000000000000000000 -> 0
+     * 11111111111111111111111111111111 -> 4294967295
+     * 11111111111111110000000000000000 -> 4294901760
+     * 00000000000000000000000000000000 -> 0
+     * 3: 
+     * 00000000000000000000000000000000 -> 0
+     * 00000000000000000000000000000000 -> 0
+     * 00000000000000000000000000000000 -> 0
+     * 00000000000000000000000000000000 -> 0
+     * 00000000000000001111111111111111 -> 65535
+     * 11111111111111111111111111111111 -> 4294967295
+     *
+     * 15 bit groups
+     * 0:
+     * |-15----------|
+     * 111111111111111
+     * 111111111111111
+     * 111111111111111
+     * 111000000000000
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     *             |p|
+     * 1: 
+     * |-15----------|
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     * 000111111111111
+     * 111111111111111
+     * 111111111111111
+     * 111111000000000
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     *             |p|
+     *
+     * 2: 
+     * |-15----------|
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     * 000000111111111
+     * 111111111111111
+     * 111111111111111
+     * 111111111000000
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     *             |p|
+     * 3: 
+     * |-15----------|
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     * 000000000000000
+     * 000000000111111
+     * 111111111111111
+     * 111111111111111
+     * 111111111111000
+     *             |p|
+     * 
+     * WAH
+     * 0:
+     * 1100000000000011 -> 49155
+     * 0111000000000000 -> 28672
+     * 1000000000001001 -> 32777
+     * 1:              
+     * 1000000000000011 -> 32771
+     * 0000111111111111 -> 4095
+     * 1100000000000010 -> 49154
+     * 0111111000000000 -> 32256
+     * 1000000000000110 -> 32774
+     * 2:              
+     * 1000000000000110 -> 32774
+     * 0000000111111111 -> 511
+     * 1100000000000010 -> 49154
+     * 0111111111000000 -> 32704
+     * 1000000000000011 -> 32771
+     * 3:              
+     * 1000000000001001 -> 32777
+     * 0000000000111111 -> 63
+     * 1100000000000010 -> 49154
+     * 0111111111111000 -> 32760
+     */
+
+    unsigned int wah_A[17] = {
+            //0
+            49155,
+            28672,
+            32777,
+            //1
+            32771,
+            4095,
+            49154,
+            32256,
+            32774,
+            //2
+            32774,
+            511,
+            49154,
+            32704,
+            32771,
+            //3
+            32777,
+            63,
+            49154,
+            32760
+    };
+
+    unsigned int i;
+    unsigned int wah_offsets_A[4] = {3,5,5,4};
+
+    char *plt = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 "
+                "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 "
+                "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 "
+                "2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 "
+                "2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 "
+                "2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 "
+                "3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 "
+                "3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 "
+                "3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3";
+
+    unsigned int *ubin;
+    unsigned int ubin_len = plt_line_to_packed_ints(plt, 192, &ubin);
+
+    TEST_ASSERT_EQUAL(12, ubin_len);
+
+    uint16_t *wah;
+    unsigned int *wah_offsets;
+    unsigned int wah_len = ubin_to_bitmap_wah16(ubin,
+                                              ubin_len,
+                                              192,
+                                              &wah,
+                                              &wah_offsets);
+
+    TEST_ASSERT_EQUAL(17, wah_len);
+
+    for (i = 0; i < 4; ++i)
+        TEST_ASSERT_EQUAL(wah_offsets_A[i], wah_offsets[i]);
+
+    for (i = 0; i < wah_len; ++i)
+        TEST_ASSERT_EQUAL(wah_A[i], wah[i]);
+
 }
 //}}}

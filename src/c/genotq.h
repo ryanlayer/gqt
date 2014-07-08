@@ -1,6 +1,8 @@
 #ifndef __GENOTQ_H__
 #define __GENOTQ_H__
 
+#include <stdint.h>
+
 
 struct plt_file {
     FILE *file;
@@ -28,6 +30,15 @@ struct uint_ll {
 
 struct wah_active_word {
     unsigned int value, nbits;
+};
+
+struct wah16_active_word {
+    uint16_t value, nbits;
+};
+
+struct wah16_ll {
+    struct wah16_active_word value;
+    struct wah16_ll *next;
 };
 
 struct wah_ll {
@@ -211,6 +222,37 @@ unsigned int ints_to_wah(unsigned int *I,
                          unsigned int **W);
 
 /**
+ * @brief   Convert an array of 32-bit integers to 16-bit WAH encoding
+ *
+ * @param I         An array of 32-bit itergers that enocde a binary string
+ * @param I_len     The number of intergers in I
+ * @param used_bits The number of used bits (size minus padding)
+ * @param W         The resulting array of WAH words (memory allocted in 
+ *                  function, value set in function)
+ *
+ * @ingroup WAH
+ *
+ * @retval          Size of W
+ *
+ * Example Usage:
+ * @code
+ *      unsigned int X[5] =
+ *          { bin_char_to_int("01000000000000000000000000000001"),
+ *            bin_char_to_int("11111111111111111111111111111111"),
+ *            bin_char_to_int("11111111111111111111111111111111"),
+ *            bin_char_to_int("01000000000101010100000000000000"),
+ *            bin_char_to_int("01000000000000000001010101000000")
+ *          };
+ *      uint16_t *w_X;
+ *      unsigned int wah_size_X = ints_to_wah(X,5,160,&w_X);
+ * @endcode
+ */
+unsigned int ints_to_wah16(unsigned int *I,
+                           int I_len,
+                           unsigned int used_bits,
+                           uint16_t **W);
+
+/**
  * @brief   Add a new bit to an active word
  *
  * @param a
@@ -259,6 +301,36 @@ int append_bit_to_active_word(struct wah_active_word *a, int b);
 int append_active_word(struct wah_ll **A_head,
                        struct wah_ll **A_tail,
                        struct wah_active_word a);
+
+/**
+ * @brief   Append an active workd to a 16-bit WAH list
+ *
+ * @param A_head    Pointer to the head of the list
+ * @param A_tail    Pointer to the tail of the list
+ * @param a         The active word
+ *
+ * @retval  1   A new word was added to the list
+ * @retval  0   A new word was not added
+ *
+ * @ingroup WAH
+ *
+ * Example Usage:
+ * @code
+ *     struct wah16_active_word_ll *A_head = NULL,
+ *                               *A_tail = NULL;
+ *
+ *     struct wah16_active_word a;
+ *     a.nbits = 15;
+ *     a.value = 19114;
+ *     int r = append_active_word(&A_head,&A_tail,a);
+ * @endcode
+ */
+int append_active_16word(struct wah16_ll **A_head,
+                         struct wah16_ll **A_tail,
+                         struct wah16_active_word a);
+
+
+
 /**
  * @brief   Append a fill word to a WAH list
  *
@@ -445,6 +517,33 @@ unsigned int map_from_32_bits_to_31_bits(unsigned int *I,
                                          unsigned int **O);
 
 /**
+ * @brief   A helper function to group ints encoding 32-bits to ones encoding
+ *          15-bits for WAH consideration
+ *
+ * @param I         An array of ints encoding 32-bits
+ * @param I_len     Number of elements in I
+ * @param used_bits Then number of bits used (size minus padding)
+ * @param O         The same bits from I, but encoded in 15-bit groups
+ *
+ * @ingroup WAH
+ *
+ * @retval          size of O
+ *
+ * Example Usage:
+ * @code
+ *      #include <stdint.h>
+ *      unsigned int A[6] = {1073741824, 0, 0, 0, 402653184, 67108864};
+ *      uint16_t *O;
+ *      int l;
+ *      int num_31_groups = map_from_32_bits_to_15_bits(I,5,160,&O,&l);
+ * @endcode
+ */
+unsigned int map_from_32_bits_to_15_bits(unsigned int *I,
+                                         int I_len,
+                                         unsigned int used_bits,
+                                         uint16_t **O);
+
+/**
  * @brief Convert WAH encoding to uncompressed binary ints.
  *
  * Given that padding must be used to deal with the  31-bit chunks that WAH
@@ -500,6 +599,40 @@ unsigned int  ubin_to_bitmap(unsigned int *U,
                              unsigned int U_len,
                              unsigned int used_bits,
                              unsigned int **B);
+
+/**
+ * @brief Convert an array of uncompressed binary values to a bitmap index of
+ *        the values using 16-bit ints.
+ *
+ * @param U Uncompressed 2-bit binary values encoded in an array of integers
+ * @param U_len Unumber of integers in U
+ * @param used_bits Number of bits in U that are used
+ * @param B Resulting bitmap index where the index for value 0 starts at
+ *          position 0 and the index for value 1 starts at position N, value 2
+ *          at N*2, etc. Where U encodeds N (U_len*16) 2-bit values
+ * 
+ * @retval size total number of elements in B, where the bitmap index for each
+ *         value uses 1/4 of the size
+ *
+ * Example Usage:
+ * @code
+ *      #include <stdint.h>
+ *      unsigned int U1[4] = {
+ *              bin_char_to_int("00011011000110110001101100011011"),
+ *              bin_char_to_int("00000101010110101111000001010110"),
+ *              bin_char_to_int("00000000000000000000000000000000"),
+ *              bin_char_to_int("11111111111111111111111111111111")
+ *      };
+ *      uint16_t *B;
+ *      unsigned int B_len = ubin_to_bitmap(U1,4,128,u,&B);
+ * @endcode
+ */
+
+unsigned int ubin_to_bitmap_wah16(unsigned int *U,
+                                  unsigned int U_len,
+                                  unsigned int num_fields,
+                                  uint16_t **W,
+                                  unsigned int **wah_sizes);
 
 
 /**
@@ -632,6 +765,40 @@ unsigned int plt_to_bitmap_wah(char *plt,
  */
 unsigned int convert_file_by_name_ubin_to_wahbm(char *ubin_in, char *wah_out);
 
+/**
+ * @brief convert an uncompressed binary file to a 16-bit WAH encoded bitmap
+ * index
+ *
+ * A WAH file is: 
+ * number of fields (32-bit)
+ * number of records (32-bit)
+ * Record offsets (number of records * 4 * 16-bit)
+ * 1st record 0 bitmap
+ * 1st record 1 bitmap
+ * 1st record 2 bitmap
+ * 1st record 3 bitmap
+ * 2nd record 0 bitmap
+ * 2nd record 1 bitmap
+ * 2nd record 2 bitmap
+ * 2nd record 3 bitmap
+ *
+ * @param ubin_in uncompressed binary file name
+ * @param wah_out 16-bit WAH encoded bitmap index file
+ *
+ * @retval 0 if everything went right
+ * @retval 1 otherwise
+ *
+ * @code
+ *      char *plt_file_name="data/10.1e4.ind.txt";
+ *      char *ubin_file_name="data/10.1e4.ind.ubin";
+ *      char *wah_file_name="data/10.1e4.ind.wah16";
+ *
+ *      convert_file_by_name_plt_to_ubin(plt_file_name, ubin_file_name);
+ *      convert_file_by_name_ubin_to_wahbm(ubin_file_name, wah_file_name);
+ * @endcode
+ */
+unsigned int convert_file_by_name_ubin_to_wahbm16(char *ubin_in,
+                                                  char *wah_out);
 /**
  * @brief Open a WAH-encoded bitmap index and initialize the wah_file data
  * structure.

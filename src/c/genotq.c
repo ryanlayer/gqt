@@ -557,6 +557,44 @@ unsigned int ints_to_rle(unsigned int *I, int I_len, unsigned int **O)
 }
 //}}}
 
+//{{{unsinged int map_from_32_bits_to_15_bits(unsigned int *I,
+unsigned int map_from_32_bits_to_15_bits(unsigned int *I,
+                                         int I_len,
+                                         unsigned int used_bits,
+                                         uint16_t **O)
+{
+    unsigned int int_i, bit_i, group_i, in_group_i;
+    unsigned int O_len =  (used_bits + 15 - 1)/ 15;
+    //unsigned int O_len =  (I_len*32 + 31 - 1)/ 31;
+
+    *O = (uint16_t *) calloc(O_len, sizeof(uint16_t));
+
+
+    bit_i = 1;
+    group_i = 0;
+    in_group_i = 0;
+
+    for (int_i = 0; int_i < I_len; ++int_i) {
+        for ( ;bit_i<=32*(int_i+1); ++bit_i) {
+            unsigned int bit = (I[int_i] >> (32 - (bit_i%32))) & 1;
+            (*O)[group_i] = (*O)[group_i] + (bit << (14 - in_group_i));
+
+            in_group_i += 1;
+
+            if (bit_i % 15 == 0) {
+                in_group_i = 0;
+                group_i += 1;
+            }
+            if (bit_i == used_bits)
+                break;
+        }
+        if (bit_i == used_bits)
+            break;
+    }
+    return O_len;
+}
+//}}}
+
 //{{{unsinged int map_from_32_bits_to_31_bits(unsigned int *I,
 /* 
  * Take a list of 32 bit number and gives the list of 31-bit groups
@@ -694,6 +732,61 @@ int append_bit_to_active_word(struct wah_active_word *a, int b)
 }
 //}}}
 
+//{{{ int append_active_16word(struct wah_ll **A_head,
+/*
+ * This will return 1 if a new node is added to the active word linked list,
+ * otherwise 0
+ */
+int append_active_16word(struct wah16_ll **A_head,
+                         struct wah16_ll **A_tail,
+                         struct wah16_active_word a)
+{
+    struct wah16_ll *n = (struct wah16_ll *)
+        malloc(sizeof(struct wah16_ll));
+
+    n->value = a;
+    n->next = NULL;
+
+    if (*A_head == NULL) {
+        *A_head = n;
+        *A_tail = n;
+        return 1;
+    } else if (a.value == 0) { // all zeros
+        // The value on the tail is a litteral with all zeros
+        if ( (*A_tail)->value.value == 0 ) {
+            (*A_tail)->value.value = 0x8002;
+            //(*A_tail)->value.value = 0x80000002;
+            return 0;
+        // The value on the tail is a fill of all zeros that is not full
+        } else if ( ((*A_tail)->value.value >= 0x8000) &&
+                    ((*A_tail)->value.value < 0xC000) ) {
+            (*A_tail)->value.value += 1;
+            return 0;
+        } else { // the zeros cannot be added to the last active word
+            (*A_tail)->next = n;
+            *A_tail = n;
+            return 1;
+        }
+    } else if (a.value == 0x7FFF) { // all ones
+        if ( (*A_tail)->value.value == a.value ) {
+            (*A_tail)->value.value = 0xC002;
+            return 0;
+        } else if ( (*A_tail)->value.value >= 0xC000) {
+            (*A_tail)->value.value += 1;
+            return 0;
+        } else {
+            (*A_tail)->next = n;
+            *A_tail = n;
+            return 1;
+        }
+    } else {
+        (*A_tail)->next = n;
+        *A_tail = n;
+        return 1;
+    }
+}
+//}}}
+
 //{{{ int append_active_word(struct wah_ll **A_head,
 /*
  * This will return 1 if a new node is added to the active word linked list,
@@ -808,6 +901,50 @@ int append_fill_word(struct wah_ll **A_head,
     
     return -1;
 } 
+//}}}
+
+//{{{ int ints_to_wah16(unsigned int *I,
+unsigned int ints_to_wah16(unsigned int *I,
+                           int I_len,
+                           unsigned int used_bits,
+                           uint16_t **W)
+{
+    unsigned int W_len;
+    uint16_t *O;
+    // split the intput up int to 31-bit groups
+    unsigned int O_len = map_from_32_bits_to_15_bits(I, I_len, used_bits, &O);
+
+    // build the WAH list
+    struct wah16_ll *A_head = NULL,
+                    *A_tail = NULL,
+                    *A_curr;
+    int i,c = 0;
+    struct wah16_active_word a;
+    a.nbits=15;
+    for (i = 0; i < O_len; ++i) {
+        a.value = O[i];
+        c += append_active_16word(&A_head,&A_tail,a);
+    }
+
+    free(O);
+
+    // Move the linked list to an array
+    W_len = c;
+    *W = (uint16_t *) malloc(W_len * sizeof(uint16_t));
+
+    A_curr = A_head;
+    struct wah16_ll *A_tmp;
+    i = 0;
+    while (A_curr != NULL) {
+        (*W)[i] = A_curr->value.value;
+        i += 1;
+        A_tmp = A_curr;
+        A_curr = A_tmp->next;
+        free(A_tmp);
+    }
+
+    return W_len;
+}
 //}}}
 
 //{{{ int ints_to_wah(unsigned int *I,
@@ -1191,6 +1328,50 @@ unsigned int ubin_to_bitmap(unsigned int *U,
 }
 //}}}
 
+//{{{ unsigned int ubin_to_bitmap_wah16(unsigned int *U,
+unsigned int ubin_to_bitmap_wah16(unsigned int *U,
+                                  unsigned int U_len,
+                                  unsigned int num_fields,
+                                  uint16_t **W,
+                                  unsigned int **wah_sizes)
+{
+    unsigned int *B;
+    // two bits per field
+    unsigned int B_len = ubin_to_bitmap(U, U_len, num_fields*2, &B);
+    unsigned int b_len = B_len / 4;  // size of each bitmap index
+
+    *wah_sizes = (unsigned int *) malloc(4*sizeof(unsigned int));
+
+    uint16_t *wahs[4];
+    unsigned int wahs_size[4],
+                 i,
+                 j;
+
+    unsigned int total_wah_size = 0;
+
+    for (i = 0; i < 4; i++) {
+        wahs_size[i] = ints_to_wah16( (B + (i*b_len)), 
+                                      b_len, 
+                                      num_fields, // 1 bit per field
+                                      &(wahs[i]));
+        (*wah_sizes)[i] = wahs_size[i];
+        total_wah_size += wahs_size[i];
+    }
+
+    unsigned int W_i = 0;
+    *W = (uint16_t *) malloc(total_wah_size*sizeof(uint16_t));
+    for (i = 0; i < 4; i++) {
+        for (j = 0; j < wahs_size[i]; j++) {
+            (*W)[W_i] = wahs[i][j];
+            W_i += 1;
+        }
+        free(wahs[i]);
+    }
+
+    return total_wah_size;
+}
+//}}}
+
 //{{{ unsigned int ubin_to_bitmap_wah(unsigned int *U,
 unsigned int ubin_to_bitmap_wah(unsigned int *U,
                                 unsigned int U_len,
@@ -1253,6 +1434,73 @@ unsigned int plt_to_bitmap_wah(char *plt,
     free(ubin);
 
     return wah_len;
+}
+//}}}
+
+//{{{ unsigned int convert_file_by_name_ubin_to_wahbm(char *ubin_in, 
+unsigned int convert_file_by_name_ubin_to_wahbm16(char *ubin_in,
+                                                  char *wah_out)
+{
+    FILE *wf = fopen(wah_out,"wb");
+
+    if (!wf) {
+        printf("Unable to open %s\n", wah_out);
+        return 1;
+    }
+
+    struct ubin_file uf = init_ubin_file(ubin_in);
+
+    //write header for WAH bitmap index file
+    fwrite(&(uf.num_fields), sizeof(int), 1, wf);
+    fwrite(&(uf.num_records), sizeof(int), 1, wf);
+    int zero = 0;
+    int k;
+    for (k = 0; k < uf.num_records*4; ++k)
+        fwrite(&zero, sizeof(int), 1, wf);
+
+    int num_ints_per_record = 1 + ((uf.num_fields - 1) / 16);
+    int num_bytes_per_record = num_ints_per_record * 4;
+
+    unsigned int *c = (unsigned int *)
+        malloc(num_ints_per_record*sizeof(unsigned int));
+
+    int i,j,wah_i = 0, offset_total  = 0;
+
+    // skip to the target record and read in the full record
+    fseek(uf.file, uf.header_offset, SEEK_SET);
+
+    for (i = 0; i < uf.num_records; ++i) {
+        fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
+         
+        uint16_t *wah;
+        unsigned int *wah_sizes;
+        unsigned int wah_len = ubin_to_bitmap_wah16(c,
+                                                    num_ints_per_record,
+                                                    uf.num_fields,
+                                                    &wah,
+                                                    &wah_sizes);
+
+        fseek(wf,sizeof(unsigned int)* (2+4* wah_i),  SEEK_SET);
+        for (j = 0; j < 4; ++j) {
+            offset_total += wah_sizes[j];
+            fwrite(&offset_total, sizeof(unsigned int), 1, wf);
+        }
+
+        fseek(wf,0,SEEK_END);
+        size_t ret = fwrite(wah, sizeof(uint16_t), wah_len, wf);
+        if (ret != wah_len)
+            fprintf(stderr, "ret:%zu != wah_len:%u\n", ret, wah_len);
+
+        wah_i+=1;
+        free(wah);
+        free(wah_sizes);
+    }
+
+    free(c);
+
+    fclose(wf);
+    fclose(uf.file);
+    return 0;
 }
 //}}}
 

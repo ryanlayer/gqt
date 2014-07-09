@@ -88,6 +88,7 @@
 
 ### Ryan
 #### Develop
+* plt-to-vcf
 #### Document
 #### Verify
 
@@ -105,3 +106,5 @@
     * wah plt
 * wah >,<,>=,<= than query
 * plt >,<,>=,<= than query
+* 16-bit word wah file conversion
+* do in place OR

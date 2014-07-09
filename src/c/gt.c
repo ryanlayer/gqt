@@ -29,6 +29,12 @@ int gt_wahbm(char *in,
              unsigned int num_records,
              int quiet);
 
+int gt_in_place_wahbm(char *in,
+                      unsigned int query_value,
+                      unsigned int *R,
+                      unsigned int num_records,
+                      int quiet);
+
 void print_result(unsigned int len,
                   unsigned int *R,
                   unsigned int num_fields);
@@ -111,26 +117,41 @@ int gt(int argc, char **argv)
     unsigned int R[num_records];
     parse_cmd_line_int_csv(R, num_records, record_ids);
 
-    if (strcmp(type, "plt") == 0)  return gt_plt(in,
-                                                 query_value,
-                                                 R,
-                                                 num_records,
-                                                 Q_is_set);
-    else if (strcmp(type, "ubin") == 0) return gt_ubin(in,
-                                                       query_value,
-                                                       R,
-                                                       num_records,
-                                                       Q_is_set);
-    else if (strcmp(type, "wah") == 0) return gt_wah(in,
-                                                     query_value,
-                                                     R,
-                                                     num_records,
-                                                     Q_is_set);
-    else if (strcmp(type, "wahbm") == 0) return gt_wahbm(in,
-                                                         query_value,
-                                                         R,
-                                                         num_records,
-                                                         Q_is_set);
+    if (strcmp(type, "plt") == 0)
+        return gt_plt(in,
+                      query_value,
+                      R,
+                      num_records,
+                      Q_is_set);
+
+    else if (strcmp(type, "ubin") == 0)
+        return gt_ubin(in,
+                       query_value,
+                       R,
+                       num_records,
+                       Q_is_set);
+
+    else if (strcmp(type, "wah") == 0) 
+        return gt_wah(in,
+                      query_value,
+                      R,
+                      num_records,
+                      Q_is_set);
+
+    else if (strcmp(type, "wahbm") == 0)
+        return gt_wahbm(in,
+                        query_value,
+                        R,
+                        num_records,
+                        Q_is_set);
+
+    else if (strcmp(type, "ipwahbm") == 0)
+        return gt_in_place_wahbm(in,
+                                 query_value,
+                                 R,
+                                 num_records,
+                                 Q_is_set);
+
 
     return 1;
 }
@@ -139,10 +160,11 @@ int gt_help()
 {
     printf("usage:   gtq gt <type> -i <input file> -q <query value> "
                 "-n <number of records> -r <record ids>\n"
-           "         plt    Plain text \n"
-           "         ubin   Uncompressed binary\n"
-           "         wah    WAH \n"
-           "         wahbm  WAH bitmap\n"
+           "         plt      Plain text \n"
+           "         ubin     Uncompressed binary\n"
+           "         wah      WAH \n"
+           "         wahbm    WAH bitmap\n"
+           "         ipwahbm  in-place WAH bitmap\n"
     );
 
     return 0;
@@ -218,6 +240,46 @@ int gt_wah(char *in,
 {
     return 0;
 }
+
+int gt_in_place_wahbm(char *in,
+                      unsigned int query_value,
+                      unsigned int *R,
+                      unsigned int num_records,
+                      int quiet)
+
+{
+    start();
+    struct wah_file wf = init_wahbm_file(in);
+    stop();
+    fprintf(stderr,"%lu\t", report());
+
+    start();
+    unsigned int *wf_R;
+    unsigned int len_wf_R = gt_records_in_place_wahbm(wf,
+                                                      R,
+                                                      num_records,
+                                                      query_value,
+                                                      &wf_R);
+    stop();
+    fprintf(stderr,"%lu\t", report());
+
+    start();
+
+    unsigned int *ints;
+    unsigned int len_ints = wah_to_ints(wf_R,len_wf_R,&ints);
+    stop();
+    fprintf(stderr,"%lu\n", report());
+
+    if (quiet == 0)
+        print_result(len_ints, ints, wf.num_fields);
+
+    free(ints);
+    free(wf_R);
+    fclose(wf.file);
+
+    return 0;
+}
+
 int gt_wahbm(char *in,
              unsigned int query_value,
              unsigned int *R,

@@ -14,7 +14,7 @@ all: clean $(TEST_NAMES) test
 %: %.c
 	#ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $@.c
 	ruby $(UNITY_ROOT)/generate_test_runner.rb $@.c
-	$(CC) -Werror -g -o $@ -I$(UNITY_ROOT) -I$(SRC) -DTEST $(UNITY_ROOT)/unity.c $(SRC)/genotq.c $@.c $@_Runner.c -lm 
+	$(CC) -Werror -g -o $@ -I$(UNITY_ROOT) -I$(SRC) -DTEST $(UNITY_ROOT)/unity.c $(SRC)/genotq.c $(SRC)/timer.c $@.c $@_Runner.c -lm -ltcmalloc
 	rm $@_Runner.c
 
 test:

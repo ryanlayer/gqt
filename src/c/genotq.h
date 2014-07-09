@@ -491,6 +491,103 @@ unsigned int wah_or(struct wah_run *x,
                     unsigned int **O);
 
 /**
+ * @brief   in-place OR two WAH runs
+ *
+ * The assumption here is that r_wah is pre-allocated and  contains only
+ * literals, no fills.  Wah can be any combination of litterals and fills.
+ * The result is stored back into r_wah.
+ *
+ * @param r_wah a wah-encoded bitmap of all literals
+ * @param r_wah_size the number of words in r_wah
+ * @param wah a wah-encoded bitmap with a cobmo of literals and fills
+ * @param wah_size the numberof words in wah
+ *
+ * @retval  The number of elements in r_wah
+ *
+ * @ingroup WAH
+ *
+ * Example Usage:
+ * @code
+ *    unsigned int X[5] =
+ *        { bin_char_to_int("01000000000000000000000000000001"),
+ *          bin_char_to_int("11111111111111111111111111111111"),
+ *          bin_char_to_int("11111111111111111111111111111111"),
+ *          bin_char_to_int("01000000000101010100000000000000"),
+ *          bin_char_to_int("01000000000000000001010101000000")
+ *        };
+ *
+ *    unsigned int Y[5] =
+ *        { bin_char_to_int("01000000000000000000000000000001"),
+ *          bin_char_to_int("11111111111111111111111111111111"),
+ *          bin_char_to_int("11111111111111111111111111111000"),
+ *          bin_char_to_int("00000000000000000000000000000000"),
+ *          bin_char_to_int("00000000000000000000000000001011")
+ *        };
+ *    unsigned int R[6] = {0,0,0,0,0,0};
+ *
+ *    unsigned int r = wah_in_place_or(R, 6, w_Y, wah_size_Y);
+ *    r = wah_in_place_or(R, 6, w_X, wah_size_X);
+ *    unsigned int *ints_ip;
+ *    unsigned int ints_ip_len = wah_to_ints(R,r,&ints_ip);
+ * @endcode
+ */
+unsigned int  wah_in_place_or(unsigned int *r_wah,
+                              unsigned int r_wah_size,
+                              unsigned int *wah,
+                              unsigned int wah_size);
+
+/**
+ * @brief   in-place AND two WAH runs
+ *
+ * The assumption here is that r_wah is pre-allocated and  contains only
+ * literals, no fills.  Wah can be any combination of litterals and fills.
+ * The result is stored back into r_wah.
+ *
+ * @param r_wah a wah-encoded bitmap of all literals
+ * @param r_wah_size the number of words in r_wah
+ * @param wah a wah-encoded bitmap with a cobmo of literals and fills
+ * @param wah_size the numberof words in wah
+ *
+ * @retval  The number of elements in r_wah
+ *
+ * @ingroup WAH
+ *
+ * Example Usage:
+ * @code
+ *    unsigned int X[5] =
+ *        { bin_char_to_int("01000000000000000000000000000001"),
+ *          bin_char_to_int("11111111111111111111111111111111"),
+ *          bin_char_to_int("11111111111111111111111111111111"),
+ *          bin_char_to_int("01000000000101010100000000000000"),
+ *          bin_char_to_int("01000000000000000001010101000000")
+ *        };
+ *
+ *    unsigned int Y[5] =
+ *        { bin_char_to_int("01000000000000000000000000000001"),
+ *          bin_char_to_int("11111111111111111111111111111111"),
+ *          bin_char_to_int("11111111111111111111111111111000"),
+ *          bin_char_to_int("00000000000000000000000000000000"),
+ *          bin_char_to_int("00000000000000000000000000001011")
+ *        };
+ *    unsigned int R[6] = {0x7fffffff,
+ *                         0x7fffffff,
+ *                         0x7fffffff,
+ *                         0x7fffffff,
+ *                         0x7fffffff,
+ *                         0x7fffffff};
+ *
+ *    unsigned int r = wah_in_place_and(R, 6, w_Y, wah_size_Y);
+ *    r = wah_in_place_and(R, 6, w_X, wah_size_X);
+ *    unsigned int *ints_ip;
+ *    unsigned int ints_ip_len = wah_to_ints(R,r,&ints_ip);
+ * @endcode
+ */
+unsigned int  wah_in_place_and(unsigned int *r_wah,
+                               unsigned int r_wah_size,
+                               unsigned int *wah,
+                               unsigned int wah_size);
+
+/**
  * @brief   A helper function to group ints encoding 32-bits to ones encoding
  *          31-bits for WAH consideration
  *
@@ -968,7 +1065,8 @@ unsigned int get_plt_record(struct plt_file pf,
 
 
 /**
- * @brief Return records whose values are >= start_test_value and < end_test_value
+ * @brief Return records whose values are >= start_test_value and <
+ * end_test_value
  *
  * @param pf The initialized plain text encoded file
  * @param record_ids array of integer ids of the records to test
@@ -988,6 +1086,31 @@ unsigned int get_plt_record(struct plt_file pf,
                               unsigned int start_test_value,
                               unsigned int end_test_value,
                               unsigned int **R);
+/**
+ * @brief Return records whose values are >= start_test_value and <
+ * end_test_value using in_place functions
+ *
+ * @param pf The initialized plain text encoded file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to test fields against
+ * @param R result with 
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+
+unsigned int range_records_in_place_wahbm(struct wah_file wf,
+                                          unsigned int *record_ids,
+                                          unsigned int num_r,
+                                          unsigned int start_test_value,
+                                          unsigned int end_test_value,
+                                          unsigned int **R);
+
+
 
 /**
  * @brief Return records whose value is equal to the test value
@@ -1245,6 +1368,28 @@ unsigned int gt_records_wahbm(struct wah_file wf,
                               unsigned int num_r,
                               unsigned int test_value,
                               unsigned int **R);
+/**
+ * @brief Return records whose value are greater than the test value using 
+ * in-place functions
+ *
+ * @param wf The initialized WAH-encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to test fields against
+ * @param R result with 
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int gt_records_in_place_wahbm(struct wah_file wf,
+                                       unsigned int *record_ids,
+                                       unsigned int num_r,
+                                       unsigned int test_value,
+                                       unsigned int **R);
+
 
 /**
  * @brief Return records whose value are greater or equal to the test value 

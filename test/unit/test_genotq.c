@@ -5,6 +5,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <inttypes.h>
+#include "timer.h"
 
 //{{{ SETUP
 //{{{ char* itoa(int value, char* str, int radix) {
@@ -2815,7 +2816,6 @@ void test_ne_records_plt_ubin_wahbm(void)
 }
 //}}}
 
-
 //{{{void test_padding_fix(void)
 void test_padding_fix(void)
 {
@@ -2940,7 +2940,8 @@ void test_get_wah_bitmap_in_place(void)
     unsigned int *wah_bm1;
 
     unsigned int max_wah_size = (wf2.num_fields + 31 - 1)/ 31;
-    unsigned int *wah_bm2 = (unsigned int *) malloc(sizeof(unsigned int)*max_wah_size);
+    unsigned int *wah_bm2 = (unsigned int *)
+            malloc(sizeof(unsigned int)*max_wah_size);
 
 
     for (i = 0; i < 10; ++i) {
@@ -2971,8 +2972,10 @@ void test_get_wah_bitmap_in_place_then_or(void)
 
     unsigned int max_wah_size = (wf.num_fields + 31 - 1)/ 31;
 
-    unsigned int *wah_ip_bm1 = (unsigned int *) malloc(sizeof(unsigned int)*max_wah_size);
-    unsigned int *wah_ip_bm2 = (unsigned int *) malloc(sizeof(unsigned int)*max_wah_size);
+    unsigned int *wah_ip_bm1 = (unsigned int *)
+            malloc(sizeof(unsigned int)*max_wah_size);
+    unsigned int *wah_ip_bm2 = (unsigned int *)
+            malloc(sizeof(unsigned int)*max_wah_size);
 
     unsigned int wah_ip_size1 = get_wah_bitmap_in_place(wf,1,2,&wah_ip_bm1);
     unsigned int wah_ip_size2 = get_wah_bitmap_in_place(wf,2,2,&wah_ip_bm2);
@@ -2997,37 +3000,8 @@ void test_get_wah_bitmap_in_place_then_or(void)
 
     TEST_ASSERT_EQUAL(r_len, r_ip_len);
 
-    for (i = 0; i < r_len; ++i) {
-        fprintf(stderr, "%u\t%u\n", r[i], r_ip[i]);
+    for (i = 0; i < r_len; ++i) 
         TEST_ASSERT_EQUAL(r[i], r_ip[i]);
-    }
-}
-//}}}
-
-//{{{ void test_gt_records_in_place_wahbm(void)
-void test_gt_records_in_place_wahbm(void)
-{
-    unsigned int test_records[4] = {1,2,3,4};
-
-    char *wah_file_name="../data/10.1e4.ind.wahbm";
-    struct wah_file wf1 = init_wahbm_file(wah_file_name);
-    struct wah_file wf2 = init_wahbm_file(wah_file_name);
-
-
-    unsigned int *wf_R1;
-    unsigned int len_wf_R1 = gt_records_wahbm(wf1, test_records, 4, 0, &wf_R1);
-
-    unsigned int *wf_R2;
-    unsigned int len_wf_R2 = gt_records_in_place_wahbm(wf2, test_records, 4, 0, &wf_R2);
-
-    unsigned int i;
-    for (i = 0; i < len_wf_R2; ++i)
-        TEST_ASSERT_EQUAL(wf_R1[i], wf_R2[i]);
-
-    /*
-    for (i = 0; i < 2; ++i)
-        TEST_ASSERT_EQUAL(A[i] , ints[i] >> shift[i]);
-    */
 }
 //}}}
 
@@ -3513,5 +3487,268 @@ void test_ubin_to_bitmap_wah16(void)
     for (i = 0; i < wah_len; ++i)
         TEST_ASSERT_EQUAL(wah_A[i], wah[i]);
 
+}
+//}}}
+
+//{{{ void test_wah_in_place_or(void)
+void test_wah_in_place_or(void)
+{
+    /*
+     * X
+     * |--31-------------------------|
+     * 0100000000000000000000000000000
+     * 1111111111111111111111111111111
+     * 1111111111111111111111111111111
+     * 1110100000000010101010000000000
+     * 0000010000000000000000010101010
+     * 00000
+     * |--32--------------------------|
+     * 01000000000000000000000000000001
+     * 11111111111111111111111111111111
+     * 11111111111111111111111111111111
+     * 01000000000101010100000000000000
+     * 01000000000000000001010101000000
+     * WAH
+     * 536870912
+     * 3221225474
+     * 1946244096
+     * 33554602
+     * 0
+     *
+     * Y
+     * |--31-------------------------|
+     * 0100000000000000000000000000000
+     * 1111111111111111111111111111111
+     * 1111111111111111111111111111111
+     * 0000000000000000000000000000000
+     * 0000000000000000000000000000000
+     * 01011
+     * |--32--------------------------|
+     * 01000000000000000000000000000001
+     * 11111111111111111111111111111111
+     * 11111111111111111111111111111000
+     * 00000000000000000000000000000000
+     * 00000000000000000000000000001011
+     * WAH
+     * 536870912
+     * 3221225474
+     * 2147483650
+     * 738197504
+     *
+     *
+     * Result:
+     * 00100000000000000000000000000000
+     * 11000000000000000000000000000010
+     * 01110100000000010101010000000000
+     * 00000010000000000000000010101010
+     * 00101100000000000000000000000000
+     */
+
+    unsigned int A[5] = 
+        { bin_char_to_int("00100000000000000000000000000000"),
+          bin_char_to_int("11000000000000000000000000000010"),
+          bin_char_to_int("01110100000000010101010000000000"),
+          bin_char_to_int("00000010000000000000000010101010"),
+          bin_char_to_int("00101100000000000000000000000000")
+        };
+ 
+
+    unsigned int X[5] =
+        { bin_char_to_int("01000000000000000000000000000001"),
+          bin_char_to_int("11111111111111111111111111111111"),
+          bin_char_to_int("11111111111111111111111111111111"),
+          bin_char_to_int("01000000000101010100000000000000"),
+          bin_char_to_int("01000000000000000001010101000000")
+        };
+
+    unsigned int Y[5] =
+        { bin_char_to_int("01000000000000000000000000000001"),
+          bin_char_to_int("11111111111111111111111111111111"),
+          bin_char_to_int("11111111111111111111111111111000"),
+          bin_char_to_int("00000000000000000000000000000000"),
+          bin_char_to_int("00000000000000000000000000001011")
+        };
+
+    unsigned int *w_X;
+    int wah_size_X = ints_to_wah(X,5,160,&w_X);
+    TEST_ASSERT_EQUAL(5, wah_size_X);
+    struct wah_run r_X = init_wah_run(w_X, wah_size_X);
+
+    unsigned int *w_Y;
+    int wah_size_Y = ints_to_wah(Y,5,160,&w_Y);
+    TEST_ASSERT_EQUAL(4, wah_size_Y);
+    struct wah_run r_Y = init_wah_run(w_Y, wah_size_Y);
+
+    unsigned int *Z;
+    unsigned int Z_len = wah_or(&r_X, &r_Y, &Z);
+
+    int i;
+    for (i = 0; i < Z_len; ++i)
+        TEST_ASSERT_EQUAL(A[i], Z[i]);
+
+    
+    unsigned int R[6] = {0,0,0,0,0,0};
+
+    unsigned int r = wah_in_place_or(R, 6, w_Y, wah_size_Y);
+    r = wah_in_place_or(R, 6, w_X, wah_size_X);
+
+    unsigned int *ints_o, *ints_ip;
+    unsigned int ints_ip_len = wah_to_ints(R,r,&ints_ip);
+    unsigned int ints_o_len = wah_to_ints(Z,Z_len,&ints_o);
+
+    TEST_ASSERT_EQUAL(ints_o_len, ints_ip_len);
+    for (i = 0; i < ints_o_len; ++i)
+        TEST_ASSERT_EQUAL(ints_o[i], ints_ip[i]);
+
+}
+//}}}
+
+//{{{ void test_wah_in_place_and(void)
+void test_wah_in_place_and(void)
+{
+    /*
+     * X
+     * |--32--------------------------|
+     * 01000000000000000000000000000001
+     * 11111111111111111111111111111111
+     * 11111111111111111111111111111111
+     * 01000000000101010100000000000000
+     * 01000000000000000001010101000000
+     * Y
+     * |--32--------------------------|
+     * 01000000000000000000000000000001
+     * 11111111111111111111111111111111
+     * 11111111111111111111111111111000
+     * 00000000000000000000000000000000
+     * 00000000000000000000000000001011
+     *
+     * Result:
+     * 01000000000000000000000000000001
+     * 11111111111111111111111111111111
+     * 11111111111111111111111111111000
+     * 00000000000000000000000000000000
+     * 00000000000000000000000000000000
+     */
+
+    unsigned int A[5] = 
+        { bin_char_to_int("01000000000000000000000000000001"),
+          bin_char_to_int("11111111111111111111111111111111"),
+          bin_char_to_int("11111111111111111111111111111000"),
+          bin_char_to_int("00000000000000000000000000000000"),
+          bin_char_to_int("00000000000000000000000000000000")
+        };
+
+    unsigned int X[5] =
+        { bin_char_to_int("01000000000000000000000000000001"),
+          bin_char_to_int("11111111111111111111111111111111"),
+          bin_char_to_int("11111111111111111111111111111111"),
+          bin_char_to_int("01000000000101010100000000000000"),
+          bin_char_to_int("01000000000000000001010101000000")
+        };
+
+    unsigned int Y[5] =
+        { bin_char_to_int("01000000000000000000000000000001"),
+          bin_char_to_int("11111111111111111111111111111111"),
+          bin_char_to_int("11111111111111111111111111111000"),
+          bin_char_to_int("00000000000000000000000000000000"),
+          bin_char_to_int("00000000000000000000000000001011")
+        };
+
+
+    unsigned int *w_X;
+    int wah_size_X = ints_to_wah(X,5,160,&w_X);
+    TEST_ASSERT_EQUAL(5, wah_size_X);
+    struct wah_run r_X = init_wah_run(w_X, wah_size_X);
+
+    unsigned int *w_Y;
+    int wah_size_Y = ints_to_wah(Y,5,160,&w_Y);
+    TEST_ASSERT_EQUAL(4, wah_size_Y);
+    struct wah_run r_Y = init_wah_run(w_Y, wah_size_Y);
+
+    unsigned int *Z;
+    unsigned int Z_len = wah_and(&r_X, &r_Y, &Z);
+
+    unsigned int *ints;
+    unsigned int ints_len = wah_to_ints(Z, Z_len, &ints);
+
+    unsigned int i;
+    for (i = 0; i < 5; ++i) 
+        TEST_ASSERT_EQUAL(A[i], ints[i]);
+
+
+    
+    unsigned int R[6] = {0x7fffffff,
+                         0x7fffffff,
+                         0x7fffffff,
+                         0x7fffffff,
+                         0x7fffffff,
+                         0x7fffffff};
+
+    unsigned int r = wah_in_place_and(R, 6, w_Y, wah_size_Y);
+    r = wah_in_place_and(R, 6, w_X, wah_size_X);
+
+    unsigned int *ints_ip;
+    unsigned int ints_ip_len = wah_to_ints(R,r,&ints_ip);
+
+    TEST_ASSERT_EQUAL(ints_len, ints_ip_len);
+    for (i = 0; i < ints_len; ++i)
+        TEST_ASSERT_EQUAL(ints[i], ints_ip[i]);
+
+}
+//}}}
+
+//{{{ void test_gt_records_plt_ubin_in_place_wahbm(void)
+void test_gt_records_plt_ubin_in_place_wahbm(void)
+{
+    char *plt_file_name="../data/10.1e4.ind.txt";
+    char *ubin_file_name="../data/10.1e4.ind.ubin";
+    char *wah_file_name="../data/10.1e4.ind.wahbm";
+
+    struct plt_file pf = init_plt_file(plt_file_name);
+    struct ubin_file uf = init_ubin_file(ubin_file_name);
+    struct wah_file wf = init_wahbm_file(wah_file_name);
+
+    unsigned int test_records[4] = {1,2,3,4};
+
+    unsigned int *pf_R;
+    unsigned int len_pf_R = gt_records_plt(pf, test_records, 4, 0, &pf_R);
+
+    unsigned int *uf_R;
+    unsigned int len_uf_R = gt_records_ubin(uf, test_records, 4, 0, &uf_R);
+
+    unsigned int *wf_R;
+    unsigned int len_wf_R = gt_records_in_place_wahbm(wf,
+                                                      test_records,
+                                                      4,
+                                                      0,
+                                                      &wf_R);
+
+    unsigned int *ints;
+    unsigned int ints_size = wah_to_ints(wf_R,len_wf_R,&ints);
+
+                
+    /*
+     * 1000001110111010100101011110111111010110100
+     * 0000000220222020000202020000020022000000010
+     * 0000000221222021000202010000020022000000000
+     * 1011010110222021000202020010020022000000100
+     *
+     * 0000000110111010000101010000010011000000000
+     *
+     * 00000001101110100001010100000100 -> 28972292
+     * 11000000000                      -> 1536
+     */
+
+    unsigned int A[2] = {28972292,1536};
+    unsigned int shift[2] = {0,21};
+    unsigned int i;
+    for (i = 0; i < 2; ++i)
+        TEST_ASSERT_EQUAL(A[i] , pf_R[i] >> shift[i]);
+
+    for (i = 0; i < 2; ++i)
+        TEST_ASSERT_EQUAL(A[i] , uf_R[i] >> shift[i]);
+
+    for (i = 0; i < 2; ++i)
+        TEST_ASSERT_EQUAL(A[i] , ints[i] >> shift[i]);
 }
 //}}}

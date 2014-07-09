@@ -178,10 +178,6 @@ int gt_plt(char *in,
 {
     start();
     struct plt_file pf = init_plt_file(in);
-    stop();
-    fprintf(stderr,"%lu\t", report());
-
-    start();
     unsigned int *pf_R;
     unsigned int len_pf_R = gt_records_plt(pf,
                                            R,
@@ -210,10 +206,6 @@ int gt_ubin(char *in,
 {
     start();
     struct ubin_file uf = init_ubin_file(in);
-    stop();
-    fprintf(stderr,"%lu\t", report());
-
-    start();
     unsigned int *uf_R;
     unsigned int len_uf_R = gt_records_ubin(uf,
                                            R,
@@ -250,21 +242,12 @@ int gt_in_place_wahbm(char *in,
 {
     start();
     struct wah_file wf = init_wahbm_file(in);
-    stop();
-    fprintf(stderr,"%lu\t", report());
-
-    start();
     unsigned int *wf_R;
     unsigned int len_wf_R = gt_records_in_place_wahbm(wf,
                                                       R,
                                                       num_records,
                                                       query_value,
                                                       &wf_R);
-    stop();
-    fprintf(stderr,"%lu\t", report());
-
-    start();
-
     unsigned int *ints;
     unsigned int len_ints = wah_to_ints(wf_R,len_wf_R,&ints);
     stop();
@@ -289,20 +272,12 @@ int gt_wahbm(char *in,
 {
     start();
     struct wah_file wf = init_wahbm_file(in);
-    stop();
-    fprintf(stderr,"%lu\t", report());
-
-    start();
     unsigned int *wf_R;
     unsigned int len_wf_R = gt_records_wahbm(wf,
                                              R,
                                              num_records,
                                              query_value,
                                              &wf_R);
-    stop();
-    fprintf(stderr,"%lu\t", report());
-
-    start();
 
     unsigned int *ints;
     unsigned int len_ints = wah_to_ints(wf_R,len_wf_R,&ints);

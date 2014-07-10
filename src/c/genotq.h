@@ -536,6 +536,12 @@ unsigned int  wah_in_place_or(unsigned int *r_wah,
                               unsigned int *wah,
                               unsigned int wah_size);
 
+unsigned int  wah_compressed_in_place_or(unsigned int *r_wah,
+                                         unsigned int r_wah_size,
+                                         unsigned int *wah,
+                                         unsigned int wah_size);
+
+
 /**
  * @brief   in-place AND two WAH runs
  *

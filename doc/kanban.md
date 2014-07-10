@@ -71,6 +71,9 @@
 
 ## QUEUE
 
+### Ryan
+* plt-to-vcf
+* count and sum based on compressed in-place 
 
 ## IN PROGRESS
 
@@ -88,7 +91,8 @@
 
 ### Ryan
 #### Develop
-* plt-to-vcf
+* compressed in-place OR and AND
+    * compressed in-place wah to ints
 #### Document
 #### Verify
 

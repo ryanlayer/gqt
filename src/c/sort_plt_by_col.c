@@ -83,7 +83,11 @@ int main(int argc, char **argv)
 
     qsort(S, pf.num_fields, sizeof(struct pair), compare);
 
+
+    // jump past the header
     fseek(pf.file, pf.header_offset, SEEK_SET);
+
+
 
     printf("%d\n%d\n", pf.num_fields, pf.num_records);
     for (i = 0; i < pf.num_records; ++i) {

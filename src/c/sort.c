@@ -17,6 +17,7 @@ int compare (const void *a, const void *b)
 {
     return ((struct pair *)a)->b - ((struct pair *)b)->b; 
 }
+
 int sort(int argc, char **argv)
 {
     if (argc < 2) return sort_help();

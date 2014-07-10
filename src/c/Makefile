@@ -8,6 +8,7 @@ LIB=genotq.o \
     convert.o \
     gt.o \
     view.o \
+    sort.o \
     timer.o
 
 
@@ -15,10 +16,6 @@ OBJS=$(addprefix $(OBJ)/, $(LIB))
 
 
 PROG=read_binary_uints \
-	sort_plt_by_col \
-	gt_records_plt \
-	gt_records_wah \
-	gt_records_ubin \
 	gtq \
 	gt_records_grabix 
 

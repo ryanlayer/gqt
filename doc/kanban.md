@@ -74,7 +74,6 @@
 ### Ryan
 * plt-to-vcf
 * count and sum based on compressed in-place 
-
 ## IN PROGRESS
 
 ### Aaron
@@ -91,8 +90,14 @@
 
 ### Ryan
 #### Develop
-* compressed in-place OR and AND
-    * compressed in-place wah to ints
+* count
+    * wah
+    * plt
+    * ubin
+    * in place
+    * compressed in place
+
+
 #### Document
 #### Verify
 
@@ -112,3 +117,5 @@
 * plt >,<,>=,<= than query
 * 16-bit word wah file conversion
 * do in place OR
+* compressed in-place OR and AND
+    * compressed in-place wah to ints

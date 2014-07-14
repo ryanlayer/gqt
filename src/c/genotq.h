@@ -535,11 +535,99 @@ unsigned int  wah_in_place_or(unsigned int *r_wah,
                               unsigned int r_wah_size,
                               unsigned int *wah,
                               unsigned int wah_size);
-
+/**
+ * @brief   compressed in-place OR two WAH runs
+ *
+ * The assumption here is that r_wah is pre-allocated to an array that can hold
+ * the maximum possible size. r_wah can contain a mix of fills and literals,
+ * but any fill must be followed by enough empty words to allow the fill to be
+ * completely inflated if future operations require it.
+ * wah can be any combination of litterals and fills.  The result is stored
+ * back into r_wah.
+ *
+ * @param r_wah a wah-encoded bitmap of all literals
+ * @param r_wah_size the number of words in r_wah
+ * @param wah a wah-encoded bitmap with a cobmo of literals and fills
+ * @param wah_size the numberof words in wah
+ *
+ * @retval  The number of elements in r_wah
+ *
+ * @ingroup WAH
+ *
+ * Example Usage:
+ * @code
+ *    unsigned int X[5] =
+ *        { bin_char_to_int("01000000000000000000000000000001"),
+ *          bin_char_to_int("11111111111111111111111111111111"),
+ *          bin_char_to_int("11111111111111111111111111111111"),
+ *          bin_char_to_int("01000000000101010100000000000000"),
+ *          bin_char_to_int("01000000000000000001010101000000")
+ *        };
+ *
+ *    unsigned int Y[5] =
+ *        { bin_char_to_int("01000000000000000000000000000001"),
+ *          bin_char_to_int("11111111111111111111111111111111"),
+ *          bin_char_to_int("11111111111111111111111111111000"),
+ *          bin_char_to_int("00000000000000000000000000000000"),
+ *          bin_char_to_int("00000000000000000000000000001011")
+ *        };
+ *    unsigned int R[6] = {0x80000006,0,0,0,0,0};
+ *
+ *    unsigned int r = wah_compressed_in_place_or(R, 6, w_Y, wah_size_Y);
+ *    r = wah_compressed_in_place_or(R, 6, w_X, wah_size_X);
+ * @endcode
+ */
 unsigned int  wah_compressed_in_place_or(unsigned int *r_wah,
                                          unsigned int r_wah_size,
                                          unsigned int *wah,
                                          unsigned int wah_size);
+/**
+ * @brief   compressed in-place AND two WAH runs
+ *
+ * The assumption here is that r_wah is pre-allocated to an array that can hold
+ * the maximum possible size. r_wah can contain a mix of fills and literals,
+ * but any fill must be followed by enough empty words to allow the fill to be
+ * completely inflated if future operations require it.
+ * wah can be any combination of litterals and fills.  The result is stored
+ * back into r_wah.
+ *
+ * @param r_wah a wah-encoded bitmap of all literals
+ * @param r_wah_size the number of words in r_wah
+ * @param wah a wah-encoded bitmap with a cobmo of literals and fills
+ * @param wah_size the numberof words in wah
+ *
+ * @retval  The number of elements in r_wah
+ *
+ * @ingroup WAH
+ *
+ * Example Usage:
+ * @code
+ *    unsigned int X[5] =
+ *        { bin_char_to_int("01000000000000000000000000000001"),
+ *          bin_char_to_int("11111111111111111111111111111111"),
+ *          bin_char_to_int("11111111111111111111111111111111"),
+ *          bin_char_to_int("01000000000101010100000000000000"),
+ *          bin_char_to_int("01000000000000000001010101000000")
+ *        };
+ *
+ *    unsigned int Y[5] =
+ *        { bin_char_to_int("01000000000000000000000000000001"),
+ *          bin_char_to_int("11111111111111111111111111111111"),
+ *          bin_char_to_int("11111111111111111111111111111000"),
+ *          bin_char_to_int("00000000000000000000000000000000"),
+ *          bin_char_to_int("00000000000000000000000000001011")
+ *        };
+ *    unsigned int R[6] = {0xc0000006,0,0,0,0,0};
+ *
+ *    unsigned int r = wah_compressed_in_place_and(R, 6, w_Y, wah_size_Y);
+ *    r = wah_compressed_in_place_and(R, 6, w_X, wah_size_X);
+ * @endcode
+ */
+unsigned int  wah_compressed_in_place_and(unsigned int *r_wah,
+                                          unsigned int r_wah_size,
+                                          unsigned int *wah,
+                                          unsigned int wah_size);
+
 
 
 /**
@@ -671,6 +759,32 @@ unsigned int map_from_32_bits_to_15_bits(unsigned int *I,
 unsigned int wah_to_ints(unsigned int *W,
                          unsigned int W_len,
                          unsigned int **O);
+/**
+ * @brief Convert compressed in place WAH encoding to uncompressed binary ints.
+ *
+ * Given that padding must be used to deal with the  31-bit chunks that WAH
+ * considers and the 32-bit chunks of an int, it is common to have more bits in
+ * the resulting int than were in the original.
+ *
+ * @param W     A WAH-encoded array
+ * @param W_len The number of elements in W
+ * @param O     The uncompressed binary version of W
+ *
+ * @retval size of O
+ *
+ * Example Usage:
+ * @code
+ *     unsigned int I[5] = {2147483648,0,0,3,1};
+ *     unsigned int *WAH;
+ *     unsigned int wah_size = ints_to_wah(I,5,160,&WAH);
+ *     unsigned int *INTS;
+ *     unsigned int ints_size = wah_to_ints(WAH,wah_size,&INTS);
+ * @endcode
+ */
+
+unsigned int compressed_in_place_wah_to_ints(unsigned int *W,
+                                             unsigned int W_len,
+                                             unsigned int **O);
 
 /**
  * @brief Convert an array of uncompressed binary values to a bitmap index of
@@ -1108,17 +1222,36 @@ unsigned int get_plt_record(struct plt_file pf,
  * @code
  * @endcode
  */
-
 unsigned int range_records_in_place_wahbm(struct wah_file wf,
                                           unsigned int *record_ids,
                                           unsigned int num_r,
                                           unsigned int start_test_value,
                                           unsigned int end_test_value,
                                           unsigned int **R);
-
-
-
 /**
+ * @brief Return records whose values are >= start_test_value and <
+ * end_test_value using compressed in place functions
+ *
+ * @param pf The initialized plain text encoded file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to test fields against
+ * @param R result with 
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int range_records_compressed_in_place_wahbm(
+            struct wah_file wf,
+            unsigned int *record_ids,
+            unsigned int num_r,
+            unsigned int start_test_value,
+            unsigned int end_test_value,
+            unsigned int **R);
+/*
  * @brief Return records whose value is equal to the test value
  *
  * @param pf The initialized plain text encoded bitmap file
@@ -1374,6 +1507,7 @@ unsigned int gt_records_wahbm(struct wah_file wf,
                               unsigned int num_r,
                               unsigned int test_value,
                               unsigned int **R);
+
 /**
  * @brief Return records whose value are greater than the test value using 
  * in-place functions
@@ -1396,6 +1530,27 @@ unsigned int gt_records_in_place_wahbm(struct wah_file wf,
                                        unsigned int test_value,
                                        unsigned int **R);
 
+/**
+ * @brief Return records whose value are greater than the test value using 
+ * in-place functions
+ *
+ * @param wf The initialized WAH-encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to test fields against
+ * @param R result with 
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int gt_records_compressed_in_place_wahbm(struct wah_file wf,
+                                       unsigned int *record_ids,
+                                       unsigned int num_r,
+                                       unsigned int test_value,
+                                       unsigned int **R);
 
 /**
  * @brief Return records whose value are greater or equal to the test value 
@@ -1732,4 +1887,5 @@ int or_ubin_fields(struct ubin_file u_file,
 void parse_cmd_line_int_csv(unsigned int *I,
                             int num_I,
                             char *cmd_line_arg);
+const char *int_to_binary(unsigned int x);
 #endif

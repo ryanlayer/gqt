@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include "timer.h"
+#include <string.h>
 
 //{{{ SETUP
 //{{{ char* itoa(int value, char* str, int radix) {
@@ -3761,9 +3762,6 @@ void test_wah_compressed_in_place_or(void)
     for (i = 0; i < 6; ++i)
         TEST_ASSERT_EQUAL(A0[i], R[i]);
 
-    for (i = 0; i < wah_size_X; ++i)
-        fprintf(stderr, "%u\n", w_X[i]);
-
     r = wah_compressed_in_place_or(R, 6, w_X, wah_size_X);
 
     /*
@@ -3826,24 +3824,252 @@ void test_wah_compressed_in_place_or(void)
 
     TEST_ASSERT_EQUAL(6, r);
         
-    fprintf(stderr, "\n");
     for (i = 0; i < 6; ++i)
-        fprintf(stderr, "%u\n", R[i]);
-        //TEST_ASSERT_EQUAL(A1[i], R[i]);
+        TEST_ASSERT_EQUAL(A1[i], R[i]);
 
-
-/*
-    r = wah_in_place_or(R, 6, w_X, wah_size_X);
 
     unsigned int *ints_o, *ints_ip;
-    unsigned int ints_ip_len = wah_to_ints(R,r,&ints_ip);
+    unsigned int ints_ip_len = compressed_in_place_wah_to_ints(R,r,&ints_ip);
+    unsigned int ints_o_len = wah_to_ints(Z,Z_len,&ints_o);
+
+    TEST_ASSERT_EQUAL(ints_o_len, ints_ip_len);
+
+    for (i = 0; i < ints_o_len; ++i)
+        TEST_ASSERT_EQUAL(ints_o[i], ints_ip[i]);
+}
+//}}}
+
+//{{{ void test_wah_compressed_in_place_and(void)
+void test_wah_compressed_in_place_and(void)
+{
+    /*
+     * X
+     * |--31-------------------------|
+     * 0100000000000000000000000000000
+     * 1111111111111111111111111111111
+     * 1111111111111111111111111111111
+     * 1110100000000010101010000000000
+     * 0000010000000000000000010101010
+     * 00000
+     * |--32--------------------------|
+     * 01000000000000000000000000000001
+     * 11111111111111111111111111111111
+     * 11111111111111111111111111111111
+     * 01000000000101010100000000000000
+     * 01000000000000000001010101000000
+     * WAH
+     * 536870912
+     * 3221225474
+     * 1946244096
+     * 33554602
+     * 0
+     *
+     * Y
+     * |--31-------------------------|
+     * 0100000000000000000000000000000
+     * 1111111111111111111111111111111
+     * 1111111111111111111111111111111
+     * 0000000000000000000000000000000
+     * 0000000000000000000000000000000
+     * 01011
+     * |--32--------------------------|
+     * 01000000000000000000000000000001
+     * 11111111111111111111111111111111
+     * 11111111111111111111111111111000
+     * 00000000000000000000000000000000
+     * 00000000000000000000000000001011
+     * WAH
+     * 536870912
+     * 3221225474
+     * 2147483650
+     * 738197504
+     *
+     *
+     * Result:
+     * 00100000000000000000000000000000
+     * 11000000000000000000000000000010
+     * 01110100000000010101010000000000
+     * 00000010000000000000000010101010
+     * 00101100000000000000000000000000
+     */
+
+     unsigned int A[5] = 
+        { bin_char_to_int("01000000000000000000000000000001"),
+          bin_char_to_int("11111111111111111111111111111111"),
+          bin_char_to_int("11111111111111111111111111111000"),
+          bin_char_to_int("00000000000000000000000000000000"),
+          bin_char_to_int("00000000000000000000000000000000")
+        };
+ 
+
+    unsigned int X[5] =
+        { bin_char_to_int("01000000000000000000000000000001"),
+          bin_char_to_int("11111111111111111111111111111111"),
+          bin_char_to_int("11111111111111111111111111111111"),
+          bin_char_to_int("01000000000101010100000000000000"),
+          bin_char_to_int("01000000000000000001010101000000")
+        };
+
+    unsigned int Y[5] =
+        { bin_char_to_int("01000000000000000000000000000001"),
+          bin_char_to_int("11111111111111111111111111111111"),
+          bin_char_to_int("11111111111111111111111111111000"),
+          bin_char_to_int("00000000000000000000000000000000"),
+          bin_char_to_int("00000000000000000000000000001011")
+        };
+
+    unsigned int *w_X;
+    int wah_size_X = ints_to_wah(X,5,160,&w_X);
+    TEST_ASSERT_EQUAL(5, wah_size_X);
+    struct wah_run r_X = init_wah_run(w_X, wah_size_X);
+
+    unsigned int *w_Y;
+    int wah_size_Y = ints_to_wah(Y,5,160,&w_Y);
+    TEST_ASSERT_EQUAL(4, wah_size_Y);
+    struct wah_run r_Y = init_wah_run(w_Y, wah_size_Y);
+
+    unsigned int *Z;
+    unsigned int Z_len = wah_and(&r_X, &r_Y, &Z);
+
+    unsigned int i;
+
+    // init the first value to be a fill of zeros as long as the max size is
+    unsigned int R[6] = {0xc0000006,0,0,0,0,0};
+
+
+    /*
+     * - 00100000000000000000000000000000  - 11000000000000000000000000000110
+     *   11000000000000000000000000000010    0
+     *   10000000000000000000000000000010    0
+     *   00101100000000000000000000000000    0
+     *                                       0
+     *                                       0
+     *
+     *   00100000000000000000000000000000    00100000000000000000000000000000 
+     * - 11000000000000000000000000000010  - 11000000000000000000000000000101
+     *   10000000000000000000000000000010    0
+     *   00101100000000000000000000000000    0
+     *                                       0
+     *                                       0
+     *
+     *   00100000000000000000000000000000    00100000000000000000000000000000 
+     *   11000000000000000000000000000010    11000000000000000000000000000010
+     * - 10000000000000000000000000000010    0
+     *   00101100000000000000000000000000  - 11000000000000000000000000000011
+     *                                       0
+     *                                       0
+     *
+     *   00100000000000000000000000000000    00100000000000000000000000000000 
+     *   11000000000000000000000000000010    11000000000000000000000000000010
+     *   10000000000000000000000000000010    0
+     * - 00101100000000000000000000000000    10000000000000000000000000000010
+     *                                       0
+     *                                     - 01111111111111111111111111111111
+     *
+     *   00100000000000000000000000000000    00100000000000000000000000000000 
+     *   11000000000000000000000000000010    11000000000000000000000000000010
+     *   10000000000000000000000000000010    0
+     *   00101100000000000000000000000000    10000000000000000000000000000010
+     *                                       0
+     *                                       00101100000000000000000000000000
+     *
+     *   00100000000000000000000000000000 -> 536870912
+     *   11000000000000000000000000000010 -> 3221225474
+     *   0                                -> 0
+     *   10000000000000000000000000000010 -> 2147483650
+     *   0                                -> 0
+     *   00101100000000000000000000000000 -> 738197504
+     *
+     */
+    
+    unsigned int A0[6] = {536870912,
+                          3221225474,
+                          0,
+                          2147483650,
+                          0,
+                          738197504};
+
+    unsigned int r = wah_compressed_in_place_and(R, 6, w_Y, wah_size_Y);
+
+    TEST_ASSERT_EQUAL(6, r);
+        
+    for (i = 0; i < 6; ++i)
+        TEST_ASSERT_EQUAL(A0[i], R[i]);
+
+    r = wah_compressed_in_place_and(R, 6, w_X, wah_size_X);
+
+    /*
+     * - 00100000000000000000000000000000  - 00100000000000000000000000000000
+     *   11000000000000000000000000000010    11000000000000000000000000000010
+     *   01110100000000010101010000000000    0
+     *   00000010000000000000000010101010    10000000000000000000000000000010
+     *   00000000000000000000000000000000    0
+     *                                       00101100000000000000000000000000
+     * 
+     *   00100000000000000000000000000000    00100000000000000000000000000000
+     * - 11000000000000000000000000000010  - 11000000000000000000000000000010
+     *   01110100000000010101010000000000    0
+     *   00000010000000000000000010101010    10000000000000000000000000000010
+     *   00000000000000000000000000000000    0
+     *                                       00101100000000000000000000000000
+     *
+     *   00100000000000000000000000000000    00100000000000000000000000000000
+     *   11000000000000000000000000000010    11000000000000000000000000000010
+     * - 01110100000000010101010000000000    0
+     *   00000010000000000000000010101010  - 10000000000000000000000000000010
+     *   00000000000000000000000000000000    0
+     *                                       00101100000000000000000000000000
+     *
+     *   00100000000000000000000000000000    00100000000000000000000000000000
+     *   11000000000000000000000000000010    11000000000000000000000000000010
+     *   01110100000000010101010000000000    0
+     * - 00000010000000000000000010101010    00000000000000000000000000000000
+     *   00000000000000000000000000000000  - 00000000000000000000000000000000
+     *                                       00101100000000000000000000000000
+     *
+     *   00100000000000000000000000000000    00100000000000000000000000000000
+     *   11000000000000000000000000000010    11000000000000000000000000000010
+     *   01110100000000010101010000000000    0
+     *   00000010000000000000000010101010    00000000000000000000000000000000
+     * - 00000000000000000000000000000000    00000000000000000000000000000000
+     *                                     - 00101100000000000000000000000000
+     *
+     *   00100000000000000000000000000000    00100000000000000000000000000000
+     *   11000000000000000000000000000010    11000000000000000000000000000010
+     *   01110100000000010101010000000000    0
+     *   00000010000000000000000010101010    00000000000000000000000000000000
+     *   00000000000000000000000000000000    00000000000000000000000000000000
+     *                                       00000000000000000000000000000000
+     *
+     *   00100000000000000000000000000000 -> 536870912
+     *   11000000000000000000000000000010 -> 3221225474
+     *   0                                -> 0
+     *   00000000000000000000000000000000 -> 0
+     *   00000010000000000000000010101010 -> 0
+     *   00000000000000000000000000000000 -> 0
+     *
+     */
+
+    unsigned int A1[6] = {536870912,
+                          3221225474,
+                          0,
+                          0,
+                          0,
+                          0};
+
+    TEST_ASSERT_EQUAL(6, r);
+        
+    for (i = 0; i < 6; ++i)
+        TEST_ASSERT_EQUAL(A1[i], R[i]);
+
+
+    unsigned int *ints_o, *ints_ip;
+    unsigned int ints_ip_len = compressed_in_place_wah_to_ints(R,r,&ints_ip);
     unsigned int ints_o_len = wah_to_ints(Z,Z_len,&ints_o);
 
     TEST_ASSERT_EQUAL(ints_o_len, ints_ip_len);
     for (i = 0; i < ints_o_len; ++i)
         TEST_ASSERT_EQUAL(ints_o[i], ints_ip[i]);
-*/
-
 }
 //}}}
 
@@ -3996,3 +4222,317 @@ void test_gt_records_plt_ubin_in_place_wahbm(void)
         TEST_ASSERT_EQUAL(A[i] , ints[i] >> shift[i]);
 }
 //}}}
+
+//{{{ void test_more_wah_compressed_in_place_or(void)
+void test_more_wah_compressed_in_place_or(void)
+{
+    /*
+     * Cases:
+     * 1. Both X and Y are fills
+     *  1.1 same length
+     *  1.2 X is longer than Y
+     *      1.2.1 X has a single word left
+     *      1.2.2 X has a fill left
+     *      1.2.2 X has multiple fills left
+     *  1.3 Y is longer than X
+     *   1.3.1 X is literals
+     *   1.3.2 X is fills
+     */
+
+    /*
+     * 1. Both X and Y are fills
+     *  1.1 same length
+     */
+    unsigned int i;
+    unsigned int T1A[2] =
+        { bin_char_to_int("11000000000000000000000000000011"),
+         bin_char_to_int("11000000000000000000000000000011")};
+
+    unsigned int T1B[2] =
+        { bin_char_to_int("11000000000000000000000000000011"),
+         bin_char_to_int("11000000000000000000000000000011")};
+
+    unsigned int A1[6] =
+        { bin_char_to_int("11000000000000000000000000000011"),
+          bin_char_to_int("00000000000000000000000000000000"),
+          bin_char_to_int("00000000000000000000000000000000"),
+          bin_char_to_int("11000000000000000000000000000011"),
+          bin_char_to_int("00000000000000000000000000000000"),
+          bin_char_to_int("00000000000000000000000000000000")};
+
+
+    unsigned int R1[6] = {0x80000006,0,0,0,0,0};
+    unsigned int r = wah_compressed_in_place_or(R1, 6, T1A, 2);
+    r = wah_compressed_in_place_or(R1, 6, T1B, 2);
+
+    for (i = 0; i < r; ++i)
+        TEST_ASSERT_EQUAL(A1[i], R1[i]);
+    /*
+     * Cases:
+     * 1. Both X and Y are fills
+     *  1.2 X is longer than Y
+     *      1.2.1 X has a single word left
+     */
+
+    unsigned int T2A[2] =
+        { bin_char_to_int("10000000000000000000000000000011"),
+         bin_char_to_int("11000000000000000000000000000011")};
+
+    unsigned int T2B[3] =
+        { bin_char_to_int("11000000000000000000000000000010"),
+         bin_char_to_int("01010101010101010101010101010101"),
+         bin_char_to_int("11000000000000000000000000000011")};
+
+    unsigned int A2[6] =
+        { bin_char_to_int("11000000000000000000000000000010"),
+          bin_char_to_int("00000000000000000000000000000000"),
+          bin_char_to_int("01010101010101010101010101010101"),
+          bin_char_to_int("11000000000000000000000000000011"),
+          bin_char_to_int("00000000000000000000000000000000"),
+          bin_char_to_int("00000000000000000000000000000000")};
+
+
+    unsigned int R2[6] = {0x80000006,0,0,0,0,0};
+    r = wah_compressed_in_place_or(R2, 6, T2A, 2);
+    r = wah_compressed_in_place_or(R2, 6, T2B, 3);
+
+    for (i = 0; i < r; ++i)
+        TEST_ASSERT_EQUAL(A2[i], R2[i]);
+
+     /*
+     * Cases:
+     * 1. Both X and Y are fills
+     *  1.2 X is longer than Y
+     *      1.2.2 X has a fill left
+     */
+
+    unsigned int T3A[2] =
+        { bin_char_to_int("10000000000000000000000000000100"),
+         bin_char_to_int("11000000000000000000000000000011")};
+
+    unsigned int T3B[4] =
+        { bin_char_to_int("11000000000000000000000000000010"),
+         bin_char_to_int("01010101010101010101010101010101"),
+         bin_char_to_int("01010101010101010101010101010101"),
+         bin_char_to_int("11000000000000000000000000000011")};
+
+    unsigned int A3[7] =
+        { bin_char_to_int("11000000000000000000000000000010"),
+          bin_char_to_int("00000000000000000000000000000000"),
+          bin_char_to_int("01010101010101010101010101010101"),
+          bin_char_to_int("01010101010101010101010101010101"),
+          bin_char_to_int("11000000000000000000000000000011"),
+          bin_char_to_int("00000000000000000000000000000000"),
+          bin_char_to_int("00000000000000000000000000000000")};
+
+
+    unsigned int R3[7] = {0x80000007,0, 0,0,0,0,0};
+    r = wah_compressed_in_place_or(R3, 7, T3A, 2);
+    r = wah_compressed_in_place_or(R3, 7, T3B, 4);
+
+    for (i = 0; i < r; ++i)
+        TEST_ASSERT_EQUAL(A3[i], R3[i]);
+
+     /*
+     * Cases:
+     * 1. Both X and Y are fills
+     *  1.2 X is longer than Y
+     *      1.2.3 X has multiple fills left
+     */
+
+    unsigned int T4A[1] =
+        { bin_char_to_int("10000000000000000000000000000110") };
+
+    unsigned int T4B[3] =
+        { bin_char_to_int("11000000000000000000000000000010"),
+         bin_char_to_int("01010101010101010101010101010101"),
+         bin_char_to_int("11000000000000000000000000000011")};
+
+    unsigned int A4[6] =
+        { bin_char_to_int("11000000000000000000000000000010"),
+          bin_char_to_int("00000000000000000000000000000000"),
+          bin_char_to_int("01010101010101010101010101010101"),
+          bin_char_to_int("11000000000000000000000000000011"),
+          bin_char_to_int("00000000000000000000000000000000"),
+          bin_char_to_int("00000000000000000000000000000000")};
+
+
+    unsigned int R4[6] = {0x80000006,0,0,0,0,0};
+    r = wah_compressed_in_place_or(R4, 6, T4A, 1);
+    r = wah_compressed_in_place_or(R4, 6, T4B, 3);
+
+    for (i = 0; i < r; ++i)
+        TEST_ASSERT_EQUAL(A4[i], R4[i]);
+
+     /*
+     * Cases:
+     * 1. Both X and Y are fills
+     *  1.3 Y is longer than X
+     *   1.3.1 X is literals
+     */
+
+    unsigned int T5A[5] =
+        { bin_char_to_int("01010101010101010101010101010101"),
+          bin_char_to_int("01111111111111111111111111111111"),
+          bin_char_to_int("00000000000000000000000000000001"),
+          bin_char_to_int("01110001110001110001110001110001"),
+          bin_char_to_int("01110001110001110001110001110001")
+        };
+
+    unsigned int T5B[2] =
+        { bin_char_to_int("10000000000000000000000000000100"),
+          bin_char_to_int("00001110001110001110001110001110")};
+
+    unsigned int A5[5] =
+        { bin_char_to_int("01010101010101010101010101010101"),
+          bin_char_to_int("01111111111111111111111111111111"),
+          bin_char_to_int("00000000000000000000000000000001"),
+          bin_char_to_int("01110001110001110001110001110001"),
+          bin_char_to_int("01111111111111111111111111111111")
+        };
+
+    unsigned int R5[6] = {0x80000005,0,0,0,0};
+    r = wah_compressed_in_place_or(R5, 5, T5A, 5);
+    r = wah_compressed_in_place_or(R5, 5, T5B, 2);
+
+    for (i = 0; i < r; ++i)
+        TEST_ASSERT_EQUAL(A5[i], R5[i]);
+
+     /*
+     * Cases:
+     * 1. Both X and Y are fills
+     *  1.3 Y is longer than X
+     *   1.3.2 X is fills
+     */
+
+    unsigned int T6A[3] =
+        { bin_char_to_int("11000000000000000000000000000010"),
+          bin_char_to_int("10000000000000000000000000000010"),
+          bin_char_to_int("11000000000000000000000000000010"),
+        };
+
+    unsigned int T6B[2] =
+        { bin_char_to_int("10000000000000000000000000000100"),
+          bin_char_to_int("11000000000000000000000000000010")};
+
+    unsigned int A6[6] =
+        { bin_char_to_int("11000000000000000000000000000010"),
+          bin_char_to_int("00000000000000000000000000000000"),
+          bin_char_to_int("10000000000000000000000000000010"),
+          bin_char_to_int("00000000000000000000000000000000"),
+          bin_char_to_int("11000000000000000000000000000010"),
+          bin_char_to_int("00000000000000000000000000000000")
+        };
+
+    unsigned int R6[6] = {0x80000006,0,0,0,0,0};
+    r = wah_compressed_in_place_or(R6, 6, T6A, 3);
+    r = wah_compressed_in_place_or(R6, 6, T6B, 2);
+
+    for (i = 0; i < r; ++i)
+        TEST_ASSERT_EQUAL(A6[i], R6[i]);
+
+    // X is a fill of ones with a litteral left over
+    //
+    unsigned int T7A[2] =
+        { bin_char_to_int("11000000000000000000000000000011"),
+         bin_char_to_int("11000000000000000000000000000011")};
+
+    unsigned int T7B[3] =
+        { bin_char_to_int("11000000000000000000000000000010"),
+         bin_char_to_int("01010101010101010101010101010101"),
+         bin_char_to_int("11000000000000000000000000000011")};
+
+    unsigned int A7[6] =
+        { bin_char_to_int("11000000000000000000000000000010"),
+          bin_char_to_int("00000000000000000000000000000000"),
+          bin_char_to_int("01111111111111111111111111111111"),
+          bin_char_to_int("11000000000000000000000000000011"),
+          bin_char_to_int("00000000000000000000000000000000"),
+          bin_char_to_int("00000000000000000000000000000000")};
+
+
+    unsigned int R7[6] = {0x80000006,0,0,0,0,0};
+    r = wah_compressed_in_place_or(R7, 6, T7A, 2);
+    r = wah_compressed_in_place_or(R7, 6, T7B, 3);
+
+    for (i = 0; i < r; ++i)
+        TEST_ASSERT_EQUAL(A7[i], R7[i]);
+
+
+    // Y is a fill of 1s, and the last value 
+
+    unsigned int T8A[3] =
+        { bin_char_to_int("11000000000000000000000000000011"),
+          bin_char_to_int("00000000000000000000000000000011"),
+          bin_char_to_int("10000000000000000000000000000010")
+        };
+
+    unsigned int T8B[2] =
+        { bin_char_to_int("11000000000000000000000000000100"),
+          bin_char_to_int("11000000000000000000000000000010")};
+
+    unsigned int A8[6] =
+        { bin_char_to_int("11000000000000000000000000000011"),
+          bin_char_to_int("00000000000000000000000000000000"),
+          bin_char_to_int("00000000000000000000000000000000"),
+          bin_char_to_int("01111111111111111111111111111111"),
+          bin_char_to_int("11000000000000000000000000000010"),
+          bin_char_to_int("00000000000000000000000000000000")
+        };
+
+    unsigned int R8[6] = {0x80000006,0,0,0,0,0};
+    r = wah_compressed_in_place_or(R8, 6, T8A, 3);
+    r = wah_compressed_in_place_or(R8, 6, T8B, 2);
+
+    for (i = 0; i < r; ++i)
+        TEST_ASSERT_EQUAL(A8[i], R8[i]);
+
+
+}
+//}}}
+
+void test_wah_compressed_in_place_or_v_in_place_wah_or(void)
+{
+#if 0
+    char *wah_file_name="/Users/rl6sf/data/genotq/sim/"
+        "5000.1e8.ind.allele_sort.wah";
+    struct wah_file wf = init_wah_file(wah_file_name);
+
+    unsigned int max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+
+    unsigned int *record_new_bm = (unsigned int *)
+                        malloc(sizeof(unsigned int)*max_wah_size);
+
+    unsigned int *or_ip_result_bm = (unsigned int *)
+                        malloc(sizeof(unsigned int)*max_wah_size);
+    unsigned int *or_cip_result_bm = (unsigned int *)
+                        malloc(sizeof(unsigned int)*max_wah_size);
+    unsigned int i,j,
+                 record_new_bm_size,
+                 cip_or_result_bm_size,ip_or_result_bm_size;
+
+    for (i = 0; i < wf.num_records; ++i) {
+        fprintf(stderr, "%u\n", i);
+        memset(or_ip_result_bm, 0, sizeof(unsigned int)*max_wah_size);
+        or_cip_result_bm[0] = (2<<30) + max_wah_size;
+
+        for (j = 1; j < 4; ++j) {
+            record_new_bm_size = get_wah_bitmap_in_place(wf,
+                                                         i,
+                                                         j,
+                                                         &record_new_bm);
+
+            ip_or_result_bm_size =
+                    wah_in_place_or(or_ip_result_bm,
+                                    max_wah_size,
+                                    record_new_bm,
+                                    record_new_bm_size);
+            cip_or_result_bm_size =
+                    wah_compressed_in_place_or(or_cip_result_bm,
+                                    max_wah_size,
+                                    record_new_bm,
+                                    record_new_bm_size);
+        }
+    }
+#endif
+}

@@ -628,7 +628,32 @@ unsigned int  wah_compressed_in_place_and(unsigned int *r_wah,
                                           unsigned int *wah,
                                           unsigned int wah_size);
 
-
+/**
+ * @brief   AND two compressed in-place WAH runs
+ *
+ * The assumption here is that r_wah and whar are pre-allocated to arrays
+ * that can hold the maximum possible size. Both can contain a mix of fills
+ * and literals, but any fill must be followed by enough empty words to allow
+ * the fill to be completely inflated if future operations require it.  
+ *
+ * @param r_wah a compressed in-place wah-encoded bitmap of literals and fills
+ * @param r_wah_size the number of words in r_wah
+ * @param wah a compressed in-place wah-encoded bitmap of literals and fills
+ * @param wah_size the numberof words in wah
+ *
+ * @retval  The number of elements in r_wah
+ *
+ * @ingroup WAH
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int  wah_compressed_in_place_and_compressed_in_place(
+                                          unsigned int *r_wah,
+                                          unsigned int r_wah_size,
+                                          unsigned int *wah,
+                                          unsigned int wah_size);
 
 /**
  * @brief   in-place AND two WAH runs
@@ -1185,6 +1210,29 @@ unsigned int get_plt_record(struct plt_file pf,
 
 
 /**
+ * @brief Return a count of records whose values are >= start_test_value and <
+ * end_test_value
+ *
+ * @param pf The initialized plain text encoded file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to test fields against
+ * @param R array of ints that contain counts
+ *
+ * @retval number of ints in R
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+ unsigned int count_range_records_plt(struct plt_file pt,
+                                      unsigned int *record_ids,
+                                      unsigned int num_r,
+                                      unsigned int start_test_value,
+                                      unsigned int end_test_value,
+                                      unsigned int **R);
+
+/**
  * @brief Return records whose values are >= start_test_value and <
  * end_test_value
  *
@@ -1192,7 +1240,7 @@ unsigned int get_plt_record(struct plt_file pf,
  * @param record_ids array of integer ids of the records to test
  * @param num_r number of records in record_ids
  * @param test_value value to test fields against
- * @param R result with 
+ * @param R packed ints where the bit is zero if all fields meet that condition
  *
  * @retval number of ints in the record
  *
@@ -1315,6 +1363,54 @@ unsigned int gt_records_plt(struct plt_file pf,
                             unsigned int **R);
 
 /**
+ * @brief Return the number of records whose value are greater than the test
+ * value
+ *
+ * @param pf The initialized plain text encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to test fields against
+ * @param R result with 
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+
+unsigned int gt_count_records_plt(struct plt_file pf,
+                                  unsigned int *record_ids,
+                                  unsigned int num_r,
+                                  unsigned int test_value,
+                                  unsigned int **R);
+
+
+/**
+ * @brief Return the count of records whose value are greater than the test
+ * value
+ *
+ * @param pf The initialized plain text encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to test fields against
+ * @param R array of integers with counts
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int gt_records_plt(struct plt_file pf,
+                            unsigned int *record_ids,
+                            unsigned int num_r,
+                            unsigned int test_value,
+                            unsigned int **R);
+
+
+
+/**
  * @brief Return records whose value are greater than or equal to the test value
  *
  * @param pf The initialized plain text encoded bitmap file
@@ -1399,13 +1495,16 @@ unsigned int gt_records_ubin(struct ubin_file uf,
 
 
 /**
- * @brief Return records whose values are >= start_test_value and < end_test_value
+ * @brief Return records whose values are >= start_test_value and <
+ * end_test_value
  *
  * @param wf The initialized WAH-encoded bitmap file
  * @param record_ids array of integer ids of the records to test
  * @param num_r number of records in record_ids
- * @param start_test_value is the lower bound value to test fields against (inclusive)
- * @param end_test_value is the upper bound value to test fields against (exclusive)
+ * @param start_test_value is the lower bound value to test fields against
+ * (inclusive)
+ * @param end_test_value is the upper bound value to test fields against
+ * (exclusive)
  * @param R result with 
  *
  * @retval number of ints in the record
@@ -1420,6 +1519,120 @@ unsigned int gt_records_ubin(struct ubin_file uf,
                               unsigned int start_test_value,
                               unsigned int end_test_value,
                               unsigned int **R);
+/**
+ * @brief For each field, count that number of records that meet a certian
+ * critera 
+ *
+ * @param wf The initialized WAH-encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param start_test_value is the lower bound value to test fields against
+ * (inclusive)
+ * @param end_test_value is the upper bound value to test fields against
+ * (exclusive)
+ * @param R interger counts
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+
+unsigned int count_range_records_wahbm(struct wah_file wf,
+                              unsigned int *record_ids,
+                              unsigned int num_r,
+                              unsigned int start_test_value,
+                              unsigned int end_test_value,
+                              unsigned int **R);
+
+/**
+ * @brief For each field, count that number of records that meet a certian
+ * critera using in-place functions
+ *
+ * @param wf The initialized WAH-encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param start_test_value is the lower bound value to test fields against
+ * (inclusive)
+ * @param end_test_value is the upper bound value to test fields against
+ * (exclusive)
+ * @param R interger counts
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int count_range_records_in_place_wahbm(struct wah_file wf,
+                                                unsigned int *record_ids,
+                                                unsigned int num_r,
+                                                unsigned int start_test_value,
+                                                unsigned int end_test_value,
+                                                unsigned int **R);
+
+/**
+ * @brief For each field, count that number of records that meet a certian
+ * critera using compressed in-place functions
+ *
+ * @param wf The initialized WAH-encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param start_test_value is the lower bound value to test fields against
+ * (inclusive)
+ * @param end_test_value is the upper bound value to test fields against
+ * (exclusive)
+ * @param R interger counts
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int count_range_records_compressed_in_place_wahbm(
+            struct wah_file wf,
+            unsigned int *record_ids,
+            unsigned int num_r,
+            unsigned int start_test_value,
+            unsigned int end_test_value,
+            unsigned int **R);
+
+
+/**
+ * @brief Take the numbers encoded by a single wahbm, and add them to the R
+ * and store back into R
+ *
+ * @param R array of ints that are added to the WAH-encoded bit map store 
+ * @param r_size size of R
+ * @param wah A WAH-encoded bitmap
+ * @param wah_size number of ints in wah
+ *
+ * @return the size of R
+ *
+ */
+unsigned int add_wahbm(unsigned int *R,
+                       unsigned int r_size,
+                       unsigned int *wah,
+                       unsigned int wah_size);
+
+/**
+ * @brief Take the numbers encoded by a single compressed in-place wahbm, and
+ * add them to the R and store back into R
+ *
+ * @param R array of ints that are added to the WAH-encoded bit map store 
+ * @param r_size size of R
+ * @param wah A compressed in-place WAH-encoded bitmap
+ * @param wah_size number of ints in wah
+ *
+ * @return the size of R
+ *
+ */
+unsigned int add_compressed_in_place_wahbm(unsigned int *R,
+                                           unsigned int r_size,
+                                           unsigned int *wah,
+                                           unsigned int wah_size);
 
 /**
  * @brief Return records whose values are >= start_test_value,  < end_test_value and not exclude_value
@@ -1507,6 +1720,71 @@ unsigned int gt_records_wahbm(struct wah_file wf,
                               unsigned int num_r,
                               unsigned int test_value,
                               unsigned int **R);
+
+/**
+ * @brief For each field, count the number of records that meet the criterea
+ *
+ * @param wf The initialized WAH-encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to test fields against
+ * @param R integer counts
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int gt_count_records_wahbm(struct wah_file wf,
+                                   unsigned int *record_ids,
+                                   unsigned int num_r,
+                                   unsigned int test_value,
+                                   unsigned int **R);
+
+/**
+ * @brief For each field, count the number of records that meet the criterea
+ * using in-place funcitons
+ *
+ * @param wf The initialized WAH-encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to test fields against
+ * @param R integer counts
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int gt_count_records_in_place_wahbm(struct wah_file wf,
+                                             unsigned int *record_ids,
+                                             unsigned int num_r,
+                                             unsigned int test_value,
+                                             unsigned int **R) ;
+/**
+ * @brief For each field, count the number of records that meet the criterea
+ * using compressed in-place funcitons
+ *
+ * @param wf The initialized WAH-encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param test_value value to test fields against
+ * @param R integer counts
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int gt_count_records_compressed_in_place_wahbm(
+                    struct wah_file wf,
+                    unsigned int *record_ids,
+                    unsigned int num_r,
+                    unsigned int test_value,
+                    unsigned int **R);
 
 /**
  * @brief Return records whose value are greater than the test value using 

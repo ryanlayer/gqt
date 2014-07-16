@@ -4491,48 +4491,133 @@ void test_more_wah_compressed_in_place_or(void)
 }
 //}}}
 
-void test_wah_compressed_in_place_or_v_in_place_wah_or(void)
+//{{{void test_plt_gt_count(void)
+void test_plt_gt_count(void)
+{
+    /*
+     * Input:
+     * 1000001110111010100101011110111111010110100
+     * 0000000220222020000202020000020022000000010
+     * 0000000221222021000202010000020022000000000
+     * 1011010110222021000202020010020022000000100
+     *
+     */
+
+    unsigned int A[43] = {
+        2,0,1,1,0,1,1,4,4,1,4,4,4,0,4,2,1,
+        0,0,4,0,4,0,4,1,1,2,0,1,4,1,1,4,4,
+        0,1,0,1,1,0,2,1,0};
+
+    char *plt_file_name="../data/10.1e4.ind.txt";
+    struct plt_file pf = init_plt_file(plt_file_name);
+
+    unsigned int test_records[4] = {1,2,3,4};
+
+    unsigned int *R;
+    unsigned int R_len = count_range_records_plt(pf,
+                                                 test_records,
+                                                 4,
+                                                 0,
+                                                 3,
+                                                 &R);
+    unsigned int i;
+    for (i = 0; i < R_len; ++i)
+        TEST_ASSERT_EQUAL(A[i], R[i]);
+
+}
+//}}}
+
+//{{{void test_plt_gt_count(void)
+void test_ubin_gt_count(void)
 {
 #if 0
-    char *wah_file_name="/Users/rl6sf/data/genotq/sim/"
-        "5000.1e8.ind.allele_sort.wah";
-    struct wah_file wf = init_wah_file(wah_file_name);
+    /*
+     * Input:
+     * 1000001110111010100101011110111111010110100
+     * 0000000220222020000202020000020022000000010
+     * 0000000221222021000202010000020022000000000
+     * 1011010110222021000202020010020022000000100
+     *
+     */
 
-    unsigned int max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    unsigned int A[43] = {
+        2,0,1,1,0,1,1,4,4,1,4,4,4,0,4,2,1,
+        0,0,4,0,4,0,4,1,1,2,0,1,4,1,1,4,4,
+        0,1,0,1,1,0,2,1,0};
 
-    unsigned int *record_new_bm = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size);
+    char *ubin_file_name="../data/10.1e4.ind.ubin";
 
-    unsigned int *or_ip_result_bm = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size);
-    unsigned int *or_cip_result_bm = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size);
-    unsigned int i,j,
-                 record_new_bm_size,
-                 cip_or_result_bm_size,ip_or_result_bm_size;
+    struct ubin_file uf = init_ubin_file(ubin_file_name);
 
-    for (i = 0; i < wf.num_records; ++i) {
-        fprintf(stderr, "%u\n", i);
-        memset(or_ip_result_bm, 0, sizeof(unsigned int)*max_wah_size);
-        or_cip_result_bm[0] = (2<<30) + max_wah_size;
+    unsigned int test_records[4] = {1,2,3,4};
 
-        for (j = 1; j < 4; ++j) {
-            record_new_bm_size = get_wah_bitmap_in_place(wf,
-                                                         i,
-                                                         j,
-                                                         &record_new_bm);
-
-            ip_or_result_bm_size =
-                    wah_in_place_or(or_ip_result_bm,
-                                    max_wah_size,
-                                    record_new_bm,
-                                    record_new_bm_size);
-            cip_or_result_bm_size =
-                    wah_compressed_in_place_or(or_cip_result_bm,
-                                    max_wah_size,
-                                    record_new_bm,
-                                    record_new_bm_size);
-        }
-    }
+    unsigned int *R;
+    unsigned int R_len = count_range_records_ubin(uf,
+                                                 test_records,
+                                                 4,
+                                                 0,
+                                                 3,
+                                                 &R);
+    unsigned int i;
+    for (i = 0; i < R_len; ++i)
+        TEST_ASSERT_EQUAL(A[i], R[i]);
 #endif
 }
+//}}}
+
+//{{{void test add_wahmb(void)
+void test_add_wahmb(void)
+{
+    unsigned int wah1[4] = {
+        bin_char_to_int("11000000000000000000000000000010"), //2
+        bin_char_to_int("01010101010101010101010101010101"), //1
+        bin_char_to_int("10000000000000000000000000000011"), //3
+        bin_char_to_int("01010101010101010101010101010101") //1
+    };
+
+    unsigned int i, *R, r_size;
+    r_size = (2+1+3+1)*31;
+    R = (unsigned int*) calloc(r_size, sizeof(unsigned int));
+
+    r_size = add_wahbm(R, r_size, wah1, 4);
+    r_size = add_wahbm(R, r_size, wah1, 4);
+    r_size = add_wahbm(R, r_size, wah1, 4);
+
+    unsigned int sum = 0;
+    for (i = 0; i < r_size; ++i)
+        sum += R[i];
+
+    TEST_ASSERT_EQUAL((2*31+16*2)*3,sum);
+
+}
+//}}}
+
+//{{{void test add_compressed_in_place_wahmb(void)
+void test_add_compressed_in_place_wahmb(void)
+{
+    unsigned int wah1[7] = {
+        bin_char_to_int("11000000000000000000000000000010"), //2
+        bin_char_to_int("00000000000000000000000000000000"), //blank
+        bin_char_to_int("01010101010101010101010101010101"), //1
+        bin_char_to_int("10000000000000000000000000000011"), //3
+        bin_char_to_int("00000000000000000000000000000000"), //blank
+        bin_char_to_int("00000000000000000000000000000000"), //blank
+        bin_char_to_int("01010101010101010101010101010101") //1
+    };
+
+    unsigned int i, *R, r_size;
+    r_size = (7)*31;
+    R = (unsigned int*) calloc(r_size, sizeof(unsigned int));
+
+    r_size = add_compressed_in_place_wahbm(R, r_size, wah1, 7);
+    r_size = add_compressed_in_place_wahbm(R, r_size, wah1, 7);
+    r_size = add_compressed_in_place_wahbm(R, r_size, wah1, 7);
+
+    unsigned int sum = 0;
+    for (i = 0; i < r_size; ++i) 
+        sum += R[i];
+
+    TEST_ASSERT_EQUAL((2*31+16*2)*3,sum);
+
+}
+//}}}

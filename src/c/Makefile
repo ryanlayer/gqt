@@ -9,6 +9,7 @@ LIB=genotq.o \
     gt.o \
     view.o \
     sort.o \
+    count.o \
     timer.o
 
 

@@ -38,7 +38,6 @@ const char *int_to_binary(unsigned int x)
 }
 //}}}
 
-
 //{{{ unsigned int bin_char_to_int(char *bin)
 unsigned int bin_char_to_int(char *bin)
 {
@@ -1226,8 +1225,8 @@ unsigned int  wah_or(struct wah_run *x,
 }
 //}}}
 
-//{{{ void wah_or(struct wah_run *x,
-unsigned int  wah_in_place_or(unsigned int *r_wah,
+//{{{ unsigned int wah_in_place_or(unsigned int *r_wah,
+unsigned int wah_in_place_or(unsigned int *r_wah,
                               unsigned int r_wah_size,
                               unsigned int *wah,
                               unsigned int wah_size)
@@ -1262,8 +1261,8 @@ unsigned int  wah_in_place_or(unsigned int *r_wah,
 }
 //}}}
 
-//{{{ unsigned int  wah_compressed_in_place_or(unsigned int *r_wah,
-unsigned int  wah_compressed_in_place_or(unsigned int *r_wah,
+//{{{ unsigned int wah_compressed_in_place_or(unsigned int *r_wah,
+unsigned int wah_compressed_in_place_or(unsigned int *r_wah,
                                          unsigned int r_wah_size,
                                          unsigned int *wah,
                                          unsigned int wah_size)
@@ -1403,9 +1402,10 @@ unsigned int  wah_compressed_in_place_or(unsigned int *r_wah,
 }
 //}}}
 
-//{{{ unsigned int  wah_compressed_in_place_and(unsigned int *r_wah,
+//{{{ unsigned int wah_compressed_in_place_and_compressed_in_place(
 //Here wer are dealing with two compressed_in_place values
-unsigned int  wah_compressed_in_place_and(unsigned int *r_wah,
+unsigned int wah_compressed_in_place_and_compressed_in_place(
+                                          unsigned int *r_wah,
                                           unsigned int r_wah_size,
                                           unsigned int *wah,
                                           unsigned int wah_size)
@@ -1579,8 +1579,159 @@ unsigned int  wah_compressed_in_place_and(unsigned int *r_wah,
 }
 //}}}
 
-//{{{ void wah_and(struct wah_run *x,
-unsigned int  wah_in_place_and(unsigned int *r_wah,
+//{{{ unsigned int wah_compressed_in_place_and(unsigned int *r_wah,
+//Here wer are dealing with two compressed_in_place values
+unsigned int wah_compressed_in_place_and(unsigned int *r_wah,
+                                          unsigned int r_wah_size,
+                                          unsigned int *wah,
+                                          unsigned int wah_size)
+{
+    unsigned int wah_i, wah_v, wah_fill_size, wah_fill_value,
+                 r_wah_i, r_wah_v, r_wah_fill_size, r_wah_fill_value,
+                 end, num_words;
+
+    r_wah_i = 0;
+    unsigned int wah_c = 0;
+
+    for (wah_i = 0; wah_i < wah_size; ++wah_i)
+    {
+        wah_v = wah[wah_i];
+        r_wah_v = r_wah[r_wah_i];
+
+        if (wah_v == 0x80000000)
+            abort();
+        if (r_wah_v == 0x80000000)
+            abort();
+
+        if (wah_v >= 0x80000000) {
+            wah_fill_value = (wah_v >> 30) & 1;
+            wah_fill_size = (wah_v & 0x3fffffff);
+
+
+            while (wah_fill_size > 0) {
+                if (r_wah_v >= 0x80000000) { // r_wah is a fill
+                    /*
+                    fprintf(stderr, "%u:%u\t%u:%u\n", 
+                                            wah_i, wah[wah_i],
+                                            r_wah_i, r_wah[r_wah_i]);
+                    */
+                    r_wah_fill_value = (r_wah_v >> 30) & 1;
+                    r_wah_fill_size = (r_wah_v & 0x3fffffff);
+
+                    // make a new fill based on the smaller one
+                    num_words = MIN(wah_fill_size, r_wah_fill_size);
+
+                    if (num_words == 0)
+                        exit(1);
+
+                    if (num_words > 1) {
+                        r_wah[r_wah_i] = (1 << 31) + 
+                                        ((r_wah_fill_value & 
+                                            wah_fill_value) << 30) + 
+                                        num_words;
+                    } else {
+                        if ((r_wah_fill_value & wah_fill_value) == 1) 
+                            r_wah[r_wah_i] = 0x7fffffff;
+                        else 
+                            r_wah[r_wah_i] = 0;
+                    }
+
+
+                    r_wah_fill_size -= num_words;
+                    wah_fill_size -= num_words;
+
+                    // save any values left on the end of r_wah run
+                    if (r_wah_fill_size > 0) {
+                        if (r_wah_fill_size == 1) {
+                            // we no longer have a fill, write a literal
+                            if (r_wah_fill_value == 1) //all ones
+                                r_wah[r_wah_i + num_words] = 0x7fffffff;
+                            else  // all zeros
+                                r_wah[r_wah_i + num_words] = 0;
+                        } else { 
+                            // we still have a fill, write it
+                            r_wah[r_wah_i + num_words] = 
+                                    (1 << 31) + 
+                                    (r_wah_fill_value << 30) + 
+                                    r_wah_fill_size; 
+                        }
+                    }
+
+                    r_wah_i += num_words;
+                } else { // r_wah is a literal
+                    /*
+                    fprintf(stderr, "%u:%u\t%u:%u\n", 
+                                            wah_i, wah[wah_i],
+                                            r_wah_i, r_wah[r_wah_i]);
+                    */
+
+                    if (wah_fill_value == 0) 
+                        r_wah[r_wah_i] = 0;
+
+                    r_wah_i += 1;
+                    wah_fill_size -= 1;
+                }
+
+                if (r_wah_i < r_wah_size)
+                    r_wah_v = r_wah[r_wah_i];
+            }
+
+
+        } else if ( r_wah_v >= 0x80000000) {
+            /*
+            fprintf(stderr, "%u:%u\t%u:%u\n", 
+                                            wah_i, wah[wah_i],
+                                            r_wah_i, r_wah[r_wah_i]);
+            */
+            r_wah_fill_value = (r_wah_v >> 30) & 1;
+
+            //wah is not a fill and r_wah is a fill
+            //update the current word in r_wah 
+            if (r_wah_fill_value == 1) {
+                //fill is a one
+                r_wah[r_wah_i] = wah_v;
+            } else {
+                //fill is a zero
+                r_wah[r_wah_i] = 0;
+            }
+
+
+            // we just took one word off the r_wah fill
+            r_wah_fill_size = (r_wah_v & 0x3fffffff) - 1;
+
+            if (r_wah_fill_size == 1) {
+                // we no longer have a fill, write a literal
+                if (r_wah_fill_value == 1) {//all ones
+                    r_wah[r_wah_i + 1] = 0x7fffffff;
+                } else { // all zeros
+                    r_wah[r_wah_i + 1] = 0;
+                }
+            } else { 
+                // we still have a fill, write it
+                r_wah[r_wah_i + 1] = (1 << 31) + 
+                                     (r_wah_fill_value << 30) + 
+                                     r_wah_fill_size; 
+            }
+            r_wah_i += 1;
+
+        } else {
+            /*
+            fprintf(stderr, "%u:%u\t%u:%u\n", 
+                                            wah_i, wah[wah_i],
+                                            r_wah_i, r_wah[r_wah_i]);
+            */
+
+            r_wah[r_wah_i] = r_wah[r_wah_i] & wah[wah_i];
+            r_wah_i += 1;
+        }
+    }
+
+    return r_wah_size;
+}
+//}}}
+
+//{{{ unsigned int wah_in_place_and(unsigned int *r_wah,
+unsigned int wah_in_place_and(unsigned int *r_wah,
                                unsigned int r_wah_size,
                                unsigned int *wah,
                                unsigned int wah_size)
@@ -1613,8 +1764,8 @@ unsigned int  wah_in_place_and(unsigned int *r_wah,
 }
 //}}}
 
-//{{{ void wah_and(struct wah_run *x,
-unsigned int  wah_and(struct wah_run *x,
+//{{{ unsigned int wah_and(struct wah_run *x,
+unsigned int wah_and(struct wah_run *x,
                      struct wah_run *y,
                      unsigned int **O)
 {
@@ -2366,6 +2517,41 @@ unsigned int range_records_plt(struct plt_file pf,
 }
 //}}}
 
+//{{{ unsigned int count_range_records_plt(struct plt_file pf,
+unsigned int count_range_records_plt(struct plt_file pf,
+                                     unsigned int *record_ids,
+                                     unsigned int num_r,
+                                     unsigned int start_test_value,
+                                     unsigned int end_test_value,
+                                     unsigned int **R)
+{
+    char *line = NULL;
+    size_t len = 0;
+    char *pch;
+    ssize_t read;
+    unsigned int i,j,val;
+
+    *R = (unsigned int *) calloc(pf.num_fields,sizeof(unsigned int));
+
+    long line_len = pf.num_fields*2*sizeof(char);
+    for (i = 0; i < num_r; ++i) {
+        fseek(pf.file, pf.header_offset + line_len*record_ids[i], SEEK_SET);
+
+        read = getline(&line, &len, pf.file);
+
+        for (j = 0; j < pf.num_fields; ++j) {
+            val = (unsigned int)line[j*2] - 48;            
+            if ( (val > start_test_value) && (val < end_test_value) )
+                (*R)[j] += 1;
+        }
+    }
+
+    free(line);
+
+    return pf.num_fields;
+}
+//}}}
+
 //{{{ unsigned int gt_records_plt(struct plt_file pf,
 unsigned int eq_records_plt(struct plt_file pf,
                             unsigned int *record_ids,
@@ -2375,6 +2561,23 @@ unsigned int eq_records_plt(struct plt_file pf,
 {
     // TODO: need constants for upper bound.
     return range_records_plt(pf, record_ids, num_r, test_value, test_value+1, R);
+}
+//}}}
+
+//{{{ unsigned int gt_count_records_plt(struct plt_file pf,
+unsigned int gt_count_records_plt(struct plt_file pf,
+                                  unsigned int *record_ids,
+                                  unsigned int num_r,
+                                  unsigned int test_value,
+                                  unsigned int **R)
+{
+    // TODO: need constants for upper bound.
+    return count_range_records_plt(pf,
+                                   record_ids,
+                                   num_r,
+                                   test_value,
+                                   4,
+                                   R);
 }
 //}}}
 
@@ -2624,6 +2827,175 @@ unsigned int range_records_wahbm(struct wah_file wf,
 }
 //}}}
 
+//{{{ unsigned int count_range_records_wahbm(struct wah_file wf,
+unsigned int count_range_records_wahbm(struct wah_file wf,
+                                       unsigned int *record_ids,
+                                       unsigned int num_r,
+                                       unsigned int start_test_value,
+                                       unsigned int end_test_value,
+                                       unsigned int **R) 
+
+{
+    *R = (unsigned int *) calloc(wf.num_fields,sizeof(unsigned int));
+
+    unsigned int *record_curr_bm = NULL,
+                 *record_new_bm = NULL,
+                 *record_tmp_bm = NULL;
+
+    unsigned int record_curr_bm_size,
+                 record_new_bm_size,
+                 record_tmp_bm_size;
+
+    unsigned int i,j, r_size;
+
+    for (i = 0; i < num_r; ++i) {
+        // or all of the bit maps for this record then and that will a 
+        // running total
+
+        record_curr_bm = NULL;
+        record_new_bm = NULL;
+        record_tmp_bm = NULL;
+
+        for (j = start_test_value; j < end_test_value; ++j) {
+
+            record_new_bm_size = get_wah_bitmap(wf,
+                                                record_ids[i],
+                                                j,
+                                                &record_new_bm);
+
+            if (record_curr_bm == NULL) {
+                record_curr_bm = record_new_bm;
+                record_curr_bm_size = record_new_bm_size;
+            } else {
+                struct wah_run curr_run = init_wah_run(record_curr_bm,
+                                                       record_curr_bm_size);
+                struct wah_run new_run = init_wah_run(record_new_bm,
+                                                      record_new_bm_size);
+
+                record_tmp_bm_size = wah_or(&curr_run,
+                                            &new_run,
+                                            &record_tmp_bm);
+                free(record_curr_bm);
+                free(record_new_bm);
+
+                record_curr_bm = record_tmp_bm;
+                record_curr_bm_size = record_tmp_bm_size;
+            }
+        }
+
+        r_size = add_wahbm(*R,
+                           wf.num_fields,
+                           record_curr_bm,
+                           record_curr_bm_size);
+    }
+    return wf.num_fields;
+}
+//}}}
+
+//{{{ unsigned int add_compressed_in_place_wahbm(unsigned int *R,
+unsigned int add_compressed_in_place_wahbm(unsigned int *R,
+                                           unsigned int r_size,
+                                           unsigned int *wah,
+                                           unsigned int wah_size)
+{
+
+    unsigned int wah_i,
+                 wah_v,
+                 num_words,
+                 fill_bit,
+                 bits,
+                 bit,
+                 bit_i,
+                 word_i,
+                 field_i;
+    field_i = 0;
+
+    for (wah_i = 0; wah_i < wah_size;) {
+
+        wah_v = wah[wah_i];
+
+        if (wah_v >> 31 == 1) {
+            num_words = (wah_v & 0x3fffffff);
+            fill_bit = (wah_v>=0xC0000000?1:0);
+            bits = (fill_bit?0x7FFFFFFF:0);
+        } else {
+            num_words = 1;
+            bits = wah_v;
+        }
+
+        if ( (num_words > 1) && (fill_bit == 0) ) {
+            field_i += num_words * 31;
+            if (field_i >= r_size)
+                return r_size;
+        } else {
+            for (word_i = 0; word_i < num_words; ++word_i) {
+                for (bit_i = 0; bit_i < 31; ++bit_i) {
+                    bit = (bits >> (30 - bit_i)) & 1;
+                    R[field_i] += bit;
+                    field_i += 1;
+
+                    if (field_i >= r_size)
+                        return r_size;
+                }
+            }
+        }
+        wah_i += num_words;
+    }
+
+    return r_size;
+}
+//}}}
+
+//{{{ unsigned int add_wahbm(unsigned int *R,
+unsigned int add_wahbm(unsigned int *R,
+                       unsigned int r_size,
+                       unsigned int *wah,
+                       unsigned int wah_size)
+{
+
+    unsigned int wah_i,
+                 num_words,
+                 fill_bit,
+                 bits,
+                 bit,
+                 bit_i,
+                 word_i,
+                 field_i;
+    field_i = 0;
+
+    for (wah_i = 0; wah_i < wah_size; ++wah_i) {
+
+        if (wah[wah_i] >> 31 == 1) {
+            num_words = (wah[wah_i] & 0x3fffffff);
+            fill_bit = (wah[wah_i]>=0xC0000000?1:0);
+            bits = (fill_bit?0x7FFFFFFF:0);
+        } else {
+            num_words = 1;
+            bits = wah[wah_i];
+        }
+
+        if ( (num_words > 1) && (fill_bit == 0) ) {
+            field_i += num_words;
+            if (field_i >= r_size)
+                return r_size;
+        } else {
+            for (word_i = 0; word_i < num_words; ++word_i) {
+                for (bit_i = 0; bit_i < 31; ++bit_i) {
+                    bit = (bits >> (30 - bit_i)) & 1;
+                    R[field_i] += bit;
+                    field_i += 1;
+
+                    if (field_i >= r_size)
+                        return r_size;
+                }
+            }
+        }
+    }
+
+    return r_size;
+}
+//}}}
+
 //{{{ unsigned int range_records_compressed_in_place_wahbm(struct wah_file wf,
 unsigned int range_records_compressed_in_place_wahbm(
             struct wah_file wf,
@@ -2670,7 +3042,8 @@ unsigned int range_records_compressed_in_place_wahbm(
 
         // and 
         and_result_bm_size = 
-                wah_compressed_in_place_and(and_result_bm,
+                wah_compressed_in_place_and_compressed_in_place(
+                                            and_result_bm,
                                             max_wah_size,
                                             or_result_bm,
                                             or_result_bm_size);
@@ -2682,6 +3055,62 @@ unsigned int range_records_compressed_in_place_wahbm(
 
     *R = and_result_bm;
     return and_result_bm_size;
+}
+//}}}
+
+//{{{ unsigned int count_range_records_compressed_in_place_wahbm(struct
+unsigned int count_range_records_compressed_in_place_wahbm(
+            struct wah_file wf,
+            unsigned int *record_ids,
+            unsigned int num_r,
+            unsigned int start_test_value,
+            unsigned int end_test_value,
+            unsigned int **R) 
+
+{
+    *R = (unsigned int *) calloc(wf.num_fields,sizeof(unsigned int));
+
+    unsigned int max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    unsigned int *record_new_bm = (unsigned int *)
+                        malloc(sizeof(unsigned int)*max_wah_size);
+
+    unsigned int *or_result_bm = (unsigned int *)
+                        malloc(sizeof(unsigned int)*max_wah_size);
+
+    unsigned int and_result_bm_size, record_new_bm_size, or_result_bm_size;
+    unsigned int i,j,r_size;
+
+    for (i = 0; i < num_r; ++i) {
+        // or the appropriate bitmaps
+        //memset(or_result_bm, 0, sizeof(unsigned int)*max_wah_size);
+        or_result_bm[0] = (2<<30) + max_wah_size; 
+
+        for (j = start_test_value; j < end_test_value; ++j) {
+
+            record_new_bm_size = get_wah_bitmap_in_place(wf,
+                                                         record_ids[i],
+                                                         j,
+                                                         &record_new_bm);
+
+            or_result_bm_size = 
+                    wah_compressed_in_place_or(or_result_bm,
+                                               max_wah_size,
+                                               record_new_bm,
+                                               record_new_bm_size); 
+        }
+
+        r_size = add_compressed_in_place_wahbm(*R,
+                                               wf.num_fields,
+                                               or_result_bm,
+                                               or_result_bm_size);
+
+
+    }
+
+    free(record_new_bm);
+    free(or_result_bm);
+
+    return r_size;
 }
 //}}}
 
@@ -2738,6 +3167,58 @@ unsigned int range_records_in_place_wahbm(struct wah_file wf,
 
     *R = and_result_bm;
     return and_result_bm_size;
+}
+//}}}
+
+//{{{ unsigned int count_range_records_in_place_wahbm(struct wah_file wf,
+unsigned int count_range_records_in_place_wahbm(struct wah_file wf,
+                                                unsigned int *record_ids,
+                                                unsigned int num_r,
+                                                unsigned int start_test_value,
+                                                unsigned int end_test_value,
+                                                unsigned int **R) 
+
+{
+
+    *R = (unsigned int *) calloc(wf.num_fields,sizeof(unsigned int));
+
+    unsigned int max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    unsigned int *record_new_bm = (unsigned int *)
+                        malloc(sizeof(unsigned int)*max_wah_size);
+
+    unsigned int *or_result_bm = (unsigned int *)
+                        malloc(sizeof(unsigned int)*max_wah_size);
+
+    unsigned int and_result_bm_size, record_new_bm_size, or_result_bm_size;
+    unsigned int i,j,r_size;
+
+    for (i = 0; i < num_r; ++i) {
+        // or the appropriate bitmaps
+        memset(or_result_bm, 0, sizeof(unsigned int)*max_wah_size);
+
+        for (j = start_test_value; j < end_test_value; ++j) {
+
+            record_new_bm_size = get_wah_bitmap_in_place(wf,
+                                                         record_ids[i],
+                                                         j,
+                                                         &record_new_bm);
+
+            or_result_bm_size = wah_in_place_or(or_result_bm,
+                                                max_wah_size,
+                                                record_new_bm,
+                                                record_new_bm_size); 
+        }
+
+        r_size = add_wahbm(*R,
+                           wf.num_fields,
+                           or_result_bm,
+                           or_result_bm_size);
+    }
+
+    free(record_new_bm);
+    free(or_result_bm);
+
+    return wf.num_fields;
 }
 //}}}
 
@@ -2833,6 +3314,7 @@ unsigned int range_records_w_exclude_wahbm(struct wah_file wf,
 }
 //}}}
 
+//{{{ eq, ne, gt, gte, lt, lte :records_wahbm
 //{{{ unsigned int eq_records_wahbm(struct wah_file wf,
 unsigned int eq_records_wahbm(struct wah_file wf,
                               unsigned int *record_ids,
@@ -2846,7 +3328,7 @@ unsigned int eq_records_wahbm(struct wah_file wf,
 }
 //}}}
 
-//{{{ unsigned int eq_records_wahbm(struct wah_file wf,
+//{{{ unsigned int ne_records_wahbm(struct wah_file wf,
 unsigned int ne_records_wahbm(struct wah_file wf,
                               unsigned int *record_ids,
                               unsigned int num_r,
@@ -2870,42 +3352,6 @@ unsigned int gt_records_wahbm(struct wah_file wf,
 {
     // TODO: need constants for upper bound.
     return range_records_wahbm(wf, record_ids, num_r, test_value+1, 4, R);
-}
-//}}}
-
-//{{{ unsigned int gt_records_in_place_wahbm(struct wah_file wf,
-unsigned int gt_records_in_place_wahbm(struct wah_file wf,
-                                       unsigned int *record_ids,
-                                       unsigned int num_r,
-                                       unsigned int test_value,
-                                       unsigned int **R) 
-
-{
-    // TODO: need constants for upper bound.
-    return range_records_in_place_wahbm(wf,
-                                        record_ids,
-                                        num_r,
-                                        test_value+1,
-                                        4,
-                                        R);
-}
-//}}}
-
-//{{{ unsigned int gt_records_compressed_in_place_wahbm(struct wah_file wf,
-unsigned int gt_records_compressed_in_place_wahbm(struct wah_file wf,
-                                       unsigned int *record_ids,
-                                       unsigned int num_r,
-                                       unsigned int test_value,
-                                       unsigned int **R) 
-
-{
-    // TODO: need constants for upper bound.
-    return range_records_compressed_in_place_wahbm(wf,
-                                                   record_ids,
-                                                   num_r,
-                                                   test_value+1,
-                                                   4,
-                                                   R);
 }
 //}}}
 
@@ -2935,7 +3381,7 @@ unsigned int lt_records_wahbm(struct wah_file wf,
 }
 //}}}
 
-//{{{ unsigned int lt_records_wahbm(struct wah_file wf,
+//{{{ unsigned int lte_records_wahbm(struct wah_file wf,
 unsigned int lte_records_wahbm(struct wah_file wf,
                               unsigned int *record_ids,
                               unsigned int num_r,
@@ -2947,7 +3393,99 @@ unsigned int lte_records_wahbm(struct wah_file wf,
     return range_records_wahbm(wf, record_ids, num_r, 0, test_value+1, R);
 }
 //}}}
+//}}}
 
+//{{{ unsigned int gt_count_records_wahbm(struct wah_file wf,
+unsigned int gt_count_records_wahbm(struct wah_file wf,
+                                    unsigned int *record_ids,
+                                    unsigned int num_r,
+                                    unsigned int test_value,
+                                    unsigned int **R)
+{
+    // TODO: need constants for upper bound.
+    return count_range_records_wahbm(wf,
+                                     record_ids,
+                                     num_r,
+                                     test_value+1,
+                                     4,
+                                     R);
+}
+//}}}
+
+//{{{ unsigned int gt_records_in_place_wahbm(struct wah_file wf,
+unsigned int gt_records_in_place_wahbm(struct wah_file wf,
+                                       unsigned int *record_ids,
+                                       unsigned int num_r,
+                                       unsigned int test_value,
+                                       unsigned int **R) 
+
+{
+    // TODO: need constants for upper bound.
+    return range_records_in_place_wahbm(wf,
+                                        record_ids,
+                                        num_r,
+                                        test_value+1,
+                                        4,
+                                        R);
+}
+//}}}
+
+//{{{ unsigned int gt_records_in_place_wahbm(struct wah_file wf,
+unsigned int gt_count_records_in_place_wahbm(struct wah_file wf,
+                                             unsigned int *record_ids,
+                                             unsigned int num_r,
+                                             unsigned int test_value,
+                                             unsigned int **R) 
+
+{
+    // TODO: need constants for upper bound.
+    return count_range_records_in_place_wahbm(wf,
+                                        record_ids,
+                                        num_r,
+                                        test_value+1,
+                                        4,
+                                        R);
+}
+//}}}
+
+//{{{ unsigned int gt_records_compressed_in_place_wahbm(struct wah_file wf,
+unsigned int gt_count_records_compressed_in_place_wahbm(
+                                             struct wah_file wf,
+                                             unsigned int *record_ids,
+                                             unsigned int num_r,
+                                             unsigned int test_value,
+                                             unsigned int **R) 
+
+{
+    // TODO: need constants for upper bound.
+    return count_range_records_compressed_in_place_wahbm(wf,
+                                                         record_ids,
+                                                         num_r,
+                                                         test_value+1,
+                                                         4,
+                                                         R);
+}
+//}}}
+
+//{{{ unsigned int gt_records_compressed_in_place_wahbm(struct wah_file wf,
+unsigned int gt_records_compressed_in_place_wahbm(struct wah_file wf,
+                                       unsigned int *record_ids,
+                                       unsigned int num_r,
+                                       unsigned int test_value,
+                                       unsigned int **R) 
+
+{
+    // TODO: need constants for upper bound.
+    return range_records_compressed_in_place_wahbm(wf,
+                                                   record_ids,
+                                                   num_r,
+                                                   test_value+1,
+                                                   4,
+                                                   R);
+}
+//}}}
+
+//{{{ plt, ubin, wahbm, wah: print, print by name
 //{{{ unsigned int print_plt(struct plt_file pf,
 unsigned int print_plt(struct plt_file pf,
                        unsigned int *record_ids,
@@ -3284,6 +3822,8 @@ unsigned int print_by_name_wah(char *wahbm_file_name,
     return print_wah(wf, record_ids, num_r, format);
 }
 //}}} 
+//}}} END plt, ubin, wahbm, wah: print, print by name
+
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////

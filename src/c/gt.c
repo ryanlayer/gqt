@@ -12,33 +12,42 @@ int gt_plt(char *in,
            unsigned int query_value,
            unsigned int *R,
            unsigned int num_records,
+           int time,
            int quiet);
+
 int gt_ubin(char *in,
             unsigned int query_value,
             unsigned int *R,
             unsigned int num_records,
+            int time,
             int quiet);
+
 int gt_wah(char *in,
            unsigned int query_value,
            unsigned int *R,
            unsigned int num_records,
+           int time,
            int quiet);
+
 int gt_wahbm(char *in,
              unsigned int query_value,
              unsigned int *R,
              unsigned int num_records,
+             int time,
              int quiet);
 
 int gt_in_place_wahbm(char *in,
                       unsigned int query_value,
                       unsigned int *R,
                       unsigned int num_records,
+                      int time,
                       int quiet);
 
 int gt_compressed_in_place_wahbm(char *in,
                                  unsigned int query_value,
                                  unsigned int *R,
                                  unsigned int num_records,
+                                 int time,
                                  int quiet);
 
 
@@ -59,9 +68,10 @@ int gt(int argc, char **argv)
         r_is_set = 0, 
         n_is_set = 0, 
         Q_is_set = 0, 
+        t_is_set = 0, 
         q_is_set = 0; 
 
-    while ((c = getopt (argc, argv, "hi:q:r:n:Q")) != -1) {
+    while ((c = getopt (argc, argv, "hi:q:r:n:Qt")) != -1) {
         switch (c) {
             case 'r':
                 r_is_set = 1;
@@ -81,6 +91,9 @@ int gt(int argc, char **argv)
                 break;
             case 'Q':
                 Q_is_set = 1;
+                break;
+            case 't':
+                t_is_set = 1;
                 break;
             case 'h':
                 gt_help();
@@ -129,6 +142,7 @@ int gt(int argc, char **argv)
                       query_value,
                       R,
                       num_records,
+                      t_is_set,
                       Q_is_set);
 
     else if (strcmp(type, "ubin") == 0)
@@ -136,6 +150,7 @@ int gt(int argc, char **argv)
                        query_value,
                        R,
                        num_records,
+                      t_is_set,
                        Q_is_set);
 
     else if (strcmp(type, "wah") == 0) 
@@ -143,6 +158,7 @@ int gt(int argc, char **argv)
                       query_value,
                       R,
                       num_records,
+                      t_is_set,
                       Q_is_set);
 
     else if (strcmp(type, "wahbm") == 0)
@@ -150,6 +166,7 @@ int gt(int argc, char **argv)
                         query_value,
                         R,
                         num_records,
+                        t_is_set,
                         Q_is_set);
 
     else if (strcmp(type, "ipwahbm") == 0)
@@ -157,6 +174,7 @@ int gt(int argc, char **argv)
                                  query_value,
                                  R,
                                  num_records,
+                                 t_is_set,
                                  Q_is_set);
 
     else if (strcmp(type, "cipwahbm") == 0)
@@ -164,6 +182,7 @@ int gt(int argc, char **argv)
                                             query_value,
                                             R,
                                             num_records,
+                                            t_is_set,
                                             Q_is_set);
 
 
@@ -191,6 +210,7 @@ int gt_plt(char *in,
            unsigned int query_value,
            unsigned int *R,
            unsigned int num_records,
+           int time,
            int quiet)
 {
     start();
@@ -202,7 +222,8 @@ int gt_plt(char *in,
                                            query_value,
                                            &pf_R);
     stop();
-    fprintf(stderr,"%lu\n", report());
+    if (time != 0)
+        fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
         print_result(len_pf_R, pf_R, pf.num_fields);
@@ -218,6 +239,7 @@ int gt_ubin(char *in,
             unsigned int query_value,
             unsigned int *R,
             unsigned int num_records,
+            int time,
             int quiet)
 
 {
@@ -230,7 +252,8 @@ int gt_ubin(char *in,
                                            query_value,
                                            &uf_R);
     stop();
-    fprintf(stderr,"%lu\n", report());
+    if (time != 0)
+        fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
         print_result(len_uf_R, uf_R, uf.num_fields);
@@ -244,6 +267,7 @@ int gt_wah(char *in,
            unsigned int query_value,
            unsigned int *R,
            unsigned int num_records,
+           int time,
            int quiet)
 
 {
@@ -254,6 +278,7 @@ int gt_in_place_wahbm(char *in,
                       unsigned int query_value,
                       unsigned int *R,
                       unsigned int num_records,
+                      int time,
                       int quiet)
 
 {
@@ -268,7 +293,8 @@ int gt_in_place_wahbm(char *in,
     unsigned int *ints;
     unsigned int len_ints = wah_to_ints(wf_R,len_wf_R,&ints);
     stop();
-    fprintf(stderr,"%lu\n", report());
+    if (time != 0)
+        fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
         print_result(len_ints, ints, wf.num_fields);
@@ -284,6 +310,7 @@ int gt_compressed_in_place_wahbm(char *in,
                                  unsigned int query_value,
                                  unsigned int *R,
                                  unsigned int num_records,
+                                 int time,
                                  int quiet)
 
 {
@@ -300,7 +327,8 @@ int gt_compressed_in_place_wahbm(char *in,
                                                             len_wf_R,
                                                             &ints);
     stop();
-    fprintf(stderr,"%lu\n", report());
+    if (time != 0)
+        fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
         print_result(len_ints, ints, wf.num_fields);
@@ -316,6 +344,7 @@ int gt_wahbm(char *in,
              unsigned int query_value,
              unsigned int *R,
              unsigned int num_records,
+             int time,
              int quiet)
 
 {
@@ -331,7 +360,8 @@ int gt_wahbm(char *in,
     unsigned int *ints;
     unsigned int len_ints = wah_to_ints(wf_R,len_wf_R,&ints);
     stop();
-    fprintf(stderr,"%lu\n", report());
+    if (time != 0)
+        fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
         print_result(len_ints, ints, wf.num_fields);

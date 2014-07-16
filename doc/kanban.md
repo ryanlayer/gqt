@@ -90,13 +90,8 @@
 
 ### Ryan
 #### Develop
-* count
-    * wah
-    * plt
+* count gt
     * ubin
-    * in place
-    * compressed in place
-
 
 #### Document
 #### Verify
@@ -119,3 +114,8 @@
 * do in place OR
 * compressed in-place OR and AND
     * compressed in-place wah to ints
+* count gt
+    * wah
+    * plt
+    * in place
+    * compressed in place

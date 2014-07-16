@@ -11,6 +11,7 @@ int convert(int argc, char **argv);
 int view(int argc, char **argv);
 int gt(int argc, char **argv);
 int sort(int argc, char **argv);
+int count(int argc, char **argv);
 
 int main(int argc, char **argv)
 {
@@ -22,6 +23,7 @@ int main(int argc, char **argv)
     else if (strcmp(cmd,"view") == 0) return view(argc-2, argv+2);
     else if (strcmp(cmd,"gt") == 0) return gt(argc-2, argv+2);
     else if (strcmp(cmd,"sort") == 0) return sort(argc-2, argv+2);
+    else if (strcmp(cmd,"count") == 0) return count(argc-2, argv+2);
     else {
         printf("Unknown command\n");
         return gtq_help(argc, argv);
@@ -36,7 +38,9 @@ int gtq_help(int argc, char **argv)
            "         view      Display files contents\n"
            "         gt        Test for records with fields greater than\n"
            "                   a give value\n"
-           "         sort      Reorder files\n",
+           "         sort      Reorder files\n"
+           "         count     For each fields, count the number of records"
+           "                   that meet a condition\n",
             PROGRAM_NAME, VERSION,
             PROGRAM_NAME);
     return 0;

@@ -74,6 +74,7 @@
 ### Ryan
 * plt-to-vcf
 * count and sum based on compressed in-place 
+
 ## IN PROGRESS
 
 ### Aaron
@@ -85,15 +86,19 @@
       set of functions that ubin, wah, plt, etc. have.  Once grabix is all C (not C++), the query functions should be very similar
       to plt 
 * ubin >,<,>=,<= than query
+
 #### Document
 #### Verify
 
 ### Ryan
+
 #### Develop
 * count gt
     * ubin
 
 #### Document
+
+
 #### Verify
 
 ## DONE
@@ -119,3 +124,4 @@
     * plt
     * in place
     * compressed in place
+* invert plt

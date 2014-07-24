@@ -97,6 +97,21 @@ int convert_file_by_name_vcf_to_plt(char *in_file_name,
                                     char *out_file_name);
 
 /**
+ * @brief Switch a plain text records to fields
+ *
+ * @param in_file_name plain text input file name
+ * @param out_file_name plain text output file name
+ *
+ * @retval 0 if things worked
+ * @retval 1 otherwise
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+int convert_file_by_name_invert_plt(char *in_file_name, char *out_file_name);
+
+/**
  * @brief Convert a plain text file to an uncompressed binary file
  *
  * @param in_file_name Plain text file name

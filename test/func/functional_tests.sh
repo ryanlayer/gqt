@@ -83,3 +83,12 @@ $GTQ_PATH/gtq count cipwahbm \
 diff tmp.count.plt tmp.count.wahbm
 diff tmp.count.plt tmp.count.ipwahbm
 diff tmp.count.plt tmp.count.cipwahbm
+
+$GTQ_PATH/gtq convert plt-invert \
+    -i $DATA_PATH/10.1e4.ind.txt \
+    -o $DATA_PATH/.tmp.invert 
+
+diff $DATA_PATH/10.1e4.var.txt \
+    $DATA_PATH/.tmp.invert 
+
+

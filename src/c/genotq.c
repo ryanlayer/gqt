@@ -9,11 +9,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/param.h>
 #include <math.h>
+#include <limits.h>
 #include "genotq.h"
 
-#define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
-#define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
+//#define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
+//#define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 
 
 static int test_1 = 0;
@@ -309,6 +311,129 @@ int convert_file_plt_to_ubin(struct plt_file pf, char *out_file_name)
     fclose(o_file);
 
     return 0;
+}
+//}}}
+
+//{{{ int convert_file_by_name_invert_plt(char *in_file_name, char
+int convert_file_by_name_invert_plt(char *in_file_name, char *out_file_name)
+{
+    struct plt_file pf = init_plt_file(in_file_name);
+    FILE *o_pf = fopen(out_file_name, "w");
+
+    // get the path to the ouput to write temp files
+    char full_path[PATH_MAX+1];
+    char *ptr = realpath(in_file_name, full_path);
+    
+    char orig_path[strlen(ptr)];
+    char *o = strcpy(orig_path, full_path);
+
+    char *pch, *last;
+    pch = strtok(ptr, "/");
+    while (pch != NULL) {
+        last = pch;
+        pch = strtok(NULL, "/");
+    }
+
+    // the number of temp file will be equal to the number of records (the old
+    // number of fields), to make sure there is enough room to hold the string
+    // name
+    unsigned int max_digit_len = (unsigned int)log10((double)pf.num_fields)+1;
+
+    char temp_path[strlen(orig_path) - strlen(last) + 4 + max_digit_len + 1];
+    unsigned int path_len = strlen(orig_path) - strlen(last);
+    pch = strncpy(temp_path, orig_path, path_len);
+    pch = strncpy(temp_path + path_len, ".tmp", 4);
+    path_len += 4;
+
+
+    fprintf(o_pf, "%u\n", pf.num_records);
+    fprintf(o_pf, "%u\n", pf.num_fields);
+
+     
+
+    char *line = NULL;
+    ssize_t read;
+    size_t len;
+    unsigned int i,j,g,n;
+
+    // clear out any old files
+    for (j = 0; j < pf.num_fields; ++j) {
+        n = sprintf(temp_path + path_len, "%u", j);
+        FILE *tmp_file = fopen(temp_path, "w");
+        fclose(tmp_file);
+    }
+
+    // put each line into a seperate file
+    fseek(pf.file, pf.header_offset, SEEK_SET);
+    for (i = 0; i < pf.num_records; ++i) {
+        read = getline(&line, &len, pf.file);
+        for (j = 0; j < pf.num_fields; ++j) {
+            n = sprintf(temp_path + path_len, "%u", j);
+            FILE *tmp_file = fopen(temp_path, "a");
+            if (i!= 0)
+                fprintf(tmp_file," ");
+            g = ((int)line[j*2] - 48);
+            fprintf(tmp_file,"%u", g);
+            fclose(tmp_file);
+        }
+    }
+
+    // combine and remove tmp files
+    for (j = 0; j < pf.num_fields; ++j) {
+        n = sprintf(temp_path + path_len, "%u", j);
+        FILE *tmp_file = fopen(temp_path, "r");
+        read = getline(&line, &len, tmp_file);
+        fprintf(o_pf,"%s\n", line);
+        fclose(tmp_file);
+        remove(temp_path);
+    } 
+
+        
+    fclose(pf.file);
+    fclose(o_pf);
+    return 0;
+
+#if 0
+    char *line = NULL;
+    unsigned int i,j,count;
+    size_t len;
+    ssize_t read;
+    int g[16];
+    unsigned int *packed_ints;
+
+    FILE *o_file = fopen(out_file_name, "wb");
+    if (!o_file) {
+        fprintf(stderr, "Unable to open %s\n",out_file_name);
+        return 1;
+    }
+
+    // First value is the number of fields per record
+    fwrite(&(pf.num_fields), sizeof(int), 1, o_file);
+
+    // Second value is the number of records
+    fwrite(&(pf.num_records), sizeof(int), 1, o_file);
+
+
+    // jump past the header
+    fseek(pf.file, pf.header_offset, SEEK_SET);
+    for (i = 0; i < pf.num_records; ++i) {
+        read = getline(&line, &len, pf.file);
+        //fprintf(stderr, "read:%lu\n", read);
+        //fprintf(stderr, "%s", line);
+        unsigned int num_packed_ints  = plt_line_to_packed_ints(line,
+                                                                pf.num_fields,
+                                                                &packed_ints);
+
+        for (j = 0; j < num_packed_ints; ++j)
+            fwrite(&(packed_ints[j]), sizeof(unsigned int), 1, o_file);
+
+        free(packed_ints);
+    }
+
+    fclose(o_file);
+
+    return 0;
+#endif
 }
 //}}}
 

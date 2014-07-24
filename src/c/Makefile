@@ -1,6 +1,6 @@
 BIN=../../bin
 OBJ=../../obj
-CFLAGS=-g 
+CFLAGS=-g -lm
 GRABIX_ROOT=~/src/grabix
 CC=gcc
 
@@ -31,7 +31,7 @@ $(OBJ)/%.o: %.c
 	$(CC) -c $(CFLAGS) -o $@ $< 
 
 $(BIN)/%: %.c $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^ -lc
+	$(CC) $(CFLAGS) -o $@ $^ -lc -lm
 clean:
 	rm -rf $(BIN)/*
 	rm -rf $(OBJ)/*

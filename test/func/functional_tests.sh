@@ -68,6 +68,10 @@ $GTQ_PATH/gtq count plt \
     -i $DATA_PATH/10.1e4.ind.txt \
     $ARGS > tmp.count.plt
 
+$GTQ_PATH/gtq count ubin \
+    -i $DATA_PATH/10.1e4.ind.ubin \
+    $ARGS > tmp.count.ubin
+
 $GTQ_PATH/gtq count wahbm \
     -i $DATA_PATH/10.1e4.ind.wahbm \
     $ARGS > tmp.count.wahbm
@@ -81,14 +85,44 @@ $GTQ_PATH/gtq count cipwahbm \
     $ARGS > tmp.count.cipwahbm
 
 diff tmp.count.plt tmp.count.wahbm
+diff tmp.count.plt tmp.count.ubin
 diff tmp.count.plt tmp.count.ipwahbm
 diff tmp.count.plt tmp.count.cipwahbm
 
+rm tmp.count.plt \
+    tmp.count.ubin \
+    tmp.count.wahbm \
+    tmp.count.ipwahbm \
+    tmp.count.cipwahbm
+
+
 $GTQ_PATH/gtq convert plt-invert \
     -i $DATA_PATH/10.1e4.ind.txt \
-    -o $DATA_PATH/.tmp.invert 
+    -o tmp.invert 
 
 diff $DATA_PATH/10.1e4.var.txt \
-    $DATA_PATH/.tmp.invert 
+    tmp.invert 
 
+rm tmp.invert
+
+$GTQ_PATH/gtq convert plt-vcf \
+    -i $DATA_PATH/10.1e4.var.txt \
+    -o tmp.vcf 
+
+diff tmp.vcf $DATA_PATH/10.1e4.var.vcf
+
+rm tmp.vcf
+
+
+$GTQ_PATH/gtq convert  plt-invert-ubin \
+    -i $DATA_PATH/10.1e4.ind.txt \
+    -o tmp.i.ubin
+
+$GTQ_PATH/gtq view ubin -i tmp.i.ubin \
+    > tmp.o.i.ubin
+
+$GTQ_PATH/gtq view ubin -i $DATA_PATH/10.1e4.var.ubin \
+    > tmp.o.var.ubin
+
+diff tmp.o.var.ubin tmp.o.i.ubin
 

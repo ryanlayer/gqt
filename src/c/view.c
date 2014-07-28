@@ -60,9 +60,10 @@ int view(int argc, char **argv)
 int view_help()
 {
     printf("usage:   gtq view <type> -i <input file>\n"
-           "         plt-ubin    Plain text to uncompress binary\n"
-           "         ubin-wahbm  Uncompressed binary to WAH bitmap\n"
-           "         ubin-wah    Uncompressed binary to WAH \n"
+           "         plt   Plain text\n"
+           "         ubin  Uncompressed binary\n"
+           "         wah   WAH-encoded uncompressed binary to WAH \n"
+           "         wahbm WAH-encoded bitmap\n"
     );
 
     return 0;

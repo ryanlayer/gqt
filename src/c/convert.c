@@ -7,6 +7,7 @@
 
 int convert_help();
 int plt_ubin(char *in, char *out);
+int plt_vcf(char *in, char *out);
 int ubin_wahbm(char *in, char *out);
 int ubin_wahbm16(char *in, char *out);
 int ubin_wah(char *in, char *out);
@@ -15,6 +16,7 @@ int vcf_plt(char *in,
             unsigned int num_fields,
             unsigned int num_records);
 int plt_invert(char *in, char *out);
+int plt_invert_ubin(char *in, char *out);
 
 int convert(int argc, char **argv)
 {
@@ -89,7 +91,9 @@ int convert(int argc, char **argv)
         return vcf_plt(in, out, num_fields, num_records);
     } 
     if (strcmp(type, "plt-ubin") == 0)  return plt_ubin(in, out);
+    if (strcmp(type, "plt-vcf") == 0)  return plt_vcf(in, out);
     if (strcmp(type, "plt-invert") == 0)  return plt_invert(in, out);
+    if (strcmp(type, "plt-invert-ubin") == 0)  return plt_invert_ubin(in, out);
     if (strcmp(type, "ubin-wahbm") == 0) return ubin_wahbm(in, out);
     if (strcmp(type, "ubin-wahbm16") == 0) return ubin_wahbm16(in, out);
     if (strcmp(type, "ubin-wah") == 0) return ubin_wah(in, out);
@@ -100,14 +104,19 @@ int convert(int argc, char **argv)
 int convert_help()
 {
     printf("usage:   gtq covert <type> -i <input file> -o <output file>\n"
-           "         plt-invert   Switch records to fields\n"
-           "         plt-ubin     Plain text to uncompress binary\n"
-           "         ubin-wahbm   Uncompressed binary to WAH bitmap\n"
-           "         ubin-wahbm16 Uncompressed binary to 16-bit WAH bitmap\n"
-           "         ubin-wah     Uncompressed binary to WAH \n"
-           "         vcf-plt      VCF to by-variant plain text\n"
-           "         -r           Number of records (required for vcf-plt)\n"
-           "         -f           Number of fields (required for vcf-plt)\n"
+           "         plt-invert        Switch records to fields\n"
+           "         plt-invert-ubin   Switch records to fields\n"
+           "         plt-ubin          Plain text to uncompress binary\n"
+           "         plt-vcf           Plain text to VCF\n"
+           "         ubin-wahbm        Uncompressed binary to WAH bitmap\n"
+           "         ubin-wahbm16      Uncompressed binary to 16-bit WAH "
+                                       "bitmap\n"
+           "         ubin-wah          Uncompressed binary to WAH \n"
+           "         vcf-plt           VCF to by-variant plain text\n"
+           "         -r                Number of records "
+                                       "(required for vcf-plt)\n"
+           "         -f                Number of fields "
+                                       "(required for vcf-plt)\n"
     );
 
     return 0;
@@ -133,9 +142,19 @@ int plt_ubin(char *in, char *out)
     return convert_file_by_name_plt_to_ubin(in, out);
 }
 
+int plt_vcf(char *in, char *out)
+{
+    return convert_file_by_name_plt_to_vcf(in, out);
+}
+
 int plt_invert(char *in, char *out)
 {
     return convert_file_by_name_invert_plt(in, out);
+}
+
+int plt_invert_ubin(char *in, char *out)
+{
+    return convert_file_by_name_invert_plt_to_ubin(in, out);
 }
 
 

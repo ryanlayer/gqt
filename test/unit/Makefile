@@ -14,7 +14,16 @@ all: clean $(TEST_NAMES) test
 %: %.c
 	#ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $@.c
 	ruby $(UNITY_ROOT)/generate_test_runner.rb $@.c
-	$(CC) -Werror -g -o $@ -I$(UNITY_ROOT) -I$(SRC) -DTEST $(UNITY_ROOT)/unity.c $(SRC)/genotq.c $(SRC)/timer.c $@.c $@_Runner.c -lm 
+	$(CC) -Werror -g -o $@ -I$(UNITY_ROOT) -I$(SRC) -DTEST $(UNITY_ROOT)/unity.c \
+	    $(SRC)/genotq.c \
+	    $(SRC)/timer.c \
+	    $(SRC)/plt.c \
+	    $(SRC)/ubin.c \
+	    $(SRC)/wah.c \
+	    $(SRC)/wahbm.c \
+	    $(SRC)/wahbm_in_place.c \
+	    $(SRC)/wahbm_compressed_in_place.c \
+	    $@.c $@_Runner.c -lm 
 	rm $@_Runner.c
 
 test:

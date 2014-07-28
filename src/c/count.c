@@ -289,25 +289,31 @@ int count_ubin(char *in,
                int quiet)
 
 {
-#if 0
     start();
     struct ubin_file uf = init_ubin_file(in);
     unsigned int *uf_R;
-    unsigned int len_uf_R = count_records_ubin(uf,
-                            R,
-                            num_records,
-                            query_value,
-                            &uf_R);
+    unsigned int len_uf_R;
+
+    if (strcmp(op,"gt") == 0)
+        len_uf_R = gt_count_records_ubin(uf,
+                                         R,
+                                         num_records,
+                                         query_value,
+                                         &uf_R);
+    else 
+        return count_help();
+
     stop();
-    fprintf(stderr,"%lu\n", report());
+
+    if (time != 0 )
+        fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
-        print_result(len_uf_R, uf_R, uf.num_fields);
+        print_count_result(uf_R, uf.num_fields);
 
     free(uf_R);
     fclose(uf.file);
 
-#endif
     return 0;
 }
 

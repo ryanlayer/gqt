@@ -1,12 +1,18 @@
 BIN=../../bin
 OBJ=../../obj
-CFLAGS=-g -lm
+CFLAGS=-g
 GRABIX_ROOT=~/src/grabix
 CC=gcc
 
 LIB=genotq.o \
     convert.o \
     gt.o \
+    plt.o \
+    wah.o \
+    wahbm.o \
+    wahbm_in_place.o \
+    wahbm_compressed_in_place.o \
+    ubin.o \
     view.o \
     sort.o \
     count.o \
@@ -41,6 +47,10 @@ $(BIN)/gt_records_grabix: $(OBJS) gt_records_grabix.cpp $(GRABIX_ROOT)/grabix.cp
 	gcc -c $(GRABIX_ROOT)/bgzf.c -o $(OBJ)/bgzf.o
 	g++ -g gt_records_grabix.cpp \
 		genotq.c \
+		wah.c \
+		wahbm.c \
+		wahbm_in_place.c \
+		wahbm_compressed_in_place.c \
 		$(OBJ)/grabix.o \
 		$(OBJ)/bgzf.o \
  		-I $(GRABIX_ROOT)  \

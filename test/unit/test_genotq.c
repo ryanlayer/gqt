@@ -118,42 +118,6 @@ void test_init_plt_file_num_fields_and_num_records(void)
 }
 //}}}
 
-//{{{void test_or_records_vs_field_or(void)
-void test_or_records_vs_field_or(void)
-{
-    int q[4] = {0,1,2,3};
-    
-    struct plt_file pltf_var = init_plt_file("../data/10.1e4.var.txt");
-    int *R = (int *) calloc(pltf_var.num_fields, sizeof(int));
-    int r = or_records_plt(pltf_var, q, 4, R);
-
-    struct plt_file pltf_ind = init_plt_file("../data/10.1e4.ind.txt");
-    int *F = (int *) calloc(pltf_ind.num_records, sizeof(int));
-    int f = or_fields_plt(pltf_ind, q, 4, F);
-
-    int i;
-    for (i = 0; i < pltf_ind.num_records; ++i)
-        TEST_ASSERT_EQUAL(R[i], F[i]);
-
-
-    TEST_ASSERT_EQUAL(R[0] , 3);
-    TEST_ASSERT_EQUAL(R[1] , 1);
-    TEST_ASSERT_EQUAL(R[2] , 0);
-    TEST_ASSERT_EQUAL(R[3] , 0);
-    TEST_ASSERT_EQUAL(R[4] , 1);
-    TEST_ASSERT_EQUAL(R[5] , 0);
-    TEST_ASSERT_EQUAL(R[6] , 1);
-    TEST_ASSERT_EQUAL(R[7] , 0);
-    TEST_ASSERT_EQUAL(R[8] , 1);
-    TEST_ASSERT_EQUAL(R[9] , 1);
-
-    free(R);
-    free(F);
-    fclose(pltf_ind.file);
-    fclose(pltf_var.file);
-}
-//}}}
-
 //{{{void test_pack_int(void)
 void test_pack_int(void)
 {
@@ -411,77 +375,6 @@ void test_get_ubin_record(void)
 
 
     fclose(uf.file);
-}
-//}}}
-
-//{{{ void test_or_records_plt_vs_ubin(void)
-void test_or_records_plt_vs_ubin(void)
-{
-    int q[4] = {0,1,2,3};
-    
-    struct plt_file pltf_var = init_plt_file("../data/10.1e4.var.txt");
-    int *plt_or = (int *) calloc(pltf_var.num_fields, sizeof(int));
-    int plt_or_size = or_records_plt(pltf_var, q, 4, plt_or);
-
-    TEST_ASSERT_EQUAL(plt_or_size, pltf_var.num_fields);
-
-    char *out_file_name_2="../data/.tmp2";
-    convert_file_plt_to_ubin(pltf_var, out_file_name_2);
-
-    struct ubin_file uf_var = init_ubin_file(out_file_name_2);
-    TEST_ASSERT_EQUAL(10, uf_var.num_fields);
-    TEST_ASSERT_EQUAL(43, uf_var.num_records);
-
-    unsigned int *ubin_or;
-    int ubin_or_size =  or_records_ubin(uf_var, q, 4, &ubin_or);
-    fclose(uf_var.file);
-
-    int *u = unpack_2_bit_ints(ubin_or[0]);
-
-    int i;
-    for (i = 0; i < uf_var.num_fields; ++i)
-        TEST_ASSERT_EQUAL(u[i], plt_or[i]);
-
-    free(plt_or);
-    free(ubin_or);
-    free(u);
-    fclose(pltf_var.file);
-}
-//}}}
-
-//{{{ void test_or_fields_ubin(void)
-void test_or_fields_ubin(void)
-{
-    int q[4] = {0,1,2,3};
-    
-    struct plt_file pltf_var = init_plt_file("../data/10.1e4.var.txt");
-    int *plt_or = (int *) calloc(pltf_var.num_records, sizeof(int));
-    int plt_or_size = or_fields_plt(pltf_var, q, 4, plt_or);
-
-    TEST_ASSERT_EQUAL(plt_or_size, pltf_var.num_records);
-
-    char *out_file_name_2="../data/.tmp2";
-    convert_file_plt_to_ubin(pltf_var, out_file_name_2);
-
-    struct ubin_file uf_var = init_ubin_file(out_file_name_2);
-    TEST_ASSERT_EQUAL(10, uf_var.num_fields);
-    TEST_ASSERT_EQUAL(43, uf_var.num_records);
-
-    unsigned int *ubin_or;
-    int ubin_or_size =  or_fields_ubin(uf_var, q, 4, &ubin_or);
-    fclose(uf_var.file);
-
-    int *u = unpack_2_bit_ints(ubin_or[0]);
-
-    int i;
-    for (i = 0; i < uf_var.num_fields; ++i) {
-        TEST_ASSERT_EQUAL(u[i], plt_or[i]);
-    }
-
-    fclose(pltf_var.file);
-    free(plt_or);
-    free(ubin_or);
-    free(u);
 }
 //}}}
 
@@ -4621,3 +4514,113 @@ void test_add_compressed_in_place_wahmb(void)
 
 }
 //}}}
+
+void test_invert_plt_ubin(void)
+{
+    char *l[10] = {
+        "2 0 1 1 0 1 1 0 0 0 0 0 0 1 0 0 2 1 0 0 1 0 1 0 1 1 0 1 1 "
+            "1 1 1 1 0 1 1 1 1 1 1 0 1 0",
+        "1 0 0 0 0 0 1 1 1 0 1 1 1 0 1 0 1 0 0 1 0 1 0 1 1 1 1 0 1 "
+            "1 1 1 1 1 0 1 0 1 1 0 1 0 0",
+        "0 0 0 0 0 0 0 2 2 0 2 2 2 0 2 0 0 0 0 2 0 2 0 2 0 0 0 0 0 "
+            "2 0 0 2 2 0 0 0 0 0 0 0 1 0",
+        "0 0 0 0 0 0 0 2 2 1 2 2 2 0 2 1 0 0 0 2 0 2 0 1 0 0 0 0 0 "
+            "2 0 0 2 2 0 0 0 0 0 0 0 0 0",
+        "1 0 1 1 0 1 0 1 1 0 2 2 2 0 2 1 0 0 0 2 0 2 0 2 0 0 1 0 0 "
+            "2 0 0 2 2 0 0 0 0 0 0 1 0 0",
+        "0 0 0 0 0 0 0 2 2 0 2 2 2 0 2 0 0 0 1 2 0 2 0 2 0 0 0 0 0 "
+            "2 0 0 2 2 0 0 0 0 0 0 0 0 0",
+        "1 0 0 0 2 0 2 0 0 0 0 0 0 0 0 0 2 0 0 0 0 0 0 0 0 0 0 0 0 "
+            "2 0 0 2 2 0 0 0 0 0 0 0 0 0",
+        "0 0 0 0 0 0 0 2 2 2 1 1 1 0 1 1 1 0 0 1 0 1 0 0 1 1 0 0 1 "
+            "1 1 0 1 0 1 1 1 1 1 0 0 1 1",
+        "0 1 0 0 0 0 0 2 2 0 1 1 1 0 1 0 1 0 0 1 0 1 0 1 0 0 1 0 0 "
+            "2 0 0 2 1 1 0 1 0 0 1 1 1 1",
+        "1 0 1 0 0 1 0 1 1 0 1 1 1 1 1 0 1 1 0 1 1 1 1 1 0 0 0 0 0 "
+            "2 0 0 2 1 1 0 1 0 0 0 0 0 0",
+    };
+
+    unsigned int A[43][10] = {
+            {2,1,0,0,1,0,1,0,0,1},
+            {0,0,0,0,0,0,0,0,1,0},
+            {1,0,0,0,1,0,0,0,0,1},
+            {1,0,0,0,1,0,0,0,0,0},
+            {0,0,0,0,0,0,2,0,0,0},
+            {1,0,0,0,1,0,0,0,0,1},
+            {1,1,0,0,0,0,2,0,0,0},
+            {0,1,2,2,1,2,0,2,2,1},
+            {0,1,2,2,1,2,0,2,2,1},
+            {0,0,0,1,0,0,0,2,0,0},
+            {0,1,2,2,2,2,0,1,1,1},
+            {0,1,2,2,2,2,0,1,1,1},
+            {0,1,2,2,2,2,0,1,1,1},
+            {1,0,0,0,0,0,0,0,0,1},
+            {0,1,2,2,2,2,0,1,1,1},
+            {0,0,0,1,1,0,0,1,0,0},
+            {2,1,0,0,0,0,2,1,1,1},
+            {1,0,0,0,0,0,0,0,0,1},
+            {0,0,0,0,0,1,0,0,0,0},
+            {0,1,2,2,2,2,0,1,1,1},
+            {1,0,0,0,0,0,0,0,0,1},
+            {0,1,2,2,2,2,0,1,1,1},
+            {1,0,0,0,0,0,0,0,0,1},
+            {0,1,2,1,2,2,0,0,1,1},
+            {1,1,0,0,0,0,0,1,0,0},
+            {1,1,0,0,0,0,0,1,0,0},
+            {0,1,0,0,1,0,0,0,1,0},
+            {1,0,0,0,0,0,0,0,0,0},
+            {1,1,0,0,0,0,0,1,0,0},
+            {1,1,2,2,2,2,2,1,2,2},
+            {1,1,0,0,0,0,0,1,0,0},
+            {1,1,0,0,0,0,0,0,0,0},
+            {1,1,2,2,2,2,2,1,2,2},
+            {0,1,2,2,2,2,2,0,1,1},
+            {1,0,0,0,0,0,0,1,1,1},
+            {1,1,0,0,0,0,0,1,0,0},
+            {1,0,0,0,0,0,0,1,1,1},
+            {1,1,0,0,0,0,0,1,0,0},
+            {1,1,0,0,0,0,0,1,0,0},
+            {1,0,0,0,0,0,0,0,1,0},
+            {0,1,0,0,1,0,0,0,1,0},
+            {1,0,1,0,0,0,0,1,1,0},
+            {0,0,0,0,0,0,0,1,1,0}
+    };
+
+    unsigned int o_num_fields, o_num_records;
+    o_num_fields = 43;
+    o_num_records = 10;
+
+    unsigned int n_num_fields, n_num_records;
+    unsigned int two_bit_i = 0;
+    unsigned int *ubin = NULL;
+
+    unsigned int i,j;
+
+    for (i = 0; i < o_num_records; ++i)
+        two_bit_i = invert_plt_to_ubin(l[i],
+                                    o_num_fields,
+                                    o_num_records,
+                                    &n_num_fields,
+                                    &n_num_records,
+                                    two_bit_i,
+                                    &ubin);
+
+    TEST_ASSERT_EQUAL(o_num_fields, n_num_records);
+    TEST_ASSERT_EQUAL(o_num_records, n_num_fields);
+
+    for (i = 0; i < n_num_records; ++i) {
+        int *r = unpack_2_bit_ints(ubin[i]);
+        for (j = 0; j < n_num_fields; ++j) 
+            TEST_ASSERT_EQUAL(A[i][j],r[j]);
+        free(r);
+    }
+}
+
+void test_convert_file_by_name_invert_plt_to_ubin(void)
+{
+
+    char *plt_file = "../data/10.1e4.ind.txt";
+    char *i_ubin_file = "tmp.i.ubin";
+
+    convert_file_by_name_invert_plt_to_ubin(plt_file, i_ubin_file);
+}

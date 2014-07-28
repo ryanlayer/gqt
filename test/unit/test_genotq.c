@@ -4592,7 +4592,7 @@ void test_invert_plt_ubin(void)
 
     unsigned int n_num_fields, n_num_records;
     unsigned int two_bit_i = 0;
-    unsigned int *ubin = NULL;
+    unsigned int **ubin = NULL;
 
     unsigned int i,j;
 
@@ -4609,7 +4609,7 @@ void test_invert_plt_ubin(void)
     TEST_ASSERT_EQUAL(o_num_records, n_num_fields);
 
     for (i = 0; i < n_num_records; ++i) {
-        int *r = unpack_2_bit_ints(ubin[i]);
+        int *r = unpack_2_bit_ints(ubin[i][0]);
         for (j = 0; j < n_num_fields; ++j) 
             TEST_ASSERT_EQUAL(A[i][j],r[j]);
         free(r);

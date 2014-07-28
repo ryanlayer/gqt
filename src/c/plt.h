@@ -488,7 +488,7 @@ unsigned int invert_plt_to_ubin(char *line,
                                 unsigned int *new_num_fields,
                                 unsigned int *new_num_records,
                                 unsigned int field_i,
-                                unsigned int **ubin);
+                                unsigned int ***ubin);
 /**
  * @brief Invert a plain text file and store as an uncompressed binary
  *

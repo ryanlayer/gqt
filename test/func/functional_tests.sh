@@ -125,4 +125,4 @@ $GTQ_PATH/gtq view ubin -i $DATA_PATH/10.1e4.var.ubin \
     > tmp.o.var.ubin
 
 diff tmp.o.var.ubin tmp.o.i.ubin
-
+rm tmp.i.ubin tmp.o.i.ubin tmp.o.var.ubin

@@ -408,7 +408,7 @@ int convert_file_by_name_invert_plt_to_ubin(char *in_file_name,
 
     unsigned int n_num_fields, n_num_records;
     unsigned int i, two_bit_i = 0;
-    unsigned int *ubin = NULL;
+    unsigned int **ubin = NULL;
     char *line = NULL;
     size_t len;
     ssize_t read;
@@ -437,7 +437,7 @@ int convert_file_by_name_invert_plt_to_ubin(char *in_file_name,
     unsigned int num_ints_per_record = 1 + (((n_num_fields) - 1) / 16);
     for (i = 0; i < n_num_records; ++i) {
         fprintf(stderr, "O:%u\n", i);
-        fwrite(&(ubin[i*num_ints_per_record]),
+        fwrite(&(ubin[i][0]),
                sizeof(unsigned int),
                num_ints_per_record,
                o_file);
@@ -457,7 +457,7 @@ unsigned int invert_plt_to_ubin(char *line,
                                 unsigned int *new_num_fields,
                                 unsigned int *new_num_records,
                                 unsigned int field_i,
-                                unsigned int **ubin)
+                                unsigned int ***ubin)
 {
 
     *new_num_fields = num_records;
@@ -465,12 +465,17 @@ unsigned int invert_plt_to_ubin(char *line,
     unsigned int num_ints_per_record = 1 + (((*new_num_fields) - 1) / 16);
     unsigned int int_i = field_i / 16;
     unsigned int two_bit_i = field_i % 16;
-
-    if (*ubin == NULL)
-        *ubin = (unsigned int *) calloc(num_ints_per_record*(*new_num_records), 
-                                        sizeof(unsigned int));
-    
     unsigned int i,g;
+
+    if (*ubin == NULL) {
+        *ubin = (unsigned int **) malloc( 
+                (*new_num_records)* sizeof(unsigned int *));
+
+        for (i = 0; i < *new_num_records; ++i)
+            (*ubin)[i] = (unsigned int *) 
+                            calloc(num_ints_per_record, sizeof(unsigned int));
+    }
+    
     for (i = 0; i < num_fields; ++i) {
         g = ((int)line[i*2] - 48);
         /*
@@ -483,7 +488,7 @@ unsigned int invert_plt_to_ubin(char *line,
                         i*num_ints_per_record+int_i
                         );
         */
-        (*ubin)[i*num_ints_per_record + int_i] += g << (30 - two_bit_i*2);
+        (*ubin)[i][int_i] += g << (30 - two_bit_i*2);
         //fprintf(stderr, "u:%u\n", (*ubin)[i*num_ints_per_record + int_i]);
     }
     

@@ -711,3 +711,57 @@ unsigned int gt_count_records_ubin(struct ubin_file uf,
                                    R);
 }
 //}}}
+
+//{{{ unsigned int print_ubin(struct ubin_file uf,
+unsigned int convert_file_by_name_ubin_to_plt(char *ubin_in, char *plt_out)
+{
+    struct ubin_file uf = init_ubin_file(ubin_in);
+
+    FILE *pf = fopen(plt_out,"w");
+
+    if (!pf) {
+        printf("Unable to open %s\n", plt_out);
+        return 1;
+    }
+
+    fprintf(pf,"%u\n", uf.num_fields);
+    fprintf(pf,"%u\n", uf.num_records);
+
+
+    unsigned int num_ints_per_record = 1 + ((uf.num_fields - 1) / 16);
+    int num_bytes_per_record = num_ints_per_record * 4;
+
+    unsigned int *c = (unsigned int *)
+        malloc(num_ints_per_record*sizeof(unsigned int));
+
+    unsigned int i, j, k, num_printed = 0;
+
+    while (fread(c,sizeof(unsigned int),num_ints_per_record,uf.file)) {
+        unsigned int printed_bits = 0;
+
+        for (j = 0; j < num_ints_per_record; ++j) {
+            if (j !=0)
+                fprintf(pf," ");
+
+            for (k = 0; k < 16; ++k) {
+                unsigned int bit = (c[j] >> (30 - 2*k)) & 3;
+                if (k !=0)
+                    fprintf(pf," ");
+                fprintf(pf,"%u", bit);
+                printed_bits += 1;
+                if (printed_bits == uf.num_fields)
+                    break;
+            }
+            
+           num_printed += 1;
+        }
+        fprintf(pf,"\n");
+    }
+
+    free(c);
+    fclose(pf);
+    fclose(uf.file);
+
+    return num_printed;
+}
+//}}}

@@ -9,6 +9,7 @@ $GTQ_PATH/gtq convert vcf-plt -f 10 -r 43 -i $DATA_PATH/10.1e4.var.vcf -o tmp.va
 $GTQ_PATH/gtq convert plt-ubin -i $DATA_PATH/10.1e4.ind.txt -o tmp.ubin
 $GTQ_PATH/gtq convert ubin-wahbm -i tmp.ubin -o tmp.wahbm
 $GTQ_PATH/gtq convert ubin-wah -i tmp.ubin -o tmp.wah
+$GTQ_PATH/gtq convert ubin-plt -i tmp.ubin -o tmp.ubin.to.plt
 
 $GTQ_PATH/gtq view plt -i $DATA_PATH/10.1e4.ind.txt > tmp.plt.plt
 $GTQ_PATH/gtq view ubin -i tmp.ubin > tmp.ubin.plt
@@ -19,6 +20,7 @@ diff tmp.var.plt $DATA_PATH/10.1e4.var.txt
 diff tmp.plt.plt tmp.ubin.plt
 diff tmp.plt.plt tmp.wahbm.plt
 diff tmp.plt.plt tmp.wah.plt
+diff tmp.ubin.to.plt $DATA_PATH/10.1e4.ind.txt
 
 rm tmp.var.plt \
     tmp.plt.plt \
@@ -27,8 +29,8 @@ rm tmp.var.plt \
     tmp.wah.plt \
     tmp.ubin \
     tmp.wahbm \
-    tmp.wah
-
+    tmp.wah \
+    tmp.ubin.to.plt
 
 ARGS="-q 0 -n 5 -r 1,2,4,5,7"
 $GTQ_PATH/gtq gt plt \

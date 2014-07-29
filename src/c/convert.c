@@ -8,6 +8,7 @@
 int convert_help();
 int plt_ubin(char *in, char *out);
 int plt_vcf(char *in, char *out);
+int ubin_plt(char *in, char *out);
 int ubin_wahbm(char *in, char *out);
 int ubin_wahbm16(char *in, char *out);
 int ubin_wah(char *in, char *out);
@@ -94,6 +95,7 @@ int convert(int argc, char **argv)
     if (strcmp(type, "plt-vcf") == 0)  return plt_vcf(in, out);
     if (strcmp(type, "plt-invert") == 0)  return plt_invert(in, out);
     if (strcmp(type, "plt-invert-ubin") == 0)  return plt_invert_ubin(in, out);
+    if (strcmp(type, "ubin-plt") == 0) return ubin_plt(in, out);
     if (strcmp(type, "ubin-wahbm") == 0) return ubin_wahbm(in, out);
     if (strcmp(type, "ubin-wahbm16") == 0) return ubin_wahbm16(in, out);
     if (strcmp(type, "ubin-wah") == 0) return ubin_wah(in, out);
@@ -130,6 +132,11 @@ int ubin_wahbm16(char *in, char *out)
 int ubin_wahbm(char *in, char *out)
 {
     return convert_file_by_name_ubin_to_wahbm(in, out);
+}
+
+int ubin_plt(char *in, char *out)
+{
+    return convert_file_by_name_ubin_to_plt(in, out);
 }
 
 int ubin_wah(char *in, char *out)

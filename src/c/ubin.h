@@ -336,4 +336,5 @@ unsigned int count_range_records_ubin(struct ubin_file uf,
                                       unsigned int end_test_value,
                                       unsigned int **R);
 
+unsigned int convert_file_by_name_ubin_to_plt(char *ubin_in, char *plt_out);
 #endif

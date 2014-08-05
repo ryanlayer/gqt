@@ -128,3 +128,16 @@ $GTQ_PATH/gtq view ubin -i $DATA_PATH/10.1e4.var.ubin \
 
 diff tmp.o.var.ubin tmp.o.i.ubin
 rm tmp.i.ubin tmp.o.i.ubin tmp.o.var.ubin
+
+ARGS="-o gt -q 0 -n 5 -r 1,2,4,5,7"
+$GTQ_PATH/gtq sum ipwahbm \
+    -i $DATA_PATH/10.1e4.ind.wahbm \
+    $ARGS 
+
+$GTQ_PATH/gtq count ipwahbm \
+    -i $DATA_PATH/10.1e4.ind.wahbm \
+    $ARGS 
+
+
+
+

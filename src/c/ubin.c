@@ -385,7 +385,7 @@ unsigned int ubin_to_bitmap_wah(unsigned int *U,
                                 unsigned int **W,
                                 unsigned int **wah_sizes)
 {
-    unsigned int *B;
+    unsigned int *B = NULL;
     // two bits per field
     unsigned int B_len = ubin_to_bitmap(U, U_len, num_fields*2, &B);
     unsigned int b_len = B_len / 4;  // size of each bitmap index
@@ -408,6 +408,8 @@ unsigned int ubin_to_bitmap_wah(unsigned int *U,
         total_wah_size += wahs_size[i];
     }
 
+    free(B);
+
     unsigned int W_i = 0;
     *W = (unsigned int *) malloc(total_wah_size*sizeof(unsigned int));
     for (i = 0; i < 4; i++) {
@@ -417,6 +419,7 @@ unsigned int ubin_to_bitmap_wah(unsigned int *U,
         }
         free(wahs[i]);
     }
+
 
     return total_wah_size;
 }

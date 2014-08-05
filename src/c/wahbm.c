@@ -379,6 +379,69 @@ unsigned int count_range_records_wahbm(struct wah_file wf,
 }
 //}}}
 
+//{{{ unsigned int sum_range_records_wahbm(struct wah_file wf,
+unsigned int sum_range_records_wahbm(struct wah_file wf,
+                                     unsigned int *record_ids,
+                                     unsigned int num_r,
+                                     unsigned int **R) 
+
+{
+    *R = (unsigned int *) calloc(wf.num_fields,sizeof(unsigned int));
+
+    unsigned int *record_curr_bm = NULL,
+                 *record_new_bm = NULL,
+                 *record_tmp_bm = NULL;
+
+    unsigned int record_curr_bm_size,
+                 record_new_bm_size,
+                 record_tmp_bm_size;
+
+    unsigned int i,j, r_size;
+
+    for (i = 0; i < num_r; ++i) {
+        // or all of the bit maps for this record then and that will a 
+        // running total
+
+        record_curr_bm = NULL;
+        record_new_bm = NULL;
+        record_tmp_bm = NULL;
+
+        for (j = 0; j < 4; ++j) {
+
+            record_new_bm_size = get_wah_bitmap(wf,
+                                                record_ids[i],
+                                                j,
+                                                &record_new_bm);
+
+            if (record_curr_bm == NULL) {
+                record_curr_bm = record_new_bm;
+                record_curr_bm_size = record_new_bm_size;
+            } else {
+                struct wah_run curr_run = init_wah_run(record_curr_bm,
+                                                       record_curr_bm_size);
+                struct wah_run new_run = init_wah_run(record_new_bm,
+                                                      record_new_bm_size);
+
+                record_tmp_bm_size = wah_or(&curr_run,
+                                            &new_run,
+                                            &record_tmp_bm);
+                free(record_curr_bm);
+                free(record_new_bm);
+
+                record_curr_bm = record_tmp_bm;
+                record_curr_bm_size = record_tmp_bm_size;
+            }
+        }
+
+        r_size = add_wahbm(*R,
+                           wf.num_fields,
+                           record_curr_bm,
+                           record_curr_bm_size);
+    }
+    return wf.num_fields;
+}
+//}}}
+
 //{{{ unsigned int range_records_wahbm(struct wah_file wf,
 unsigned int range_records_wahbm(struct wah_file wf,
                               unsigned int *record_ids,
@@ -498,10 +561,67 @@ unsigned int add_wahbm(unsigned int *R,
             if (field_i >= r_size)
                 return r_size;
         } else {
+            if (bits == 0) {
+                field_i += 31;
+                if (field_i >= r_size)
+                    return r_size;
+            } else {
+                for (word_i = 0; word_i < num_words; ++word_i) {
+                    for (bit_i = 0; bit_i < 31; ++bit_i) {
+                        bit = (bits >> (30 - bit_i)) & 1;
+                        R[field_i] += bit;
+                        field_i += 1;
+
+                        if (field_i >= r_size)
+                            return r_size;
+                    }
+                }
+            }
+        }
+    }
+
+    return r_size;
+}
+//}}}
+
+//{{{ unsigned int add_n_wahbm(unsigned int *R,
+unsigned int add_n_wahbm(unsigned int *R,
+                       unsigned int n,
+                       unsigned int r_size,
+                       unsigned int *wah,
+                       unsigned int wah_size)
+{
+
+    unsigned int wah_i,
+                 num_words,
+                 fill_bit,
+                 bits,
+                 bit,
+                 bit_i,
+                 word_i,
+                 field_i;
+    field_i = 0;
+
+    for (wah_i = 0; wah_i < wah_size; ++wah_i) {
+
+        if (wah[wah_i] >> 31 == 1) {
+            num_words = (wah[wah_i] & 0x3fffffff);
+            fill_bit = (wah[wah_i]>=0xC0000000?1:0);
+            bits = (fill_bit?0x7FFFFFFF:0);
+        } else {
+            num_words = 1;
+            bits = wah[wah_i];
+        }
+
+        if ( (num_words > 1) && (fill_bit == 0) ) {
+            field_i += num_words;
+            if (field_i >= r_size)
+                return r_size;
+        } else {
             for (word_i = 0; word_i < num_words; ++word_i) {
                 for (bit_i = 0; bit_i < 31; ++bit_i) {
                     bit = (bits >> (30 - bit_i)) & 1;
-                    R[field_i] += bit;
+                    R[field_i] += bit * n;
                     field_i += 1;
 
                     if (field_i >= r_size)

@@ -1,10 +1,13 @@
 BIN=../../bin
 OBJ=../../obj
 CFLAGS=-g
+#CFLAGS+=-Dtime_count_range_records_compressed_in_place_wahbm
+#CFLAGS+=-Dtime_count_range_records_in_place_wahbm
 GRABIX_ROOT=~/src/grabix
 CC=gcc
 
-LIB=genotq.o \
+LIB= timer.o \
+    genotq.o \
     convert.o \
     gt.o \
     plt.o \
@@ -16,15 +19,15 @@ LIB=genotq.o \
     view.o \
     sort.o \
     count.o \
-    timer.o
+    sum.o 
 
 
 OBJS=$(addprefix $(OBJ)/, $(LIB))
 
 
 PROG=read_binary_uints \
-	gtq \
-	gt_records_grabix 
+	gtq 
+
 
 LIST=$(addprefix $(BIN)/, $(PROG))
 
@@ -37,7 +40,7 @@ $(OBJ)/%.o: %.c
 	$(CC) -c $(CFLAGS) -o $@ $< 
 
 $(BIN)/%: %.c $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^ -lc -lm
+	$(CC) $(CFLAGS) -o $@ $^ -lc -lm 
 clean:
 	rm -rf $(BIN)/*
 	rm -rf $(OBJ)/*

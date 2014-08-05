@@ -676,19 +676,13 @@ int append_active_word(struct wah_ll **A_head,
         // The value on the tail is a litteral with all zeros
         if ( (*A_tail)->value.value == 0 ) {
             (*A_tail)->value.value = 0x80000002;
-            //(*A_tail)->value.value = (1<<31) + 62;
-            //(*A_tail)->value.nbits = 62;
+            free(n);
             return 0;
         // The value on the tail is a fill of all zeros that is not full
-        /*
-        } else if (  ((*A_tail)->value.value >> 30 == 2) &&
-                    (((*A_tail)->value.value << 2) >> 2 < (pow(2,30)-31)) ) {
-        */
         } else if ( ((*A_tail)->value.value >= 0x80000000) &&
                     ((*A_tail)->value.value < 0xC0000000) ) {
             (*A_tail)->value.value += 1;
-            //(*A_tail)->value.value += 31;
-            //(*A_tail)->value.nbits += 31;
+            free(n);
             return 0;
         } else { // the zeros cannot be added to the last active word
             (*A_tail)->next = n;
@@ -699,17 +693,11 @@ int append_active_word(struct wah_ll **A_head,
     } else if (a.value == 0x7FFFFFFF) { // all ones
         if ( (*A_tail)->value.value == a.value ) {
             (*A_tail)->value.value = 0xC0000002;
-            //(*A_tail)->value.value = (3<<30) + 62;
-            //(*A_tail)->value.nbits = 62;
+            free(n);
             return 0;
-        /*
-        } else if (  ((*A_tail)->value.value >> 30 == 3) &&
-                    (((*A_tail)->value.value << 2) >> 2 < (pow(2,30)-31)) ) {
-        */
         } else if ( (*A_tail)->value.value >= 0xC0000000) {
             (*A_tail)->value.value += 1;
-            //(*A_tail)->value.value += 31;
-            //(*A_tail)->value.nbits += 31;
+            free(n);
             return 0;
         } else {
             (*A_tail)->next = n;

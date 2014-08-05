@@ -13,6 +13,7 @@
 #include <math.h>
 #include <limits.h>
 #include "genotq.h"
+#include "timer.h"
 
 
 // wahbm in place
@@ -100,28 +101,12 @@ unsigned int get_wah_bitmap_in_place(struct wah_file wf,
     } else {
         wah_size = wf.record_offsets[wah_record*4 + bitmap] - 
                    wf.record_offsets[wah_record*4 + bitmap - 1];
-        /*
-        fprintf(stderr, "wf.header_offset:%lu\t"
-                        "wah_record:%u\t"
-                        "bitmap:%u\t"
-                        "wah_size:%u\t"
-                        "wf.record_offsets[]:%u\n",
-                        wf.header_offset,
-                        wah_record,
-                        bitmap,
-                        wah_size,
-                        wf.record_offsets[wah_record*4 + bitmap]);
-        */
 
         wah_offset = wf.header_offset +
                      sizeof(unsigned int) * 
                         (wf.record_offsets[wah_record*4 + bitmap] - wah_size);
     }
 
-    //fprintf(stderr, "wah_size:%u\twah_offset:%u\n", wah_size, wah_offset);
-
-
-    //*wah_bitmap = (unsigned int *) malloc(sizeof(unsigned int)*wah_size);
     fseek(wf.file, wah_offset, SEEK_SET);
     fread(*wah_bitmap,sizeof(unsigned int),wah_size,wf.file);
 
@@ -207,6 +192,96 @@ unsigned int count_range_records_in_place_wahbm(struct wah_file wf,
     unsigned int and_result_bm_size, record_new_bm_size, or_result_bm_size;
     unsigned int i,j,r_size;
 
+#ifdef time_count_range_records_in_place_wahbm
+    unsigned long t1 = 0, t2 = 0, t3 = 0;
+#endif
+
+    for (i = 0; i < num_r; ++i) {
+        // or the appropriate bitmaps
+        memset(or_result_bm, 0, sizeof(unsigned int)*max_wah_size);
+
+        for (j = start_test_value; j < end_test_value; ++j) {
+
+#ifdef time_count_range_records_in_place_wahbm
+            start();
+#endif
+            record_new_bm_size = get_wah_bitmap_in_place(wf,
+                                                         record_ids[i],
+                                                         j,
+                                                         &record_new_bm);
+
+#ifdef time_count_range_records_in_place_wahbm
+            stop();
+            t1+=report();
+#endif
+
+#ifdef time_count_range_records_in_place_wahbm
+            start();
+#endif
+            or_result_bm_size = wah_in_place_or(or_result_bm,
+                                                max_wah_size,
+                                                record_new_bm,
+                                                record_new_bm_size); 
+#ifdef time_count_range_records_in_place_wahbm
+            stop();
+            t2+=report();
+#endif
+        }
+
+#ifdef time_count_range_records_in_place_wahbm
+            start();
+#endif
+        r_size = add_wahbm(*R,
+                           wf.num_fields,
+                           or_result_bm,
+                           or_result_bm_size);
+#ifdef time_count_range_records_in_place_wahbm
+            stop();
+            t3+=report();
+#endif
+    }
+
+#ifdef time_count_range_records_in_place_wahbm
+    unsigned long tall = t1 + t2 + t3;
+    fprintf(stderr,"%lu %f\t%lu %f\t%lu %f\t%lu\n", 
+            t1,
+            ((double)t1)/((double)tall),
+            t2,
+            ((double)t2)/((double)tall),
+            t3,
+            ((double)t3)/((double)tall),
+            tall);
+
+#endif
+    free(record_new_bm);
+    free(or_result_bm);
+
+    return wf.num_fields;
+}
+//}}}
+
+//{{{ unsigned int sum_range_records_in_place_wahbm(struct wah_file wf,
+unsigned int sum_range_records_in_place_wahbm(struct wah_file wf,
+                                              unsigned int *record_ids,
+                                              unsigned int num_r,
+                                              unsigned int start_test_value,
+                                              unsigned int end_test_value,
+                                              unsigned int **R) 
+
+{
+
+    *R = (unsigned int *) calloc(wf.num_fields,sizeof(unsigned int));
+
+    unsigned int max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    unsigned int *record_new_bm = (unsigned int *)
+                        malloc(sizeof(unsigned int)*max_wah_size);
+
+    unsigned int *or_result_bm = (unsigned int *)
+                        malloc(sizeof(unsigned int)*max_wah_size);
+
+    unsigned int and_result_bm_size, record_new_bm_size, or_result_bm_size;
+    unsigned int i,j,r_size;
+
     for (i = 0; i < num_r; ++i) {
         // or the appropriate bitmaps
         memset(or_result_bm, 0, sizeof(unsigned int)*max_wah_size);
@@ -218,16 +293,13 @@ unsigned int count_range_records_in_place_wahbm(struct wah_file wf,
                                                          j,
                                                          &record_new_bm);
 
-            or_result_bm_size = wah_in_place_or(or_result_bm,
-                                                max_wah_size,
-                                                record_new_bm,
-                                                record_new_bm_size); 
+            r_size = add_n_wahbm(*R,
+                               j,
+                               wf.num_fields,
+                               record_new_bm,
+                               record_new_bm_size);
         }
 
-        r_size = add_wahbm(*R,
-                           wf.num_fields,
-                           or_result_bm,
-                           or_result_bm_size);
     }
 
     free(record_new_bm);
@@ -270,6 +342,24 @@ unsigned int gt_count_records_in_place_wahbm(struct wah_file wf,
                                         test_value+1,
                                         4,
                                         R);
+}
+//}}}
+
+//{{{ unsigned int gt_sum_records_in_place_wahbm(struct wah_file wf,
+unsigned int gt_sum_records_in_place_wahbm(struct wah_file wf,
+                                             unsigned int *record_ids,
+                                             unsigned int num_r,
+                                             unsigned int test_value,
+                                             unsigned int **R) 
+
+{
+    // TODO: need constants for upper bound.
+    return sum_range_records_in_place_wahbm(wf,
+                                            record_ids,
+                                            num_r,
+                                            test_value+1,
+                                            4,
+                                            R);
 }
 //}}}
 

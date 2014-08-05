@@ -344,6 +344,11 @@ unsigned int gt_count_records_wahbm(struct wah_file wf,
                                    unsigned int test_value,
                                    unsigned int **R);
 
+unsigned int add_n_wahbm(unsigned int *R,
+                       unsigned int n,
+                       unsigned int r_size,
+                       unsigned int *wah,
+                       unsigned int wah_size);
 
 ////////////END//////////////////////////////////////////////////////
 #endif

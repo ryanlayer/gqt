@@ -249,4 +249,38 @@ unsigned int gt_records_in_place_wahbm(struct wah_file wf,
                                        unsigned int num_r,
                                        unsigned int test_value,
                                        unsigned int **R);
+
+/**
+ * @brief For each field, sum the number of that meet a certian
+ * critera using in-place functions
+ *
+ * @param wf The initialized WAH-encoded bitmap file
+ * @param record_ids array of integer ids of the records to test
+ * @param num_r number of records in record_ids
+ * @param start_test_value is the lower bound value to test fields against
+ * (inclusive)
+ * @param end_test_value is the upper bound value to test fields against
+ * (exclusive)
+ * @param R interger counts
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int sum_range_records_in_place_wahbm(struct wah_file wf,
+                                              unsigned int *record_ids,
+                                              unsigned int num_r,
+                                              unsigned int start_test_value,
+                                              unsigned int end_test_value,
+                                              unsigned int **R);
+
+
+unsigned int gt_sum_records_in_place_wahbm(struct wah_file wf,
+                                             unsigned int *record_ids,
+                                             unsigned int num_r,
+                                             unsigned int test_value,
+                                             unsigned int **R);
+
 #endif

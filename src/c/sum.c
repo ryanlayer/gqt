@@ -6,30 +6,30 @@
 #include "genotq.h"
 #include "timer.h"
 
-int count_help();
+int sum_help();
 
-int count_plt(char *in,
+int sum_plt(char *in,
               unsigned int query_value,
               char *op,
               unsigned int *R,
               unsigned int num_records,
               int time,
               int quiet);
-int count_ubin(char *in,
+int sum_ubin(char *in,
                unsigned int query_value,
                char *op,
                unsigned int *R,
                unsigned int num_records,
                int time,
                int quiet);
-int count_wah(char *in,
+int sum_wah(char *in,
               unsigned int query_value,
               char *op,
               unsigned int *R,
               unsigned int num_records,
               int time,
               int quiet);
-int count_wahbm(char *in,
+int sum_wahbm(char *in,
                 unsigned int query_value,
                 char *op,
                 unsigned int *R,
@@ -37,7 +37,7 @@ int count_wahbm(char *in,
                 int time,
                 int quiet);
 
-int count_in_place_wahbm(char *in,
+int sum_in_place_wahbm(char *in,
                          unsigned int query_value,
                          char *op,
                          unsigned int *R,
@@ -45,7 +45,7 @@ int count_in_place_wahbm(char *in,
                          int time,
                          int quiet);
 
-int count_compressed_in_place_wahbm(char *in,
+int sum_compressed_in_place_wahbm(char *in,
                                     unsigned int query_value,
                                     char *op,
                                     unsigned int *R,
@@ -54,13 +54,13 @@ int count_compressed_in_place_wahbm(char *in,
                                     int quiet);
 
 
-void print_count_result(unsigned int *R,
+void print_sum_result(unsigned int *R,
                         unsigned int num_fields);
 
 
-int count(int argc, char **argv)
+int sum(int argc, char **argv)
 {
-    if (argc < 2) return count_help();
+    if (argc < 2) return sum_help();
 
     int c;
     char *in, *out, *record_ids, *op;
@@ -102,7 +102,7 @@ int count(int argc, char **argv)
             Q_is_set = 1;
             break;
         case 'h':
-            return count_help();
+            return sum_help();
         case '?':
             if ( (optopt == 'i') ||
                     (optopt == 'o') ||
@@ -116,7 +116,7 @@ int count(int argc, char **argv)
             else
                 fprintf (stderr, "Unknown option character `\\x%x'.\n", optopt);
         default:
-            return count_help();
+            return sum_help();
         }
     }
 
@@ -124,27 +124,27 @@ int count(int argc, char **argv)
 
     if (i_is_set == 0) {
         printf("Input file is not set\n");
-        return count_help();
+        return sum_help();
     }
 
     if (q_is_set == 0) {
         printf("Query value is not set\n");
-        return count_help();
+        return sum_help();
     }
 
     if (n_is_set == 0) {
         printf("Number of records is not set\n");
-        return count_help();
+        return sum_help();
     }
 
     if (r_is_set == 0) {
         printf("Record IDs are not set\n");
-        return count_help();
+        return sum_help();
     }
 
     if (o_is_set == 0) {
         printf("Opperation is not set\n");
-        return count_help();
+        return sum_help();
     }
 
 
@@ -155,7 +155,7 @@ int count(int argc, char **argv)
            (strcmp(op, "le") == 0) ||
            (strcmp(op, "ge") == 0)) ) {
         printf("Unknown opperation\n");
-        return count_help();
+        return sum_help();
     }
 
 
@@ -163,7 +163,7 @@ int count(int argc, char **argv)
     parse_cmd_line_int_csv(R, num_records, record_ids);
 
     if (strcmp(type, "plt") == 0)
-        return count_plt(in,
+        return sum_plt(in,
                          query_value,
                          op,
                          R,
@@ -172,7 +172,7 @@ int count(int argc, char **argv)
                          Q_is_set);
 
     else if (strcmp(type, "ubin") == 0)
-        return count_ubin(in,
+        return sum_ubin(in,
                           query_value,
                           op,
                           R,
@@ -181,7 +181,7 @@ int count(int argc, char **argv)
                           Q_is_set);
 
     else if (strcmp(type, "wah") == 0)
-        return count_wah(in,
+        return sum_wah(in,
                          query_value,
                          op,
                          R,
@@ -190,7 +190,7 @@ int count(int argc, char **argv)
                          Q_is_set);
 
     else if (strcmp(type, "wahbm") == 0)
-        return count_wahbm(in,
+        return sum_wahbm(in,
                            query_value,
                            op,
                            R,
@@ -199,7 +199,7 @@ int count(int argc, char **argv)
                            Q_is_set);
 
     else if (strcmp(type, "ipwahbm") == 0)
-        return count_in_place_wahbm(in,
+        return sum_in_place_wahbm(in,
                                     query_value,
                                     op,
                                     R,
@@ -208,7 +208,7 @@ int count(int argc, char **argv)
                                     Q_is_set);
 
     else if (strcmp(type, "cipwahbm") == 0)
-        return count_compressed_in_place_wahbm(in,
+        return sum_compressed_in_place_wahbm(in,
                                                query_value,
                                                op,
                                                R,
@@ -220,9 +220,9 @@ int count(int argc, char **argv)
     return 1;
 }
 
-int count_help()
+int sum_help()
 {
-    printf("usage:   gtq count <type> -o <opperation> -i <input file> "
+    printf("usage:   gtq sum <type> -o <opperation> -i <input file> "
            "-q <query value> -n <number of records> -r <record ids>\n"
            "op:\n"
            "        gt         Greater than\n"
@@ -243,7 +243,7 @@ int count_help()
     return 0;
 }
 
-int count_plt(char *in,
+int sum_plt(char *in,
               unsigned int query_value,
               char *op,
               unsigned int *R,
@@ -251,6 +251,7 @@ int count_plt(char *in,
               int time,
               int quiet)
 {
+#if 0
     start();
     struct plt_file pf = init_plt_file(in);
     unsigned int *pf_R;
@@ -258,29 +259,29 @@ int count_plt(char *in,
     unsigned int len_pf_R;
     
     if (strcmp(op,"gt") == 0)
-        len_pf_R = gt_count_records_plt(pf,
+        len_pf_R = gt_sum_records_plt(pf,
                                         R,
                                         num_records,
                                         query_value,
                                         &pf_R);
     else 
-        return count_help();
+        return sum_help();
 
     stop();
     if (time != 0)
         fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
-        print_count_result(pf_R, pf.num_fields);
+        print_sum_result(pf_R, pf.num_fields);
 
 
     free(pf_R);
     fclose(pf.file);
-
+#endif
     return 0;
 }
 
-int count_ubin(char *in,
+int sum_ubin(char *in,
                unsigned int query_value,
                char *op,
                unsigned int *R,
@@ -289,20 +290,20 @@ int count_ubin(char *in,
                int quiet)
 
 {
-    start();
 #if 0
+    start();
     struct ubin_file uf = init_ubin_file(in);
     unsigned int *uf_R;
     unsigned int len_uf_R;
 
     if (strcmp(op,"gt") == 0)
-        len_uf_R = gt_count_records_ubin(uf,
+        len_uf_R = gt_sum_records_ubin(uf,
                                          R,
                                          num_records,
                                          query_value,
                                          &uf_R);
     else 
-        return count_help();
+        return sum_help();
 
     stop();
 
@@ -310,7 +311,7 @@ int count_ubin(char *in,
         fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
-        print_count_result(uf_R, uf.num_fields);
+        print_sum_result(uf_R, uf.num_fields);
 
     free(uf_R);
     fclose(uf.file);
@@ -318,7 +319,7 @@ int count_ubin(char *in,
     return 0;
 }
 
-int count_wah(char *in,
+int sum_wah(char *in,
               unsigned int query_value,
               char *op,
               unsigned int *R,
@@ -330,7 +331,7 @@ int count_wah(char *in,
     return 0;
 }
 
-int count_in_place_wahbm(char *in,
+int sum_in_place_wahbm(char *in,
                          unsigned int query_value,
                          char *op,
                          unsigned int *R,
@@ -345,13 +346,13 @@ int count_in_place_wahbm(char *in,
     unsigned int len_wf_R;
 
     if (strcmp(op,"gt") == 0)
-        len_wf_R = gt_count_records_in_place_wahbm(wf,
+        len_wf_R = gt_sum_records_in_place_wahbm(wf,
                                                    R,
                                                    num_records,
                                                    query_value,
                                                    &wf_R);
     else 
-        return count_help();
+        return sum_help();
 
     stop();
 
@@ -359,7 +360,7 @@ int count_in_place_wahbm(char *in,
         fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
-        print_count_result(wf_R, wf.num_fields);
+        print_sum_result(wf_R, wf.num_fields);
 
     free(wf_R);
     fclose(wf.file);
@@ -368,7 +369,7 @@ int count_in_place_wahbm(char *in,
 
 }
 
-int count_compressed_in_place_wahbm(char *in,
+int sum_compressed_in_place_wahbm(char *in,
                                     unsigned int query_value,
                                     char *op,
                                     unsigned int *R,
@@ -377,19 +378,20 @@ int count_compressed_in_place_wahbm(char *in,
                                     int quiet)
 
 {
+#if 0
     start();
     struct wah_file wf = init_wahbm_file(in);
     unsigned int *wf_R;
     unsigned int len_wf_R;
 
     if (strcmp(op,"gt") == 0)
-        len_wf_R = gt_count_records_compressed_in_place_wahbm(wf,
+        len_wf_R = gt_sum_records_compressed_in_place_wahbm(wf,
                                                               R,
                                                               num_records,
                                                               query_value,
                                                               &wf_R);
     else 
-        return count_help();
+        return sum_help();
 
     stop();
 
@@ -397,18 +399,18 @@ int count_compressed_in_place_wahbm(char *in,
         fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
-        print_count_result(wf_R, wf.num_fields);
+        print_sum_result(wf_R, wf.num_fields);
 
     free(wf_R);
     fclose(wf.file);
-
+#endif
     return 0;
 
 
 
 }
 
-int count_wahbm(char *in,
+int sum_wahbm(char *in,
                 unsigned int query_value,
                 char *op,
                 unsigned int *R,
@@ -417,19 +419,20 @@ int count_wahbm(char *in,
                 int quiet)
 
 {
+#if 0
     start();
     struct wah_file wf = init_wahbm_file(in);
     unsigned int *wf_R;
     unsigned int len_wf_R;
 
     if (strcmp(op,"gt") == 0)
-        len_wf_R = gt_count_records_wahbm(wf,
+        len_wf_R = gt_sum_records_wahbm(wf,
                                           R,
                                           num_records,
                                           query_value,
                                           &wf_R);
     else 
-        return count_help();
+        return sum_help();
 
     stop();
 
@@ -437,15 +440,15 @@ int count_wahbm(char *in,
         fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
-        print_count_result(wf_R, wf.num_fields);
+        print_sum_result(wf_R, wf.num_fields);
 
     free(wf_R);
     fclose(wf.file);
-
+#endif
     return 0;
 }
 
-void print_count_result(unsigned int *R,
+void print_sum_result(unsigned int *R,
                         unsigned int num_fields)
 {
     unsigned int i;

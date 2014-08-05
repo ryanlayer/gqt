@@ -13,6 +13,7 @@
 #include <math.h>
 #include <limits.h>
 #include "genotq.h"
+#include "timer.h"
 
 // wahbm compressed in place
 //{{{ unsigned int wah_compressed_in_place_or(unsigned int *r_wah,
@@ -568,6 +569,10 @@ unsigned int count_range_records_compressed_in_place_wahbm(
     unsigned int and_result_bm_size, record_new_bm_size, or_result_bm_size;
     unsigned int i,j,r_size;
 
+#ifdef time_count_range_records_compressed_in_place_wahbm
+    unsigned long t1 = 0, t2 = 0, t3 = 0;
+#endif 
+
     for (i = 0; i < num_r; ++i) {
         // or the appropriate bitmaps
         //memset(or_result_bm, 0, sizeof(unsigned int)*max_wah_size);
@@ -575,26 +580,58 @@ unsigned int count_range_records_compressed_in_place_wahbm(
 
         for (j = start_test_value; j < end_test_value; ++j) {
 
+#ifdef time_count_range_records_compressed_in_place_wahbm
+            start();
+#endif
             record_new_bm_size = get_wah_bitmap_in_place(wf,
                                                          record_ids[i],
                                                          j,
                                                          &record_new_bm);
+#ifdef time_count_range_records_compressed_in_place_wahbm
+            stop();
+            t1+=report();
+#endif
 
+#ifdef time_count_range_records_compressed_in_place_wahbm
+            start();
+#endif
             or_result_bm_size = 
                     wah_compressed_in_place_or(or_result_bm,
                                                max_wah_size,
                                                record_new_bm,
                                                record_new_bm_size); 
+#ifdef time_count_range_records_compressed_in_place_wahbm
+            stop();
+            t2+=report();
+#endif
         }
 
+#ifdef time_count_range_records_compressed_in_place_wahbm
+        start();
+#endif
         r_size = add_compressed_in_place_wahbm(*R,
                                                wf.num_fields,
                                                or_result_bm,
                                                or_result_bm_size);
+#ifdef time_count_range_records_compressed_in_place_wahbm
+        stop();
+        t3+=report();
+#endif
 
 
     }
 
+#ifdef time_count_range_records_compressed_in_place_wahbm
+    unsigned long tall = t1 + t2 + t3;
+    fprintf(stderr,"%lu %f\t%lu %f\t%lu %f\t%lu\n", 
+            t1,
+            ((double)t1)/((double)tall),
+            t2,
+            ((double)t2)/((double)tall),
+            t3,
+            ((double)t3)/((double)tall),
+            tall);
+#endif
     free(record_new_bm);
     free(or_result_bm);
 

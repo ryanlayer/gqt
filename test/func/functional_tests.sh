@@ -91,53 +91,53 @@ diff tmp.count.plt tmp.count.ubin
 diff tmp.count.plt tmp.count.ipwahbm
 diff tmp.count.plt tmp.count.cipwahbm
 
-rm tmp.count.plt \
-    tmp.count.ubin \
-    tmp.count.wahbm \
-    tmp.count.ipwahbm \
-    tmp.count.cipwahbm
-
-
-$GTQ_PATH/gtq convert plt-invert \
-    -i $DATA_PATH/10.1e4.ind.txt \
-    -o tmp.invert 
-
-diff $DATA_PATH/10.1e4.var.txt \
-    tmp.invert 
-
-rm tmp.invert
-
-$GTQ_PATH/gtq convert plt-vcf \
-    -i $DATA_PATH/10.1e4.var.txt \
-    -o tmp.vcf 
-
-diff tmp.vcf $DATA_PATH/10.1e4.var.vcf
-
-rm tmp.vcf
-
-
-$GTQ_PATH/gtq convert  plt-invert-ubin \
-    -i $DATA_PATH/10.1e4.ind.txt \
-    -o tmp.i.ubin
-
-$GTQ_PATH/gtq view ubin -i tmp.i.ubin \
-    > tmp.o.i.ubin
-
-$GTQ_PATH/gtq view ubin -i $DATA_PATH/10.1e4.var.ubin \
-    > tmp.o.var.ubin
-
-diff tmp.o.var.ubin tmp.o.i.ubin
-rm tmp.i.ubin tmp.o.i.ubin tmp.o.var.ubin
-
-ARGS="-o gt -q 0 -n 5 -r 1,2,4,5,7"
-$GTQ_PATH/gtq sum ipwahbm \
-    -i $DATA_PATH/10.1e4.ind.wahbm \
-    $ARGS 
-
-$GTQ_PATH/gtq count ipwahbm \
-    -i $DATA_PATH/10.1e4.ind.wahbm \
-    $ARGS 
-
-
-
-
+#rm tmp.count.plt \
+#    tmp.count.ubin \
+#    tmp.count.wahbm \
+#    tmp.count.ipwahbm \
+#    tmp.count.cipwahbm
+#
+#
+#$GTQ_PATH/gtq convert plt-invert \
+#    -i $DATA_PATH/10.1e4.ind.txt \
+#    -o tmp.invert 
+#
+#diff $DATA_PATH/10.1e4.var.txt \
+#    tmp.invert 
+#
+#rm tmp.invert
+#
+#$GTQ_PATH/gtq convert plt-vcf \
+#    -i $DATA_PATH/10.1e4.var.txt \
+#    -o tmp.vcf 
+#
+#diff tmp.vcf $DATA_PATH/10.1e4.var.vcf
+#
+#rm tmp.vcf
+#
+#
+#$GTQ_PATH/gtq convert  plt-invert-ubin \
+#    -i $DATA_PATH/10.1e4.ind.txt \
+#    -o tmp.i.ubin
+#
+#$GTQ_PATH/gtq view ubin -i tmp.i.ubin \
+#    > tmp.o.i.ubin
+#
+#$GTQ_PATH/gtq view ubin -i $DATA_PATH/10.1e4.var.ubin \
+#    > tmp.o.var.ubin
+#
+#diff tmp.o.var.ubin tmp.o.i.ubin
+#rm tmp.i.ubin tmp.o.i.ubin tmp.o.var.ubin
+#
+#ARGS="-o gt -q 0 -n 5 -r 1,2,4,5,7"
+#$GTQ_PATH/gtq sum ipwahbm \
+#    -i $DATA_PATH/10.1e4.ind.wahbm \
+#    $ARGS 
+#
+#$GTQ_PATH/gtq count ipwahbm \
+#    -i $DATA_PATH/10.1e4.ind.wahbm \
+#    $ARGS 
+#
+#
+#
+#

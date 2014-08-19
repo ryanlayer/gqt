@@ -1,3 +1,4 @@
+#include <immintrin.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,7 +44,8 @@ int count_in_place_wahbm(char *in,
                          unsigned int *R,
                          unsigned int num_records,
                          int time,
-                         int quiet);
+                         int quiet,
+                         int avx);
 
 int count_compressed_in_place_wahbm(char *in,
                                     unsigned int query_value,
@@ -66,6 +68,7 @@ int count(int argc, char **argv)
     char *in, *out, *record_ids, *op;
     unsigned int query_value, num_records;
     int i_is_set = 0,
+        a_is_set = 0,
         o_is_set = 0,
         r_is_set = 0,
         n_is_set = 0,
@@ -73,8 +76,11 @@ int count(int argc, char **argv)
         t_is_set = 0,
         q_is_set = 0;
 
-    while ((c = getopt (argc, argv, "hi:o:q:r:n:Qt")) != -1) {
+    while ((c = getopt (argc, argv, "hi:o:q:r:n:Qta")) != -1) {
         switch (c) {
+        case 'a':
+            a_is_set = 1;
+            break;
         case 't':
             t_is_set = 1;
             break;
@@ -205,7 +211,8 @@ int count(int argc, char **argv)
                                     R,
                                     num_records,
                                     t_is_set,
-                                    Q_is_set);
+                                    Q_is_set,
+                                    a_is_set);
 
     else if (strcmp(type, "cipwahbm") == 0)
         return count_compressed_in_place_wahbm(in,
@@ -336,26 +343,36 @@ int count_in_place_wahbm(char *in,
                          unsigned int *R,
                          unsigned int num_records,
                          int time,
-                         int quiet)
+                         int quiet,
+                         int avx)
 
 {
-    start();
+    if (time != 0 )
+        start();
+
     struct wah_file wf = init_wahbm_file(in);
-    unsigned int *wf_R;
+    __declspec(align(64)) unsigned int *wf_R;
     unsigned int len_wf_R;
 
-    if (strcmp(op,"gt") == 0)
-        len_wf_R = gt_count_records_in_place_wahbm(wf,
-                                                   R,
-                                                   num_records,
-                                                   query_value,
-                                                   &wf_R);
-    else 
+    if (strcmp(op,"gt") == 0) {
+        if (avx == 0)
+            len_wf_R = gt_count_records_in_place_wahbm(wf,
+                                                       R,
+                                                       num_records,
+                                                       query_value,
+                                                       &wf_R);
+        else
+            len_wf_R = avx_gt_count_records_in_place_wahbm(wf,
+                                                       R,
+                                                       num_records,
+                                                       query_value,
+                                                       &wf_R);
+
+    } else 
         return count_help();
 
-    stop();
-
     if (time != 0 )
+        stop();
         fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)

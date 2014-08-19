@@ -1,12 +1,15 @@
 BIN=../../bin
 OBJ=../../obj
-CFLAGS=-g
+#CFLAGS=-g
+CFLAGS=-O3 -mavx -mavx2
 #CFLAGS+=-Dtime_count_range_records_compressed_in_place_wahbm
 #CFLAGS+=-Dtime_count_range_records_in_place_wahbm
+#CFLAGS+=-Dtime_sum_range_records_in_place_wahbm
 GRABIX_ROOT=~/src/grabix
 CC=gcc
 
 LIB= timer.o \
+    pthread_pool.o \
     genotq.o \
     convert.o \
     gt.o \

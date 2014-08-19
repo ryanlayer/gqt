@@ -243,6 +243,28 @@ unsigned int get_plt_record(struct plt_file pf,
                               unsigned int start_test_value,
                               unsigned int end_test_value,
                               unsigned int **R);
+/**
+ * @brief Return fields whose values are >= start_test_value and <
+ * end_test_value
+ *
+ * @param pf The initialized plain text encoded file
+ * @param field_ids array of integer ids of the fields to test
+ * @param num_f number of fields in fieldids
+ * @param test_value value to test fields against
+ * @param R packed ints where the bit is zero if all fields meet that condition
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+ unsigned int range_fields_plt(struct plt_file pt,
+                               unsigned int *field_ids,
+                               unsigned int num_f,
+                               unsigned int start_test_value,
+                               unsigned int end_test_value,
+                               unsigned int **R);
 
 /*
  * @brief Return records whose value is equal to the test value
@@ -307,6 +329,48 @@ unsigned int gt_records_plt(struct plt_file pf,
                             unsigned int test_value,
                             unsigned int **R);
 
+/**
+ * @brief Return fields whose value are greater than the test value
+ *
+ * @param pf The initialized plain text encoded bitmap file
+ * @param fields_ids array of integer ids of the fields to test
+ * @param num_f number of fields in field_ids
+ * @param test_value value to test fields against
+ * @param R result with 
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int gt_fields_plt(struct plt_file pf,
+                           unsigned int *field_ids,
+                           unsigned int num_f,
+                           unsigned int test_value,
+                           unsigned int **R);
+
+
+/**
+ * @brief Return filds whose value are greater than the test value
+ *
+ * @param pf The initialized plain text encoded bitmap file
+ * @param field_ids array of integer ids of the fields to test
+ * @param num_f number of fields in field_ids
+ * @param test_value value to test fields against
+ * @param R result with 
+ *
+ * @retval number of ints in the record
+ *
+ * Example Usage:
+ * @code
+ * @endcode
+ */
+unsigned int gt_records_plt(struct plt_file pf,
+                            unsigned int *field_ids,
+                            unsigned int num_f,
+                            unsigned int test_value,
+                            unsigned int **R);
 
 
 /**

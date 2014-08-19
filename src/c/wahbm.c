@@ -12,7 +12,28 @@
 #include <sys/param.h>
 #include <math.h>
 #include <limits.h>
+#include <pthread.h>
+#include <assert.h>
+#include <immintrin.h>
 #include "genotq.h"
+#include "pthread_pool.h"
+
+const int tab32[32] = {
+    0,  9,  1, 10, 13, 21,  2, 29,
+    11, 14, 16, 18, 22, 25,  3, 30,
+    8, 12, 20, 28, 15, 17, 24,  7,
+    19, 27, 23,  6, 26,  5,  4, 31};
+
+int log2_32 (uint32_t value)
+{
+    value |= value >> 1;
+    value |= value >> 2;
+    value |= value >> 4;
+    value |= value >> 8;
+    value |= value >> 16;
+    return tab32[(uint32_t)(value*0x07C4ACDD) >> 27];
+}
+
 
 // wahbm
 //{{{ struct wah_file init_wahbm_file(char *file_name)
@@ -535,6 +556,261 @@ unsigned int add_wahbm(unsigned int *R,
                        unsigned int wah_size)
 {
 
+    unsigned int wah_c,
+                 wah_i,
+                 num_words,
+                 fill_bit,
+                 bits,
+                 bit,
+                 bit_i,
+                 word_i,
+                 field_i;
+    field_i = 0;
+
+    unsigned int v;
+
+    for (wah_i = 0; wah_i < wah_size; ++wah_i) {
+        wah_c = wah[wah_i];
+        if (wah_c >> 31 == 1) {
+            num_words = (wah_c & 0x3fffffff);
+            fill_bit = (wah_c>=0xC0000000?1:0);
+            bits = (fill_bit?0x7FFFFFFF:0);
+        } else {
+            num_words = 1;
+            bits = wah_c;
+        }
+
+        if ( (num_words > 1) && (fill_bit == 0) ) {
+            field_i += num_words;
+            if (field_i >= r_size)
+                return r_size;
+        } else {
+            if (bits == 0) {
+                field_i += 31;
+                if (field_i >= r_size)
+                    return r_size;
+            } else {
+                for (word_i = 0; word_i < num_words; ++word_i) {
+                    /* 
+                    // Attempt to reduce the number of times the for loop
+                    // itterates so that 
+                    v = bits;
+                    for ( ; v ; ) {
+                        R[field_i] += log2_32(v&(-v));
+                        v &= v - 1;
+                        field_i += 1;
+                        if (field_i >= r_size)
+                            return r_size;
+                    }
+                    */
+                    for (bit_i = 0; bit_i < 31; ++bit_i) {
+                        R[field_i] += (bits >> (30 - bit_i)) & 1;
+                        field_i += 1;
+
+                        if (field_i >= r_size)
+                            return r_size;
+                    }
+                }
+            }
+        }
+    }
+
+    return r_size;
+}
+//}}}
+
+//{{{void avx_add(unsigned int bits,
+void avx_add(unsigned int bits,
+             __m256i *s_1,
+             __m256i *s_2,
+             __m256i *s_3,
+             __m256i *s_4,
+             __m256i *m,
+             __m256i *R_avx,
+             unsigned int field_i)
+{
+
+    unsigned int avx_i = field_i/8;
+
+    __m256i y1 = _mm256_set1_epi32(bits);
+
+    __m256i y2 = _mm256_srlv_epi32 (y1, *s_1);
+    __m256i y3 = _mm256_and_si256 (y2, *m);
+    R_avx[3+avx_i] = _mm256_add_epi32(R_avx[3+avx_i], y3);
+
+    y2 = _mm256_srlv_epi32 (y1, *s_2);
+    y3 = _mm256_and_si256 (y2, *m);
+    R_avx[2+avx_i] = _mm256_add_epi32(R_avx[2+avx_i], y3);
+
+    y2 = _mm256_srlv_epi32 (y1, *s_3);
+    y3 = _mm256_and_si256 (y2, *m);
+    R_avx[1+avx_i] = _mm256_add_epi32(R_avx[1+avx_i], y3);
+
+    y2 = _mm256_srlv_epi32 (y1, *s_4);
+    y3 = _mm256_and_si256 (y2, *m);
+    R_avx[0+avx_i] = _mm256_add_epi32(R_avx[0+avx_i], y3);
+}
+//}}}
+
+//{{{ unsigned int avx_add_wahbm(unsigned int *R,
+unsigned int avx_add_wahbm(unsigned int *R,
+                       unsigned int r_size,
+                       unsigned int *wah,
+                       unsigned int wah_size)
+{
+
+    __declspec(align(64)) int rshift_4[8] = { 31, 30, 29, 28, 27, 26, 25, 24 };
+    __declspec(align(64)) int rshift_3[8] = { 23, 22, 21, 20, 19, 18, 17, 16 };
+    __declspec(align(64)) int rshift_2[8] = { 15, 14, 13, 12, 11, 10, 9, 8 };
+    __declspec(align(64)) int rshift_1[8] = { 7, 6, 5, 4, 3, 2, 1, 0 };
+    __declspec(align(64)) int masks[8] =  { 1, 1, 1, 1, 1, 1, 1, 1 };
+    
+    __m256i *R_avx = (__m256i *)R;
+
+    __m256i *rshift_1_avx = (__m256i *)rshift_1;
+    __m256i *rshift_2_avx = (__m256i *)rshift_2;
+    __m256i *rshift_3_avx = (__m256i *)rshift_3;
+    __m256i *rshift_4_avx = (__m256i *)rshift_4;
+    __m256i *masks_avx = (__m256i *)masks;
+
+    __m256i s_1 = _mm256_load_si256(rshift_1_avx);
+    __m256i s_2 = _mm256_load_si256(rshift_2_avx);
+    __m256i s_3 = _mm256_load_si256(rshift_3_avx);
+    __m256i s_4 = _mm256_load_si256(rshift_4_avx);
+    __m256i m = _mm256_load_si256(masks_avx);
+    __m256i y1, y2, y3;
+
+    unsigned int wah_c,
+                 wah_i,
+                 num_words,
+                 fill_bit,
+                 bits,
+                 bit,
+                 bit_i,
+                 word_i,
+                 field_i;
+    field_i = 0;
+
+    unsigned int buf, buf_empty_bits = 32;
+
+    for (wah_i = 0; wah_i < wah_size; ++wah_i) {
+        wah_c = wah[wah_i];
+        if (wah_c >> 31 == 1) {
+            num_words = (wah_c & 0x3fffffff);
+            fill_bit = (wah_c>=0xC0000000?1:0);
+            bits = (fill_bit?0x7FFFFFFF:0);
+        } else {
+            num_words = 1;
+            bits = wah_c;
+        }
+
+        if ( (num_words > 1) && (fill_bit == 0) ) {
+            // probably need to account for extra bits here
+            if (buf_empty_bits < 32)
+                avx_add(buf, &s_1, &s_2, &s_3, &s_4, &m, R_avx, field_i);
+            
+            field_i += 32;
+            // the empty bits were supplied by this run, so we don't want to
+            // count them twice
+            field_i += num_words*31 - buf_empty_bits; 
+
+            buf_empty_bits = 32;
+            buf = 0;
+
+            if (field_i >= r_size)
+                return r_size;
+        } else {
+            if (bits == 0) {
+
+                if (buf_empty_bits < 32)
+                    avx_add(buf, &s_1, &s_2, &s_3, &s_4, &m, R_avx, field_i);
+                field_i += 32 + (31 - buf_empty_bits);
+
+                buf = 0;
+                buf_empty_bits = 32;
+
+                if (field_i >= r_size)
+                    return r_size;
+/*
+                
+                if (buf_empty_bits < 32)
+                    avx_add(buf, &s_1, &s_2, &s_3, &s_4, &m, R_avx, field_i);
+                field_i += 32;
+
+                buf = 0;
+                buf_empty_bits = 32 - buf_empty_bits;
+*/
+
+                if (field_i >= r_size)
+                    return r_size;
+
+            } else {
+                for (word_i = 0; word_i < num_words; ++word_i) {
+                    if (buf_empty_bits == 32) {
+                        if (field_i % 32 != 0) {
+                            // add padding to buf that makes up for the
+                            // difference, then add 32 - (field_i % 32) bits to
+                            // the buff
+                            unsigned int padding = field_i % 32;
+                            buf = bits >> (padding - 1);
+                            avx_add(buf,
+                                    &s_1,
+                                    &s_2,
+                                    &s_3,
+                                    &s_4,
+                                    &m,
+                                    R_avx,
+                                    field_i - padding);
+                            field_i+= 32 - padding;
+                            buf = bits << (32 - padding + 1);
+                            buf_empty_bits = (32 - padding) + 1;
+                        } else {
+                            buf = bits << 1;
+                            buf_empty_bits = 1;
+                        }
+                    } else {
+
+                        buf += bits >> (31-buf_empty_bits);
+
+                        avx_add(buf,
+                                &s_1,
+                                &s_2,
+                                &s_3,
+                                &s_4,
+                                &m,
+                                R_avx,
+                                field_i);
+
+                        field_i+=32;
+
+                        buf_empty_bits += 1;
+                        buf = bits << buf_empty_bits;
+                    }
+                }
+            }
+        }
+    }
+
+    for (bit_i = 0; bit_i < 31; ++bit_i) {
+        R[field_i] += (buf >> (31 - bit_i)) & 1;
+        field_i += 1;
+
+        if (field_i >= r_size)
+            return r_size;
+    }
+
+    return r_size;
+}
+//}}}
+
+//{{{ unsigned int add_n_wahbm(unsigned int *R,
+unsigned int add_n_wahbm(unsigned int *R,
+                       unsigned int n,
+                       unsigned int r_size,
+                       unsigned int *wah,
+                       unsigned int wah_size)
+{
+
     unsigned int wah_i,
                  num_words,
                  fill_bit,
@@ -543,6 +819,7 @@ unsigned int add_wahbm(unsigned int *R,
                  bit_i,
                  word_i,
                  field_i;
+    unsigned int t;
     field_i = 0;
 
     for (wah_i = 0; wah_i < wah_size; ++wah_i) {
@@ -566,15 +843,29 @@ unsigned int add_wahbm(unsigned int *R,
                 if (field_i >= r_size)
                     return r_size;
             } else {
+
                 for (word_i = 0; word_i < num_words; ++word_i) {
+#if 0
+                    for( ; bits; ) {
+                        t = log2_32(bits&(-bits));
+                        R[field_i + 30 - t]+=1;
+                        bits &= bits - 1;
+                    }
+                    field_i += 31;
+                    if (field_i >= r_size)
+                        return r_size;
+#endif
+                        
+#if 1
                     for (bit_i = 0; bit_i < 31; ++bit_i) {
                         bit = (bits >> (30 - bit_i)) & 1;
-                        R[field_i] += bit;
+                        R[field_i] += bit * n;
                         field_i += 1;
 
                         if (field_i >= r_size)
                             return r_size;
                     }
+#endif
                 }
             }
         }
@@ -584,14 +875,70 @@ unsigned int add_wahbm(unsigned int *R,
 }
 //}}}
 
-//{{{ unsigned int add_n_wahbm(unsigned int *R,
-unsigned int add_n_wahbm(unsigned int *R,
-                       unsigned int n,
-                       unsigned int r_size,
-                       unsigned int *wah,
-                       unsigned int wah_size)
+//{{{void *t_add_n_wahbm(void *arg)
+void *t_add_n_wahbm(void *arg)
 {
+    struct t_add_n_wahbm_args *a = (struct t_add_n_wahbm_args *)arg;
 
+    unsigned int bit_i,
+                 bit,
+                 bits = a->bits,
+                 field_i = a->field_i, 
+                 n = a->n, 
+                 r_size = a->r_size;
+
+    //fprintf(stderr, "field_i:%u\n", field_i);
+    for (bit_i = 0; bit_i < 31; ++bit_i) {
+        bit = (bits >> (30 - bit_i)) & 1;
+        a->R[field_i] += bit * n;
+        field_i += 1;
+
+        if (field_i >= r_size)
+            return NULL;
+    }
+
+    return NULL;
+}
+//}}}
+
+//{{{void *t_add_n_wahbm_2(void *arg)
+void *t_add_n_wahbm_2(void *arg)
+{
+    struct t_add_n_wahbm_args *a = (struct t_add_n_wahbm_args *)arg;
+
+    unsigned int bit_i,
+                 word_i,
+                 bit,
+                 bits = a->bits,
+                 field_i = a->field_i, 
+                 n = a->n, 
+                 r_size = a->r_size,
+                 num_words = a->num_words;
+
+    for (word_i = 0; word_i < num_words; ++word_i) {
+        //fprintf(stderr, "field_i:%u\n", field_i);
+        for (bit_i = 0; bit_i < 31; ++bit_i) {
+            bit = (bits >> (30 - bit_i)) & 1;
+            a->R[field_i] += bit * n;
+            field_i += 1;
+
+            if (field_i >= r_size)
+                return NULL;
+        }
+    }
+
+    return NULL;
+}
+//}}}
+
+//{{{ unsigned int p_pool_add_n_wahbm(unsigned int *R,
+unsigned int p_pool_add_n_wahbm(unsigned int *R,
+                                unsigned int n,
+                                unsigned int r_size,
+                                unsigned int *wah,
+                                unsigned int wah_size,
+                                struct pool *t_pool)
+{
     unsigned int wah_i,
                  num_words,
                  fill_bit,
@@ -600,7 +947,10 @@ unsigned int add_n_wahbm(unsigned int *R,
                  bit_i,
                  word_i,
                  field_i;
+    unsigned int t;
     field_i = 0;
+
+    struct t_add_n_wahbm_args *arg;
 
     for (wah_i = 0; wah_i < wah_size; ++wah_i) {
 
@@ -618,15 +968,60 @@ unsigned int add_n_wahbm(unsigned int *R,
             if (field_i >= r_size)
                 return r_size;
         } else {
-            for (word_i = 0; word_i < num_words; ++word_i) {
-                for (bit_i = 0; bit_i < 31; ++bit_i) {
-                    bit = (bits >> (30 - bit_i)) & 1;
-                    R[field_i] += bit * n;
-                    field_i += 1;
+            if (bits == 0) {
+                field_i += 31;
+                if (field_i >= r_size)
+                    return r_size;
+            } else {
 
+#if 1
+
+                    arg = (struct t_add_n_wahbm_args *)
+                            malloc(sizeof(struct t_add_n_wahbm_args));
+                    arg->bits = bits;
+                    arg->field_i = field_i;
+                    arg->R = R;
+                    arg->r_size = r_size;
+                    arg->n = n;
+                    arg->n = num_words;
+
+                    pool_enqueue(t_pool, arg, 1);
+
+                    field_i += num_words*31;
+                    if (field_i >= r_size)
+                        return r_size;
+#endif
+
+#if 0
+                for (word_i = 0; word_i < num_words; ++word_i) {
+
+                    arg = (struct t_add_n_wahbm_args *)
+                            malloc(sizeof(struct t_add_n_wahbm_args));
+                    arg->bits = bits;
+                    arg->field_i = field_i;
+                    arg->R = R;
+                    arg->r_size = r_size;
+                    arg->n = n;
+
+                    //fprintf(stderr, "Q:");
+                    pool_enqueue(t_pool, arg, 1);
+                    //fprintf(stderr, "%u\n", field_i);
+                    /*
+                    for (bit_i = 0; bit_i < 31; ++bit_i) {
+                        bit = (bits >> (30 - bit_i)) & 1;
+                        R[field_i] += bit * n;
+                        field_i += 1;
+
+                        if (field_i >= r_size)
+                            return r_size;
+                    }
+                    */
+
+                    field_i += 31;
                     if (field_i >= r_size)
                         return r_size;
                 }
+#endif
             }
         }
     }

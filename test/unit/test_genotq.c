@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include "timer.h"
+#include "pthread_pool.h"
 #include <string.h>
 
 //{{{ SETUP
@@ -4515,6 +4516,7 @@ void test_add_compressed_in_place_wahmb(void)
 }
 //}}}
 
+//{{{void test_invert_plt_ubin(void)
 void test_invert_plt_ubin(void)
 {
     char *l[10] = {
@@ -4615,7 +4617,9 @@ void test_invert_plt_ubin(void)
         free(r);
     }
 }
+//}}}
 
+//{{{ void test_convert_file_by_name_invert_plt_to_ubin(void)
 void test_convert_file_by_name_invert_plt_to_ubin(void)
 {
 
@@ -4624,3 +4628,234 @@ void test_convert_file_by_name_invert_plt_to_ubin(void)
 
     convert_file_by_name_invert_plt_to_ubin(plt_file, i_ubin_file);
 }
+//}}}
+
+//{{{void test_get_wah_bitmaps_in_place(void)
+void test_get_wah_bitmaps_in_place(void)
+{
+    char *wahbm_file_name = "../data/10.1e4.ind.wahbm";
+    struct wah_file wf = init_wahbm_file(wahbm_file_name);
+
+    unsigned int bm_size_0, bm_size_1, bm_size_2, bm_size_3;
+
+    unsigned int *bm_0,*bm_1, *bm_2, *bm_3;
+
+    unsigned int max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+
+    bm_0 = (unsigned int *) malloc(sizeof(unsigned int)*max_wah_size);
+    bm_1 = (unsigned int *) malloc(sizeof(unsigned int)*max_wah_size);
+    bm_2 = (unsigned int *) malloc(sizeof(unsigned int)*max_wah_size);
+    bm_3 = (unsigned int *) malloc(sizeof(unsigned int)*max_wah_size);
+
+    bm_size_0 = get_wah_bitmap_in_place(wf, 1, 0, &bm_0);
+    bm_size_1 = get_wah_bitmap_in_place(wf, 1, 1, &bm_1);
+    bm_size_2 = get_wah_bitmap_in_place(wf, 1, 2, &bm_2);
+    bm_size_3 = get_wah_bitmap_in_place(wf, 1, 3, &bm_3);
+
+    unsigned int bms_size;
+    unsigned int bms_sizes[4];
+    unsigned int *bms;
+    bms = (unsigned int *) malloc(sizeof(unsigned int)*max_wah_size*4);
+    bms_size = get_wah_bitmaps_in_place(wf, 1, &bms, bms_sizes);
+
+    TEST_ASSERT_EQUAL(bm_size_0+ bm_size_1+ bm_size_2+ bm_size_3, bms_size);
+
+    TEST_ASSERT_EQUAL(bm_size_0,bms_sizes[0]);
+    TEST_ASSERT_EQUAL(bm_size_1,bms_sizes[1]);
+    TEST_ASSERT_EQUAL(bm_size_2,bms_sizes[2]);
+    TEST_ASSERT_EQUAL(bm_size_3,bms_sizes[3]);
+
+
+    unsigned int *bms_i = bms;
+    unsigned int i;
+
+    for (i = 0; i < bm_size_0; ++i)
+        TEST_ASSERT_EQUAL(bm_0[i], bms_i[i]);
+
+    bms_i = bms + bms_sizes[0];
+
+    for (i = 0; i < bm_size_1; ++i)
+        TEST_ASSERT_EQUAL(bm_1[i], bms_i[i]);
+
+    bms_i += bms_sizes[1];
+
+    for (i = 0; i < bm_size_2; ++i)
+        TEST_ASSERT_EQUAL(bm_2[i], bms_i[i]);
+
+    bms_i += bms_sizes[2];
+
+    for (i = 0; i < bm_size_3; ++i)
+        TEST_ASSERT_EQUAL(bm_3[i], bms_i[i]);
+
+}
+//}}}
+
+//{{{ void test_gt_records_fields(void)
+void test_gt_records_fields(void)
+{
+    char *plt_ind_file_name="../data/10.1e4.ind.txt";
+    char *plt_var_file_name="../data/10.1e4.var.txt";
+
+    struct plt_file pf_i = init_plt_file(plt_ind_file_name);
+    struct plt_file pf_v = init_plt_file(plt_var_file_name);
+
+    unsigned int test_records[4] = {1,2,3,4};
+    unsigned int test_fields[4] = {1,2,3,4};
+
+    unsigned int *pf_R_i;
+    unsigned int len_pf_R_i = gt_records_plt(pf_i, test_records, 4, 0, &pf_R_i);
+
+    unsigned int *pf_R_v;
+    unsigned int len_pf_R_v = gt_fields_plt(pf_v, test_fields, 4, 0, &pf_R_v);
+
+    /*
+    printf("%u %u \n", len_pf_R_i, len_pf_R_v);
+    unsigned int i;
+    for (i = 0; i < 2; ++i)
+        printf("%u %u \n", pf_R_i[i], pf_R_v[i]);
+
+    unsigned int A[2] = {28972292,1536};
+    unsigned int shift[2] = {0,21};
+    unsigned int i;
+    for (i = 0; i < 2; ++i)
+        TEST_ASSERT_EQUAL(A[i] , pf_R[i] >> shift[i]);
+
+    for (i = 0; i < 2; ++i)
+        TEST_ASSERT_EQUAL(A[i] , uf_R[i] >> shift[i]);
+
+    for (i = 0; i < 2; ++i)
+        TEST_ASSERT_EQUAL(A[i] , ints[i] >> shift[i]);
+    */
+}
+//}}}
+
+//{{{void test_avx_gt_count_records_in_place_wahbm(void)
+void test_avx_gt_count_records_in_place_wahbm(void)
+{
+    char *in = "../data/10.1e4.ind.wahbm";
+    struct wah_file wf = init_wahbm_file(in);
+    unsigned int *wf_R;
+    unsigned int len_wf_R;
+    unsigned int num_records = 5;
+    unsigned int R[5] = {1,2,3,4,5};
+    unsigned int query_value = 0;
+
+    len_wf_R = gt_count_records_in_place_wahbm(wf,
+                                               R,
+                                               num_records,
+                                               query_value,
+                                               &wf_R);
+
+    unsigned int avx_len_wf_R;
+    unsigned int *avx_wf_R;
+    avx_len_wf_R = avx_gt_count_records_in_place_wahbm(wf,
+                                                   R,
+                                                   num_records,
+                                                   query_value,
+                                                   &avx_wf_R);
+
+    TEST_ASSERT_EQUAL(len_wf_R,avx_len_wf_R);
+
+    unsigned int i;
+
+    for (i = 0; i < len_wf_R; ++i) 
+        TEST_ASSERT_EQUAL(wf_R[i], avx_wf_R[i]);
+
+}
+//}}}
+
+//{{{void test_avx_add_wahbm(void)
+void test_avx_add_wahbm(void)
+{
+    uint32_t W1[5] = {
+        bin_char_to_int("01111000000000000000000000001111"), // 1
+        bin_char_to_int("10000000000000000000000000000010"), // 2 
+        bin_char_to_int("01110010101010101010101010100111"), // 1
+        bin_char_to_int("01100010101010101010101010100011"), // 1
+        bin_char_to_int("11000000000000000000000000000010")  // 2
+    };
+
+    uint32_t A1[7*31] = {
+    3,3,3,3,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,3,3,3,3,
+    2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    2,2,2,1,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,1,2,2,2,
+    2,2,1,1,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,1,1,2,2,
+    2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
+    2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2};
+
+    unsigned int *R1;
+    int r = posix_memalign((void **)&R1, 32, 7 *31* sizeof(unsigned int));
+
+    unsigned int R1_len = avx_add_wahbm(R1,
+                                        7*31,
+                                        W1,
+                                        5);
+
+    unsigned int i;
+
+    uint32_t W2[1] = {
+        bin_char_to_int("11000000000000000000000000000111") //7
+    };
+
+    R1_len = avx_add_wahbm(R1,
+                           7*31,
+                           W2,
+                           1);
+
+    uint32_t W3[3] = {
+        bin_char_to_int("01111110000000000000000000111111"), //1
+        bin_char_to_int("01110000000000000000000000000111"), //1
+        bin_char_to_int("10000000000000000000000000000101") //5
+    };
+
+    R1_len = avx_add_wahbm(R1,
+                           7*31,
+                           W3,
+                           3);
+
+    /*
+    for (i = 0; i < R1_len; ++i) {
+        if ( (i>0) && (i%31==0))
+            printf("\n");
+        printf("%u", R1[i]);
+    }
+    printf("\n");
+    */
+
+
+    for (i = 0; i < R1_len; ++i) 
+        TEST_ASSERT_EQUAL(A1[i], R1[i]);
+}
+//}}}
+
+//{{{void test_avx_add_wahbm(void)
+void test_avx_add_wahbm_2(void)
+{
+    uint32_t W1[3] = { 0 , 0 , 0};
+    uint32_t W2[3] = { 0 , 0 , 0};
+    uint32_t W3[3] = { 8192 , 0 , 2101248};
+    uint32_t W4[3] = { 0 , 0 , 0};
+    uint32_t W5[3] = { 0 , 512 , 0};
+
+    unsigned int *R1;
+    int r = posix_memalign((void **)&R1, 32, 3 *31* sizeof(unsigned int));
+
+    unsigned int i;
+    unsigned int R1_len = avx_add_wahbm(R1, 3*31, W1, 3);
+    R1_len = avx_add_wahbm(R1, 3*31, W2, 3);
+    R1_len = avx_add_wahbm(R1, 3*31, W3, 3);
+    R1_len = avx_add_wahbm(R1, 3*31, W4, 3);
+    R1_len = avx_add_wahbm(R1, 3*31, W5, 3);
+
+    uint32_t A[93] = { 
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0
+    };
+
+
+    for (i = 0; i < R1_len; ++i) 
+        TEST_ASSERT_EQUAL(A[i], R1[i]);
+}
+//}}}

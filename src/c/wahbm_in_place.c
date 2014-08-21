@@ -413,6 +413,7 @@ unsigned int count_range_records_in_place_wahbm(struct wah_file wf,
 //}}}
 #endif
 
+#ifdef __AVX2__
 //{{{ unsigned int count_range_records_in_place_wahbm(struct wah_file wf,
 unsigned int avx_count_range_records_in_place_wahbm(
             struct wah_file wf,
@@ -511,6 +512,7 @@ unsigned int avx_count_range_records_in_place_wahbm(
     return wf.num_fields;
 }
 //}}}
+#endif
 
 //{{{ unsigned int sum_range_records_in_place_wahbm(struct wah_file wf,
 unsigned int sum_range_records_in_place_wahbm(struct wah_file wf,
@@ -641,6 +643,7 @@ unsigned int gt_count_records_in_place_wahbm(struct wah_file wf,
 }
 //}}}
 
+#ifdef __AVX2__
 //{{{ unsigned int avx_gt_count_records_in_place_wahbm(struct wah_file wf,
 unsigned int avx_gt_count_records_in_place_wahbm(struct wah_file wf,
                                              unsigned int *record_ids,
@@ -658,6 +661,7 @@ unsigned int avx_gt_count_records_in_place_wahbm(struct wah_file wf,
                                                   R);
 }
 //}}}
+#endif
 
 //{{{ unsigned int gt_sum_records_in_place_wahbm(struct wah_file wf,
 unsigned int gt_sum_records_in_place_wahbm(struct wah_file wf,

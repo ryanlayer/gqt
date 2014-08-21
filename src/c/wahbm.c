@@ -619,6 +619,7 @@ unsigned int add_wahbm(unsigned int *R,
 }
 //}}}
 
+#ifdef __AVX2__
 //{{{void avx_add(unsigned int bits,
 void avx_add(unsigned int bits,
              __m256i *s_1,
@@ -651,7 +652,9 @@ void avx_add(unsigned int bits,
     R_avx[0+avx_i] = _mm256_add_epi32(R_avx[0+avx_i], y3);
 }
 //}}}
+#endif
 
+#ifdef __AVX2__
 //{{{ unsigned int avx_add_wahbm(unsigned int *R,
 unsigned int avx_add_wahbm(unsigned int *R,
                        unsigned int r_size,
@@ -802,6 +805,7 @@ unsigned int avx_add_wahbm(unsigned int *R,
     return r_size;
 }
 //}}}
+#endif
 
 //{{{ unsigned int add_n_wahbm(unsigned int *R,
 unsigned int add_n_wahbm(unsigned int *R,

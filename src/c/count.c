@@ -362,12 +362,14 @@ int count_in_place_wahbm(char *in,
                                                        num_records,
                                                        query_value,
                                                        &wf_R);
+#ifdef __AVX2__
         else
             len_wf_R = avx_gt_count_records_in_place_wahbm(wf,
                                                        R,
                                                        num_records,
                                                        query_value,
                                                        &wf_R);
+#endif
 
     } else 
         return count_help();

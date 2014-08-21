@@ -43,7 +43,7 @@ $(OBJ)/%.o: %.c
 	$(CC) -c $(CFLAGS) -o $@ $< 
 
 $(BIN)/%: %.c $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^ -lc -lm 
+	$(CC) $(CFLAGS) -o $@ $^ -lc -lm  -pthread
 clean:
 	rm -rf $(BIN)/*
 	rm -rf $(OBJ)/*

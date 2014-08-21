@@ -622,11 +622,13 @@ int append_active_16word(struct wah16_ll **A_head,
         if ( (*A_tail)->value.value == 0 ) {
             (*A_tail)->value.value = 0x8002;
             //(*A_tail)->value.value = 0x80000002;
+            free(n);
             return 0;
         // The value on the tail is a fill of all zeros that is not full
         } else if ( ((*A_tail)->value.value >= 0x8000) &&
                     ((*A_tail)->value.value < 0xC000) ) {
             (*A_tail)->value.value += 1;
+            free(n);
             return 0;
         } else { // the zeros cannot be added to the last active word
             (*A_tail)->next = n;
@@ -636,9 +638,11 @@ int append_active_16word(struct wah16_ll **A_head,
     } else if (a.value == 0x7FFF) { // all ones
         if ( (*A_tail)->value.value == a.value ) {
             (*A_tail)->value.value = 0xC002;
+            free(n);
             return 0;
         } else if ( (*A_tail)->value.value >= 0xC000) {
             (*A_tail)->value.value += 1;
+            free(n);
             return 0;
         } else {
             (*A_tail)->next = n;

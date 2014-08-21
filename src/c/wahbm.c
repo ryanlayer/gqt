@@ -658,12 +658,12 @@ unsigned int avx_add_wahbm(unsigned int *R,
                        unsigned int *wah,
                        unsigned int wah_size)
 {
+    __attribute__((aligned(64))) int rshift_4[8] = { 31, 30, 29, 28, 27, 26, 25, 24 };
+    __attribute__((aligned(64))) int rshift_3[8] = { 23, 22, 21, 20, 19, 18, 17, 16 };
+    __attribute__((aligned(64))) int rshift_2[8] = { 15, 14, 13, 12, 11, 10, 9, 8 };
+    __attribute__((aligned(64))) int rshift_1[8] = { 7, 6, 5, 4, 3, 2, 1, 0 };
+    __attribute__((aligned(64))) int masks[8] =  { 1, 1, 1, 1, 1, 1, 1, 1 };
 
-    __declspec(align(64)) int rshift_4[8] = { 31, 30, 29, 28, 27, 26, 25, 24 };
-    __declspec(align(64)) int rshift_3[8] = { 23, 22, 21, 20, 19, 18, 17, 16 };
-    __declspec(align(64)) int rshift_2[8] = { 15, 14, 13, 12, 11, 10, 9, 8 };
-    __declspec(align(64)) int rshift_1[8] = { 7, 6, 5, 4, 3, 2, 1, 0 };
-    __declspec(align(64)) int masks[8] =  { 1, 1, 1, 1, 1, 1, 1, 1 };
     
     __m256i *R_avx = (__m256i *)R;
 

@@ -351,7 +351,8 @@ int count_in_place_wahbm(char *in,
         start();
 
     struct wah_file wf = init_wahbm_file(in);
-    __declspec(align(64)) unsigned int *wf_R;
+    __attribute__((aligned(64)))unsigned int *wf_R;
+    //__declspec(align(64)) unsigned int *wf_R;
     unsigned int len_wf_R;
 
     if (strcmp(op,"gt") == 0) {

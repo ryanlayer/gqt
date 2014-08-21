@@ -15,7 +15,7 @@ all: clean $(TEST_NAMES) test
 	#ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $@.c
 	ruby $(UNITY_ROOT)/generate_test_runner.rb $@.c
 	$(CC) -Werror -g -o $@ -I$(UNITY_ROOT) -I$(SRC) -DTEST $(UNITY_ROOT)/unity.c \
-	    -mavx -mavx2 -g \
+	    -mavx -mavx2 -g  -pthread \
 	    $(SRC)/genotq.c \
 	    $(SRC)/pthread_pool.c \
 	    $(SRC)/timer.c \

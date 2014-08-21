@@ -364,6 +364,8 @@ unsigned int ubin_to_bitmap_wah16(unsigned int *U,
         total_wah_size += wahs_size[i];
     }
 
+    free(B);
+
     unsigned int W_i = 0;
     *W = (uint16_t *) malloc(total_wah_size*sizeof(uint16_t));
     for (i = 0; i < 4; i++) {

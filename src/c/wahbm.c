@@ -807,6 +807,223 @@ unsigned int avx_add_wahbm(unsigned int *R,
 //}}}
 #endif
 
+#ifdef __AVX2__
+//{{{void avx_add_n(unsigned int bits,
+void avx_add_n(unsigned int bits,
+             __m256i *s_1,
+             __m256i *s_2,
+             __m256i *s_3,
+             __m256i *s_4,
+             __m256i *m,
+             __m256i *N,
+             __m256i *R_avx,
+             unsigned int field_i)
+{
+    unsigned int avx_i = field_i/8;
+
+    __m256i y1 = _mm256_set1_epi32(bits);
+
+    __m256i y2 = _mm256_srlv_epi32 (y1, *s_1);
+    __m256i y3 = _mm256_and_si256 (y2, *m);
+    __m256i y4 = _mm256_mullo_epi16(y3, *N);
+    R_avx[3+avx_i] = _mm256_add_epi32(R_avx[3+avx_i], y4);
+
+    y2 = _mm256_srlv_epi32 (y1, *s_2);
+    y3 = _mm256_and_si256 (y2, *m);
+    y4 = _mm256_mullo_epi16(y3, *N);
+    R_avx[2+avx_i] = _mm256_add_epi32(R_avx[2+avx_i], y4);
+
+    y2 = _mm256_srlv_epi32 (y1, *s_3);
+    y3 = _mm256_and_si256 (y2, *m);
+    y4 = _mm256_mullo_epi16(y3, *N);
+    R_avx[1+avx_i] = _mm256_add_epi32(R_avx[1+avx_i], y4);
+
+    y2 = _mm256_srlv_epi32 (y1, *s_4);
+    y3 = _mm256_and_si256 (y2, *m);
+    y4 = _mm256_mullo_epi16(y3, *N);
+    R_avx[0+avx_i] = _mm256_add_epi32(R_avx[0+avx_i], y4);
+}
+//}}}
+#endif
+
+#ifdef __AVX2__
+//{{{ unsigned int avx_add_n_wahbm(unsigned int *R,
+unsigned int avx_add_n_wahbm(unsigned int *R,
+                             unsigned int n,
+                             unsigned int r_size,
+                             unsigned int *wah,
+                             unsigned int wah_size)
+{
+    __attribute__((aligned(64))) int rshift_4[8] = 
+            { 31, 30, 29, 28, 27, 26, 25, 24 };
+    __attribute__((aligned(64))) int rshift_3[8] =
+            { 23, 22, 21, 20, 19, 18, 17, 16 };
+    __attribute__((aligned(64))) int rshift_2[8] =
+            { 15, 14, 13, 12, 11, 10, 9, 8 };
+    __attribute__((aligned(64))) int rshift_1[8] =
+            { 7, 6, 5, 4, 3, 2, 1, 0 };
+    __attribute__((aligned(64))) int masks[8] =  { 1, 1, 1, 1, 1, 1, 1, 1 };
+
+    
+    __m256i *R_avx = (__m256i *)R;
+
+    __m256i *rshift_1_avx = (__m256i *)rshift_1;
+    __m256i *rshift_2_avx = (__m256i *)rshift_2;
+    __m256i *rshift_3_avx = (__m256i *)rshift_3;
+    __m256i *rshift_4_avx = (__m256i *)rshift_4;
+    __m256i *masks_avx = (__m256i *)masks;
+
+    __m256i s_1 = _mm256_load_si256(rshift_1_avx);
+    __m256i s_2 = _mm256_load_si256(rshift_2_avx);
+    __m256i s_3 = _mm256_load_si256(rshift_3_avx);
+    __m256i s_4 = _mm256_load_si256(rshift_4_avx);
+    __m256i m = _mm256_load_si256(masks_avx);
+    __m256i y1, y2, y3;
+
+    __m256i n_avx = _mm256_set1_epi32(n);
+
+    unsigned int wah_c,
+                 wah_i,
+                 num_words,
+                 fill_bit,
+                 bits,
+                 bit,
+                 bit_i,
+                 word_i,
+                 field_i;
+    field_i = 0;
+
+    unsigned int buf, buf_empty_bits = 32;
+
+    for (wah_i = 0; wah_i < wah_size; ++wah_i) {
+        wah_c = wah[wah_i];
+        if (wah_c >> 31 == 1) {
+            num_words = (wah_c & 0x3fffffff);
+            fill_bit = (wah_c>=0xC0000000?1:0);
+            bits = (fill_bit?0x7FFFFFFF:0);
+        } else {
+            num_words = 1;
+            bits = wah_c;
+        }
+
+        if ( (num_words > 1) && (fill_bit == 0) ) {
+            // probably need to account for extra bits here
+            if (buf_empty_bits < 32)
+                avx_add_n(buf,
+                          &s_1,
+                          &s_2,
+                          &s_3,
+                          &s_4,
+                          &m,
+                          &n_avx,
+                          R_avx,
+                          field_i);
+            
+            field_i += 32;
+            // the empty bits were supplied by this run, so we don't want to
+            // count them twice
+            field_i += num_words*31 - buf_empty_bits; 
+
+            buf_empty_bits = 32;
+            buf = 0;
+
+            if (field_i >= r_size)
+                return r_size;
+        } else {
+            if (bits == 0) {
+
+                if (buf_empty_bits < 32)
+                    avx_add_n(buf,
+                              &s_1,
+                              &s_2,
+                              &s_3,
+                              &s_4,
+                              &m,
+                              &n_avx,
+                              R_avx,
+                              field_i);
+                field_i += 32 + (31 - buf_empty_bits);
+
+                buf = 0;
+                buf_empty_bits = 32;
+
+                if (field_i >= r_size)
+                    return r_size;
+/*
+                
+                if (buf_empty_bits < 32)
+                    avx_add(buf, &s_1, &s_2, &s_3, &s_4, &m, R_avx, field_i);
+                field_i += 32;
+
+                buf = 0;
+                buf_empty_bits = 32 - buf_empty_bits;
+*/
+
+                if (field_i >= r_size)
+                    return r_size;
+
+            } else {
+                for (word_i = 0; word_i < num_words; ++word_i) {
+                    if (buf_empty_bits == 32) {
+                        if (field_i % 32 != 0) {
+                            // add padding to buf that makes up for the
+                            // difference, then add 32 - (field_i % 32) bits to
+                            // the buff
+                            unsigned int padding = field_i % 32;
+                            buf = bits >> (padding - 1);
+                            avx_add_n(buf,
+                                      &s_1,
+                                      &s_2,
+                                      &s_3,
+                                      &s_4,
+                                      &m,
+                                      &n_avx,
+                                      R_avx,
+                                      field_i - padding);
+                            field_i+= 32 - padding;
+                            buf = bits << (32 - padding + 1);
+                            buf_empty_bits = (32 - padding) + 1;
+                        } else {
+                            buf = bits << 1;
+                            buf_empty_bits = 1;
+                        }
+                    } else {
+
+                        buf += bits >> (31-buf_empty_bits);
+
+                        avx_add_n(buf,
+                                  &s_1,
+                                  &s_2,
+                                  &s_3,
+                                  &s_4,
+                                  &m,
+                                  &n_avx,
+                                  R_avx,
+                                  field_i);
+
+                        field_i+=32;
+
+                        buf_empty_bits += 1;
+                        buf = bits << buf_empty_bits;
+                    }
+                }
+            }
+        }
+    }
+
+    for (bit_i = 0; bit_i < 31; ++bit_i) {
+        R[field_i] += n*((buf >> (31 - bit_i)) & 1);
+        field_i += 1;
+
+        if (field_i >= r_size)
+            return r_size;
+    }
+
+    return r_size;
+}
+//}}}
+#endif
+
 //{{{ unsigned int add_n_wahbm(unsigned int *R,
 unsigned int add_n_wahbm(unsigned int *R,
                        unsigned int n,

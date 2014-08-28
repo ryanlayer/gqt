@@ -514,6 +514,83 @@ unsigned int avx_count_range_records_in_place_wahbm(
 //}}}
 #endif
 
+#ifdef __AVX2__
+//{{{ unsigned int avx_sum_range_records_in_place_wahbm(struct wah_file wf,
+unsigned int avx_sum_range_records_in_place_wahbm(
+            struct wah_file wf,
+            unsigned int *record_ids,
+            unsigned int num_r,
+            unsigned int start_test_value,
+            unsigned int end_test_value,
+            unsigned int **R) 
+
+{
+    int r = posix_memalign((void **)R, 32, wf.num_fields*sizeof(unsigned int));
+    memset(*R, 0, wf.num_fields*sizeof(unsigned int));
+
+    unsigned int max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    unsigned int *record_new_bm = (unsigned int *)
+                        malloc(sizeof(unsigned int)*max_wah_size);
+
+    unsigned int record_new_bm_size;
+    unsigned int i,j,r_size;
+#ifdef time_sum_range_records_in_place_wahbm
+    unsigned long t1 = 0, t2 = 0, t3 = 0;
+#endif
+
+    for (i = 0; i < num_r; ++i) {
+        for (j = start_test_value; j < end_test_value; ++j) {
+
+#ifdef time_sum_range_records_in_place_wahbm
+            start();
+#endif
+            record_new_bm_size = get_wah_bitmap_in_place(wf,
+                                                         record_ids[i],
+                                                         j,
+                                                         &record_new_bm);
+#ifdef time_sum_range_records_in_place_wahbm
+            stop();
+            t1+=report();
+#endif
+
+#ifdef time_sum_range_records_in_place_wahbm
+#endif
+
+            r_size = avx_add_n_wahbm(*R,
+                                     j,
+                                     wf.num_fields,
+                                     record_new_bm,
+                                     record_new_bm_size);
+
+#ifdef time_sum_range_records_in_place_wahbm
+            stop();
+            t2+=report();
+#endif
+        }
+
+    }
+
+#ifdef time_sum_range_records_in_place_wahbm
+    unsigned long tall = t1 + t2;
+    fprintf(stderr,"%lu %f\t"
+                   "%lu %f\t"
+                   "%lu\n", 
+            t1,
+            ((double)t1)/((double)tall),
+            t2,
+            ((double)t2)/((double)tall),
+            tall);
+
+
+#endif
+    free(record_new_bm);
+    return wf.num_fields;
+
+
+}
+//}}}
+#endif
+
 //{{{ unsigned int sum_range_records_in_place_wahbm(struct wah_file wf,
 unsigned int sum_range_records_in_place_wahbm(struct wah_file wf,
                                               unsigned int *record_ids,
@@ -530,9 +607,6 @@ unsigned int sum_range_records_in_place_wahbm(struct wah_file wf,
     unsigned int *record_new_bm = (unsigned int *)
                         malloc(sizeof(unsigned int)*max_wah_size);
 
-    unsigned int *or_result_bm = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size);
-
     unsigned int and_result_bm_size, record_new_bm_size, or_result_bm_size;
     unsigned int i,j,r_size;
 
@@ -543,9 +617,6 @@ unsigned int sum_range_records_in_place_wahbm(struct wah_file wf,
 #endif
 
     for (i = 0; i < num_r; ++i) {
-        // or the appropriate bitmaps
-        memset(or_result_bm, 0, sizeof(unsigned int)*max_wah_size);
-
         for (j = start_test_value; j < end_test_value; ++j) {
 
 #ifdef time_sum_range_records_in_place_wahbm
@@ -601,8 +672,6 @@ unsigned int sum_range_records_in_place_wahbm(struct wah_file wf,
 
 #endif
     free(record_new_bm);
-    free(or_result_bm);
-
     return wf.num_fields;
 }
 //}}}

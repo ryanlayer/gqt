@@ -374,9 +374,10 @@ int count_in_place_wahbm(char *in,
     } else 
         return count_help();
 
-    if (time != 0 )
+    if (time != 0 ) {
         stop();
         fprintf(stderr,"%lu\n", report());
+    }
 
     if (quiet == 0)
         print_count_result(wf_R, wf.num_fields);

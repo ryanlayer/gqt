@@ -141,3 +141,49 @@ diff tmp.count.plt tmp.count.cipwahbm
 #
 #
 #
+
+plink --file ../data/10.1e4.ind --freq >/dev/null
+cat plink.frq  \
+    | grep -v "CHR" \
+    | awk '{ if ($3=="2") print $5*$6; else print (1-$5)*$6}' \
+    | tr '\n' ' ' \
+    > plink.out
+echo -en "\n" >> plink.out
+gtq sum ipwahbm \
+    -i ../data/10.1e4.ind.wahbm \
+    -n 10 \
+    -r 0,1,2,3,4,5,6,7,8,9 \
+    -u 2 \
+    -l 1 \
+    > gtq.out
+gtq sum ipwahbm \
+    -a \
+    -i ../data/10.1e4.ind.wahbm \
+    -n 10 \
+    -r 0,1,2,3,4,5,6,7,8,9 \
+    -u 2 \
+    -l 1 \
+    > gtq.out.a
+
+if [ -n "`diff -w gtq.out plink.out`" ]
+then 
+    echo "ERROR: gtq sum does not match plink"
+    cat gtq.out
+    cat plink.out
+    echo
+else
+    echo
+    rm plink.out plink.frq plink.log
+fi
+
+if [ -n "`diff -w gtq.out gtq.out.a`" ]
+then 
+    echo "ERROR: gtq sum does not match gtq sum -a"
+    cat gtq.out
+    cat gtq.out.a
+    echo
+else
+    echo
+    rm gtq.out gtq.out.a
+fi
+

@@ -76,10 +76,11 @@ int sum(int argc, char **argv)
     if (argc < 2) return sum_help();
 
     int c;
-    char *in, *out, *record_ids, *op;
+    char *in, *out, *record_ids, *op, *bim;
     unsigned int num_records;
     int i_is_set = 0,
         a_is_set = 0,
+        b_is_set = 0,
         r_is_set = 0,
         n_is_set = 0,
         Q_is_set = 0,
@@ -96,7 +97,11 @@ int sum(int argc, char **argv)
         case 'a':
             a_is_set = 1;
             break;
-        case 'u':
+        case 'b':
+        	b_is_set = 1;
+        	bim = optarg;
+        	break;
+       case 'u':
             u_is_set = 1;
             range_end = atoi(optarg);
             break;
@@ -379,6 +384,7 @@ int sum_in_place_wahbm(char *in,
                                                 range_start,
                                                 range_end + 1,
                                                 &wf_R);
+#ifdef __AVX2__
     else
         len_wf_R = avx_sum_range_records_in_place_wahbm(wf,
                                                 R,
@@ -387,6 +393,7 @@ int sum_in_place_wahbm(char *in,
                                                 range_end + 1,
                                                 &wf_R);
 
+#endif
 
     if (time != 0 ) {
         stop();

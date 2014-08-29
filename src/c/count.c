@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include "genotq.h"
 #include "timer.h"
+#include "quickFile.h"
 
 int count_help();
 
@@ -15,28 +16,33 @@ int count_plt(char *in,
               unsigned int *R,
               unsigned int num_records,
               int time,
-              int quiet);
+              int quiet,
+              char *bim);
+
 int count_ubin(char *in,
                unsigned int query_value,
                char *op,
                unsigned int *R,
                unsigned int num_records,
                int time,
-               int quiet);
+               int quiet,
+               char *bim);
 int count_wah(char *in,
               unsigned int query_value,
               char *op,
               unsigned int *R,
               unsigned int num_records,
               int time,
-              int quiet);
+              int quiet,
+              char *bim);
 int count_wahbm(char *in,
                 unsigned int query_value,
                 char *op,
                 unsigned int *R,
                 unsigned int num_records,
                 int time,
-                int quiet);
+                int quiet,
+                char *bim);
 
 int count_in_place_wahbm(char *in,
                          unsigned int query_value,
@@ -45,7 +51,8 @@ int count_in_place_wahbm(char *in,
                          unsigned int num_records,
                          int time,
                          int quiet,
-                         int avx);
+                         int avx,
+                         char *bim);
 
 int count_compressed_in_place_wahbm(char *in,
                                     unsigned int query_value,
@@ -53,11 +60,13 @@ int count_compressed_in_place_wahbm(char *in,
                                     unsigned int *R,
                                     unsigned int num_records,
                                     int time,
-                                    int quiet);
+                                    int quiet,
+                                    char *bim);
 
 
 void print_count_result(unsigned int *R,
-                        unsigned int num_fields);
+                        unsigned int num_fields,
+                        char *bim);
 
 
 int count(int argc, char **argv)
@@ -65,10 +74,11 @@ int count(int argc, char **argv)
     if (argc < 2) return count_help();
 
     int c;
-    char *in, *out, *record_ids, *op;
+    char *in=NULL, *out=NULL, *record_ids=NULL, *op=NULL, *bim=NULL;
     unsigned int query_value, num_records;
     int i_is_set = 0,
         a_is_set = 0,
+        b_is_set = 0,
         o_is_set = 0,
         r_is_set = 0,
         n_is_set = 0,
@@ -76,11 +86,15 @@ int count(int argc, char **argv)
         t_is_set = 0,
         q_is_set = 0;
 
-    while ((c = getopt (argc, argv, "hi:o:q:r:n:Qta")) != -1) {
+    while ((c = getopt (argc, argv, "hi:o:q:r:n:b:Qta")) != -1) {
         switch (c) {
         case 'a':
             a_is_set = 1;
             break;
+        case 'b':
+        	b_is_set = 1;
+        	bim = optarg;
+        	break;
         case 't':
             t_is_set = 1;
             break;
@@ -175,7 +189,8 @@ int count(int argc, char **argv)
                          R,
                          num_records,
                          t_is_set,
-                         Q_is_set);
+                         Q_is_set,
+                         bim);
 
     else if (strcmp(type, "ubin") == 0)
         return count_ubin(in,
@@ -184,7 +199,8 @@ int count(int argc, char **argv)
                           R,
                           num_records,
                           t_is_set,
-                          Q_is_set);
+                          Q_is_set,
+                          bim);
 
     else if (strcmp(type, "wah") == 0)
         return count_wah(in,
@@ -193,7 +209,8 @@ int count(int argc, char **argv)
                          R,
                          num_records,
                          t_is_set,
-                         Q_is_set);
+                         Q_is_set,
+                         bim);
 
     else if (strcmp(type, "wahbm") == 0)
         return count_wahbm(in,
@@ -202,7 +219,8 @@ int count(int argc, char **argv)
                            R,
                            num_records,
                            t_is_set,
-                           Q_is_set);
+                           Q_is_set,
+                           bim);
 
     else if (strcmp(type, "ipwahbm") == 0)
         return count_in_place_wahbm(in,
@@ -212,7 +230,8 @@ int count(int argc, char **argv)
                                     num_records,
                                     t_is_set,
                                     Q_is_set,
-                                    a_is_set);
+                                    a_is_set,
+                                    bim);
 
     else if (strcmp(type, "cipwahbm") == 0)
         return count_compressed_in_place_wahbm(in,
@@ -221,7 +240,8 @@ int count(int argc, char **argv)
                                                R,
                                                num_records,
                                                t_is_set,
-                                               Q_is_set);
+                                               Q_is_set,
+                                               bim);
 
 
     return 1;
@@ -256,7 +276,8 @@ int count_plt(char *in,
               unsigned int *R,
               unsigned int num_records,
               int time,
-              int quiet)
+              int quiet,
+              char *bim)
 {
     start();
     struct plt_file pf = init_plt_file(in);
@@ -278,7 +299,7 @@ int count_plt(char *in,
         fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
-        print_count_result(pf_R, pf.num_fields);
+        print_count_result(pf_R, pf.num_fields, bim);
 
 
     free(pf_R);
@@ -293,7 +314,8 @@ int count_ubin(char *in,
                unsigned int *R,
                unsigned int num_records,
                int time,
-               int quiet)
+               int quiet,
+               char *bim)
 
 {
     start();
@@ -331,7 +353,8 @@ int count_wah(char *in,
               unsigned int *R,
               unsigned int num_records,
               int time,
-              int quiet)
+              int quiet,
+              char *bim)
 
 {
     return 0;
@@ -344,7 +367,8 @@ int count_in_place_wahbm(char *in,
                          unsigned int num_records,
                          int time,
                          int quiet,
-                         int avx)
+                         int avx,
+                         char *bim)
 
 {
     if (time != 0 )
@@ -380,7 +404,7 @@ int count_in_place_wahbm(char *in,
     }
 
     if (quiet == 0)
-        print_count_result(wf_R, wf.num_fields);
+        print_count_result(wf_R, wf.num_fields, bim);
 
     free(wf_R);
     fclose(wf.file);
@@ -395,7 +419,8 @@ int count_compressed_in_place_wahbm(char *in,
                                     unsigned int *R,
                                     unsigned int num_records,
                                     int time,
-                                    int quiet)
+                                    int quiet,
+                                    char *bim)
 
 {
     start();
@@ -418,7 +443,7 @@ int count_compressed_in_place_wahbm(char *in,
         fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
-        print_count_result(wf_R, wf.num_fields);
+        print_count_result(wf_R, wf.num_fields, bim);
 
     free(wf_R);
     fclose(wf.file);
@@ -435,7 +460,8 @@ int count_wahbm(char *in,
                 unsigned int *R,
                 unsigned int num_records,
                 int time,
-                int quiet)
+                int quiet,
+                char *bim)
 
 {
     start();
@@ -458,7 +484,7 @@ int count_wahbm(char *in,
         fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
-        print_count_result(wf_R, wf.num_fields);
+        print_count_result(wf_R, wf.num_fields, bim);
 
     free(wf_R);
     fclose(wf.file);
@@ -467,13 +493,20 @@ int count_wahbm(char *in,
 }
 
 void print_count_result(unsigned int *R,
-                        unsigned int num_fields)
+                        unsigned int num_fields,
+                        char *bim)
 {
     unsigned int i;
+    struct QuickFileInfo qFile;
+
+    if (bim != NULL) {
+    	quickFileInit(bim, &qFile);
+    }
+
     for(i = 0; i < num_fields; ++i) {
         if (i!= 0)
             printf(" ");
-        printf("%u", R[i]);
+        printf("%s %u", (bim != NULL ? qFile.lines[i] : ""), R[i]);
     }
     printf("\n");
 }

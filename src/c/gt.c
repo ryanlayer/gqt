@@ -15,6 +15,13 @@ int gt_plt(char *in,
            int time,
            int quiet);
 
+int gt_plt_fields(char *in,
+                  unsigned int query_value,
+                  unsigned int *R,
+                  unsigned int num_fields,
+                  int time,
+                  int quiet);
+
 int gt_ubin(char *in,
             unsigned int query_value,
             unsigned int *R,
@@ -66,12 +73,13 @@ int gt(int argc, char **argv)
     unsigned int query_value, num_records;
     int i_is_set = 0, 
         r_is_set = 0, 
+        f_is_set = 0, 
         n_is_set = 0, 
         Q_is_set = 0, 
         t_is_set = 0, 
         q_is_set = 0; 
 
-    while ((c = getopt (argc, argv, "hi:q:r:n:Qt")) != -1) {
+    while ((c = getopt (argc, argv, "hi:q:r:n:fQt")) != -1) {
         switch (c) {
             case 'r':
                 r_is_set = 1;
@@ -80,6 +88,9 @@ int gt(int argc, char **argv)
             case 'n':
                 n_is_set = 1;
                 num_records = atoi(optarg);
+                break;
+            case 'f':
+                f_is_set = 1;
                 break;
             case 'i':
                 i_is_set = 1;
@@ -137,13 +148,23 @@ int gt(int argc, char **argv)
     unsigned int R[num_records];
     parse_cmd_line_int_csv(R, num_records, record_ids);
 
-    if (strcmp(type, "plt") == 0)
-        return gt_plt(in,
-                      query_value,
-                      R,
-                      num_records,
-                      t_is_set,
-                      Q_is_set);
+    if (strcmp(type, "plt") == 0) {
+        if (f_is_set == 1) 
+            return gt_plt_fields(in,
+                                 query_value,
+                                 R,
+                                 num_records,
+                                 t_is_set,
+                                 Q_is_set);
+        else
+            return gt_plt(in,
+                          query_value,
+                          R,
+                          num_records,
+                          t_is_set,
+                          Q_is_set);
+
+    }
 
     else if (strcmp(type, "ubin") == 0)
         return gt_ubin(in,
@@ -227,6 +248,35 @@ int gt_plt(char *in,
 
     if (quiet == 0)
         print_result(len_pf_R, pf_R, pf.num_fields);
+
+
+    free(pf_R);
+    fclose(pf.file);
+
+    return 0;
+}
+
+int gt_plt_fields(char *in,
+                  unsigned int query_value,
+                  unsigned int *R,
+                  unsigned int num_records,
+                  int time,
+                  int quiet)
+{
+    start();
+    struct plt_file pf = init_plt_file(in);
+    unsigned int *pf_R;
+    unsigned int len_pf_R = gt_fields_plt(pf,
+                                          R,
+                                          num_records,
+                                          query_value,
+                                          &pf_R);
+    stop();
+    if (time != 0)
+        fprintf(stderr,"%lu\n", report());
+
+    if (quiet == 0)
+        print_result(len_pf_R, pf_R, pf.num_records);
 
 
     free(pf_R);

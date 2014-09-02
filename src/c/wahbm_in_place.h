@@ -282,5 +282,30 @@ unsigned int gt_sum_records_in_place_wahbm(struct wah_file wf,
                                              unsigned int num_r,
                                              unsigned int test_value,
                                              unsigned int **R);
+/**
+ * @breif Read in all 4 bitmaps at once
+ */
+unsigned int get_wah_bitmaps_in_place(struct wah_file wf,
+                                      unsigned int wah_record,
+                                      unsigned int **wah_bitmap,
+                                      unsigned int *wah_sizes);
+#ifdef __AVX2__
+unsigned int avx_gt_count_records_in_place_wahbm(struct wah_file wf,
+                                             unsigned int *record_ids,
+                                             unsigned int num_r,
+                                             unsigned int test_value,
+                                             unsigned int **R);
+#endif
+
+#ifdef __AVX2__
+unsigned int avx_count_range_records_in_place_wahbm(
+            struct wah_file wf,
+            unsigned int *record_ids,
+            unsigned int num_r,
+            unsigned int start_test_value,
+            unsigned int end_test_value,
+            unsigned int **R);
+#endif
+
 
 #endif

@@ -5,57 +5,79 @@
 #include <ctype.h>
 #include "genotq.h"
 #include "timer.h"
+#include "quickFile.h"
+#include "bufOut.h"
 
 int sum_help();
 
 int sum_plt(char *in,
-              unsigned int query_value,
-              char *op,
               unsigned int *R,
               unsigned int num_records,
+              unsigned int range_start,
+              unsigned int range_end,
+              unsigned int range_exclude,
+              int x_is_set,
               int time,
-              int quiet);
+              int quiet,
+              char *bim);
 int sum_ubin(char *in,
-               unsigned int query_value,
-               char *op,
                unsigned int *R,
                unsigned int num_records,
+               unsigned int range_start,
+               unsigned int range_end,
+               unsigned int range_exclude,
+               int x_is_set,
                int time,
-               int quiet);
+               int quiet,
+               char *bim);
 int sum_wah(char *in,
-              unsigned int query_value,
-              char *op,
               unsigned int *R,
               unsigned int num_records,
+              unsigned int range_start,
+              unsigned int range_end,
+              unsigned int range_exclude,
+              int x_is_set,
               int time,
-              int quiet);
+              int quiet,
+              char *bim);
 int sum_wahbm(char *in,
-                unsigned int query_value,
-                char *op,
                 unsigned int *R,
                 unsigned int num_records,
+                unsigned int range_start,
+                unsigned int range_end,
+                unsigned int range_exclude,
+                int x_is_set,
                 int time,
-                int quiet);
+                int quiet,
+                char *bim);
 
 int sum_in_place_wahbm(char *in,
-                         unsigned int query_value,
-                         char *op,
                          unsigned int *R,
                          unsigned int num_records,
+                         unsigned int range_start,
+                         unsigned int range_end,
+                         unsigned int range_exclude,
+                         int x_is_set,
+                         int a_is_set,
                          int time,
-                         int quiet);
+                         int quiet,
+                         char *bim);
 
 int sum_compressed_in_place_wahbm(char *in,
-                                    unsigned int query_value,
-                                    char *op,
                                     unsigned int *R,
                                     unsigned int num_records,
+                                    unsigned int range_start,
+                                    unsigned int range_end,
+                                    unsigned int range_exclude,
+                                    int x_is_set,
                                     int time,
-                                    int quiet);
+                                    int quiet,
+                                    char *bim);
 
 
 void print_sum_result(unsigned int *R,
-                        unsigned int num_fields);
+                        unsigned int num_fields,
+                        char *bim);
 
 
 int sum(int argc, char **argv)
@@ -63,24 +85,45 @@ int sum(int argc, char **argv)
     if (argc < 2) return sum_help();
 
     int c;
-    char *in, *out, *record_ids, *op;
-    unsigned int query_value, num_records;
+    char *in, *out, *record_ids, *op, *bim;
+    unsigned int num_records;
     int i_is_set = 0,
-        o_is_set = 0,
+        a_is_set = 0,
+        b_is_set = 0,
         r_is_set = 0,
         n_is_set = 0,
         Q_is_set = 0,
         t_is_set = 0,
-        q_is_set = 0;
+        u_is_set = 0,
+        l_is_set = 0,
+        e_is_set = 0,
+        x_is_set = 0;
 
-    while ((c = getopt (argc, argv, "hi:o:q:r:n:Qt")) != -1) {
+    uint32_t range_start = 0, range_end = 3, range_exclude = 0;
+
+    while ((c = getopt (argc, argv, "ahi:r:n:b:Qtu:l:e:x:")) != -1) {
         switch (c) {
+        case 'a':
+            a_is_set = 1;
+            break;
+        case 'b':
+        	b_is_set = 1;
+        	bim = optarg;
+        	break;
+       case 'u':
+            u_is_set = 1;
+            range_end = atoi(optarg);
+            break;
+        case 'l':
+            l_is_set = 1;
+            range_start = atoi(optarg);
+            break;
+        case 'x':
+            x_is_set = 1;
+            range_exclude = atoi(optarg);
+            break;
         case 't':
             t_is_set = 1;
-            break;
-        case 'o':
-            o_is_set = 1;
-            op = optarg;
             break;
         case 'r':
             r_is_set = 1;
@@ -94,21 +137,19 @@ int sum(int argc, char **argv)
             i_is_set = 1;
             in = optarg;
             break;
-        case 'q':
-            q_is_set = 1;
-            query_value = atoi(optarg);
-            break;
         case 'Q':
             Q_is_set = 1;
             break;
         case 'h':
             return sum_help();
         case '?':
-            if ( (optopt == 'i') ||
-                    (optopt == 'o') ||
+            if (    (optopt == 'i') ||
                     (optopt == 'r') ||
                     (optopt == 'n') ||
-                    (optopt == 'q') )
+                    (optopt == 'g') ||
+                    (optopt == 'l') ||
+                    (optopt == 'e') ||
+                    (optopt == 'x'))
                 fprintf (stderr, "Option -%c requires an argument.\n",
                          optopt);
             else if (isprint (optopt))
@@ -127,11 +168,6 @@ int sum(int argc, char **argv)
         return sum_help();
     }
 
-    if (q_is_set == 0) {
-        printf("Query value is not set\n");
-        return sum_help();
-    }
-
     if (n_is_set == 0) {
         printf("Number of records is not set\n");
         return sum_help();
@@ -142,79 +178,81 @@ int sum(int argc, char **argv)
         return sum_help();
     }
 
-    if (o_is_set == 0) {
-        printf("Opperation is not set\n");
-        return sum_help();
-    }
-
-
-    if ( !((strcmp(op, "gt") == 0) ||
-           (strcmp(op, "lt") == 0) ||
-           (strcmp(op, "eq") == 0) ||
-           (strcmp(op, "ne") == 0) ||
-           (strcmp(op, "le") == 0) ||
-           (strcmp(op, "ge") == 0)) ) {
-        printf("Unknown opperation\n");
-        return sum_help();
-    }
-
-
     unsigned int R[num_records];
     parse_cmd_line_int_csv(R, num_records, record_ids);
 
     if (strcmp(type, "plt") == 0)
         return sum_plt(in,
-                         query_value,
-                         op,
                          R,
                          num_records,
+                         range_start,
+                         range_end,
+                         range_exclude,
+                         x_is_set,
                          t_is_set,
-                         Q_is_set);
+                         Q_is_set,
+                         bim);
 
     else if (strcmp(type, "ubin") == 0)
         return sum_ubin(in,
-                          query_value,
-                          op,
                           R,
                           num_records,
+                          range_start,
+                          range_end,
+                          range_exclude,
+                          x_is_set,
                           t_is_set,
-                          Q_is_set);
+                          Q_is_set,
+                          bim);
 
     else if (strcmp(type, "wah") == 0)
         return sum_wah(in,
-                         query_value,
-                         op,
                          R,
                          num_records,
+                         range_start,
+                         range_end,
+                         range_exclude,
+                         x_is_set,
                          t_is_set,
-                         Q_is_set);
+                         Q_is_set,
+                         bim);
 
     else if (strcmp(type, "wahbm") == 0)
         return sum_wahbm(in,
-                           query_value,
-                           op,
                            R,
                            num_records,
+                           range_start,
+                           range_end,
+                           range_exclude,
+                           x_is_set,
                            t_is_set,
-                           Q_is_set);
+                           Q_is_set,
+                           bim);
 
     else if (strcmp(type, "ipwahbm") == 0)
         return sum_in_place_wahbm(in,
-                                    query_value,
-                                    op,
                                     R,
                                     num_records,
+                                    range_start,
+                                    range_end,
+                                    range_exclude,
+                                    x_is_set,
+                                    a_is_set,
                                     t_is_set,
-                                    Q_is_set);
+                                    Q_is_set,
+                                    bim);
 
     else if (strcmp(type, "cipwahbm") == 0)
         return sum_compressed_in_place_wahbm(in,
-                                               query_value,
-                                               op,
-                                               R,
-                                               num_records,
-                                               t_is_set,
-                                               Q_is_set);
+                                             R,
+                                             num_records,
+                                             range_start,
+                                             range_end,
+                                             range_exclude,
+                                             x_is_set,
+                                             t_is_set,
+                                             Q_is_set,
+                                             bim);
 
 
     return 1;
@@ -222,34 +260,35 @@ int sum(int argc, char **argv)
 
 int sum_help()
 {
-    printf("usage:   gtq sum <type> -o <opperation> -i <input file> "
-           "-q <query value> -n <number of records> -r <record ids>\n"
-           "op:\n"
-           "        gt         Greater than\n"
-           "        lt         Less than\n"
-           "        eq         Equal\n"
-           "        ne         Not equal\n"
-           "        le         Less than or equal\n"
-           "        ge         Greater than or equal\n"
-           "type:"
-           "         plt       Plain text \n"
-           "         ubin      Uncompressed binary\n"
-           "         wah       WAH \n"
-           "         wahbm     WAH bitmap\n"
-           "         ipwahbm   in-place WAH bitmap\n"
-           "         cipwahbm  compressed in-place WAH bitmap\n"
+    printf("usage:   gtq sum <type> -i <input file>\n"
+           "                        -n <number of records>\n"
+           "                        -r <record ids CSV>\n"
+           "                        -l <inclusive lower bound>\n"
+           "                        -u <inclusive upper bound>\n"
+           "                        -b <bim file>\n"
+           "                        -x <exlcude>\n"
+           "\ttypes:\n"
+           "\t\tplt       Plain text \n"
+           "\t\tubin      Uncompressed binary\n"
+           "\t\twah       WAH \n"
+           "\t\twahbm     WAH bitmap\n"
+           "\t\tipwahbm   in-place WAH bitmap\n"
+           "\t\tcipwahbm  compressed in-place WAH bitmap\n"
           );
 
     return 0;
 }
 
 int sum_plt(char *in,
-              unsigned int query_value,
-              char *op,
               unsigned int *R,
               unsigned int num_records,
+              unsigned int range_start,
+              unsigned int range_end,
+              unsigned int range_exclude,
+              int x_is_set,
               int time,
-              int quiet)
+              int quiet,
+              char *bim)
 {
 #if 0
     start();
@@ -272,7 +311,7 @@ int sum_plt(char *in,
         fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
-        print_sum_result(pf_R, pf.num_fields);
+        print_sum_result(pf_R, pf.num_fields, bim);
 
 
     free(pf_R);
@@ -282,12 +321,15 @@ int sum_plt(char *in,
 }
 
 int sum_ubin(char *in,
-               unsigned int query_value,
-               char *op,
                unsigned int *R,
                unsigned int num_records,
+               unsigned int range_start,
+               unsigned int range_end,
+               unsigned int range_exclude,
+               int x_is_set,
                int time,
-               int quiet)
+               int quiet,
+               char *bim)
 
 {
 #if 0
@@ -311,7 +353,7 @@ int sum_ubin(char *in,
         fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
-        print_sum_result(uf_R, uf.num_fields);
+        print_sum_result(uf_R, uf.num_fields, bim);
 
     free(uf_R);
     fclose(uf.file);
@@ -320,24 +362,31 @@ int sum_ubin(char *in,
 }
 
 int sum_wah(char *in,
-              unsigned int query_value,
-              char *op,
               unsigned int *R,
               unsigned int num_records,
+              unsigned int range_start,
+              unsigned int range_end,
+              unsigned int range_exclude,
+              int x_is_set,
               int time,
-              int quiet)
+              int quiet,
+              char *bim)
 
 {
     return 0;
 }
 
 int sum_in_place_wahbm(char *in,
-                         unsigned int query_value,
-                         char *op,
                          unsigned int *R,
                          unsigned int num_records,
+                         unsigned int range_start,
+                         unsigned int range_end,
+                         unsigned int range_exclude,
+                         int x_is_set,
+                         int a_is_set,
                          int time,
-                         int quiet)
+                         int quiet,
+                         char *bim)
 
 {
     start();
@@ -345,22 +394,34 @@ int sum_in_place_wahbm(char *in,
     unsigned int *wf_R;
     unsigned int len_wf_R;
 
-    if (strcmp(op,"gt") == 0)
-        len_wf_R = gt_sum_records_in_place_wahbm(wf,
-                                                   R,
-                                                   num_records,
-                                                   query_value,
-                                                   &wf_R);
-    else 
-        return sum_help();
-
-    stop();
-
     if (time != 0 )
+        start();
+
+    if (a_is_set ==0)
+        len_wf_R = sum_range_records_in_place_wahbm(wf,
+                                                R,
+                                                num_records,
+                                                range_start,
+                                                range_end + 1,
+                                                &wf_R);
+#ifdef __AVX2__
+    else
+        len_wf_R = avx_sum_range_records_in_place_wahbm(wf,
+                                                R,
+                                                num_records,
+                                                range_start,
+                                                range_end + 1,
+                                                &wf_R);
+
+#endif
+
+    if (time != 0 ) {
+        stop();
         fprintf(stderr,"%lu\n", report());
+    }
 
     if (quiet == 0)
-        print_sum_result(wf_R, wf.num_fields);
+        print_sum_result(wf_R, wf.num_fields, bim);
 
     free(wf_R);
     fclose(wf.file);
@@ -370,12 +431,15 @@ int sum_in_place_wahbm(char *in,
 }
 
 int sum_compressed_in_place_wahbm(char *in,
-                                    unsigned int query_value,
-                                    char *op,
                                     unsigned int *R,
                                     unsigned int num_records,
+                                    unsigned int range_start,
+                                    unsigned int range_end,
+                                    unsigned int range_exclude,
+                                    int x_is_set,
                                     int time,
-                                    int quiet)
+                                    int quiet,
+                                    char *bim)
 
 {
 #if 0
@@ -399,7 +463,7 @@ int sum_compressed_in_place_wahbm(char *in,
         fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
-        print_sum_result(wf_R, wf.num_fields);
+        print_sum_result(wf_R, wf.num_fields, bim);
 
     free(wf_R);
     fclose(wf.file);
@@ -411,12 +475,15 @@ int sum_compressed_in_place_wahbm(char *in,
 }
 
 int sum_wahbm(char *in,
-                unsigned int query_value,
-                char *op,
                 unsigned int *R,
                 unsigned int num_records,
+                unsigned int range_start,
+                unsigned int range_end,
+                unsigned int range_exclude,
+                int x_is_set,
                 int time,
-                int quiet)
+                int quiet,
+                char *bim)
 
 {
 #if 0
@@ -440,7 +507,7 @@ int sum_wahbm(char *in,
         fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
-        print_sum_result(wf_R, wf.num_fields);
+        print_sum_result(wf_R, wf.num_fields, bim);
 
     free(wf_R);
     fclose(wf.file);
@@ -449,13 +516,30 @@ int sum_wahbm(char *in,
 }
 
 void print_sum_result(unsigned int *R,
-                        unsigned int num_fields)
+                        unsigned int num_fields,
+                        char *bim)
 {
-    unsigned int i;
-    for(i = 0; i < num_fields; ++i) {
-        if (i!= 0)
-            printf(" ");
-        printf("%u", R[i]);
-    }
-    printf("\n");
+	struct QuickFileInfo qFile;
+	struct OutputBuffer outBuf;
+	size_t i=0;
+	int numDigits = 0;
+	unsigned int copyVal = 0;
+
+	quickFileInit(bim, &qFile);
+
+	initOutBuf(&outBuf, NULL);
+
+
+	for(; i < num_fields; ++i) {
+		if (i != 0)
+			appendOutBuf(&outBuf, " ", 1);
+		appendOutBuf(&outBuf, qFile.lines[i], qFile.lineLens[i]);
+		appendOutBuf(&outBuf, " ", 1);
+		appendIntegerToOutBuf(&outBuf,  R[i]);
+
+	}
+	appendOutBuf(&outBuf, "\n", 1);
+	quickFileDelete(&qFile);
+	freeOutBuf(&outBuf);
+
 }

@@ -2,9 +2,11 @@
 #define __WAHBM_H__
 
 #include <stdint.h>
+#include <immintrin.h>
 #include "plt.h"
 #include "ubin.h"
 #include "wah.h"
+#include "pthread_pool.h"
 
 /**
  * @brief Open a WAH-encoded bitmap index and initialize the wah_file data
@@ -171,6 +173,24 @@ unsigned int add_wahbm(unsigned int *R,
                        unsigned int r_size,
                        unsigned int *wah,
                        unsigned int wah_size);
+
+#ifdef __AVX2__
+unsigned int avx_add_wahbm(unsigned int *R,
+                           unsigned int r_size,
+                           unsigned int *wah,
+                           unsigned int wah_size);
+#endif
+
+#ifdef __AVX2__
+void avx_add(unsigned int bits,
+             __m256i *s_1,
+             __m256i *s_2,
+             __m256i *s_3,
+             __m256i *s_4,
+             __m256i *m,
+             __m256i *R_avx,
+             unsigned int avx_i);
+#endif
 
 
 /**
@@ -349,6 +369,37 @@ unsigned int add_n_wahbm(unsigned int *R,
                        unsigned int r_size,
                        unsigned int *wah,
                        unsigned int wah_size);
+
+unsigned int p_pool_add_n_wahbm(unsigned int *R,
+                                unsigned int n,
+                                unsigned int r_size,
+                                unsigned int *wah,
+                                unsigned int wah_size,
+                                struct pool *t_pool);
+
+void *t_add_n_wahbm(void *arg);
+void *t_add_n_wahbm_2(void *arg);
+
+struct t_add_n_wahbm_args {
+    unsigned int bits, field_i, *R, r_size, n, num_words;
+};
+
+unsigned int avx_add_n_wahbm(unsigned int *R,
+                             unsigned int n,
+                             unsigned int r_size,
+                             unsigned int *wah,
+                             unsigned int wah_size);
+#ifdef __AVX2__
+void avx_add_n(unsigned int bits,
+             __m256i *s_1,
+             __m256i *s_2,
+             __m256i *s_3,
+             __m256i *s_4,
+             __m256i *m,
+             __m256i *N,
+             __m256i *R_avx,
+             unsigned int field_i);
+#endif
 
 ////////////END//////////////////////////////////////////////////////
 #endif

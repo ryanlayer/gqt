@@ -266,4 +266,12 @@ unsigned int gt_records_compressed_in_place_wahbm(struct wah_file wf,
                                        unsigned int test_value,
                                        unsigned int **R);
 
+unsigned int avx_sum_range_records_in_place_wahbm(
+            struct wah_file wf,
+            unsigned int *record_ids,
+            unsigned int num_r,
+            unsigned int start_test_value,
+            unsigned int end_test_value,
+            unsigned int **R);
+
 #endif

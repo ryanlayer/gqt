@@ -416,7 +416,7 @@ int convert_file_by_name_invert_plt_to_ubin(char *in_file_name,
     // put each line into a seperate file
     fseek(pf.file, pf.header_offset, SEEK_SET);
     for (i = 0; i < pf.num_records; ++i) {
-        fprintf(stderr, "I:%u\n", i);
+        //fprintf(stderr, "I:%u\n", i);
         read = getline(&line, &len, pf.file);
         two_bit_i = invert_plt_to_ubin(line,
                                        pf.num_fields,
@@ -436,7 +436,7 @@ int convert_file_by_name_invert_plt_to_ubin(char *in_file_name,
 
     unsigned int num_ints_per_record = 1 + (((n_num_fields) - 1) / 16);
     for (i = 0; i < n_num_records; ++i) {
-        fprintf(stderr, "O:%u\n", i);
+        //fprintf(stderr, "O:%u\n", i);
         fwrite(&(ubin[i][0]),
                sizeof(unsigned int),
                num_ints_per_record,
@@ -625,6 +625,55 @@ unsigned int range_records_plt(struct plt_file pf,
 }
 //}}}
 
+//{{{ unsigned int range_fields_plt(struct plt_file pf,
+unsigned int range_fields_plt(struct plt_file pf,
+                              unsigned int *field_ids,
+                              unsigned int num_f,
+                              unsigned int start_test_value,
+                              unsigned int end_test_value,
+                              unsigned int **R)
+{
+    char *line = NULL;
+    size_t len = 0;
+    char *pch;
+    ssize_t read;
+    unsigned int i,j,bit;
+
+    unsigned int num_ints_per_record = 1 + ((pf.num_records - 1) / 32);
+
+    *R = (unsigned int *) malloc(num_ints_per_record*sizeof(unsigned int));
+
+    for (i = 0; i < num_ints_per_record; ++i)
+        (*R)[i] = -1;
+
+    unsigned int int_i, bit_i;
+
+    long line_len = pf.num_fields*2*sizeof(char);
+
+    fseek(pf.file, pf.header_offset, SEEK_SET);
+
+    int_i = 0;
+    bit_i = 0;
+    for (i = 0; i < pf.num_records; ++i) {
+        read = getline(&line, &len, pf.file);
+        for (j = 0; j < num_f; ++j) {
+            unsigned int val = (unsigned int)line[field_ids[j]*2] - 48; 
+            if (!(val >= start_test_value && val < end_test_value))
+                (*R)[int_i] = (*R)[int_i] & ~(1 << (31 - bit_i));
+        }
+        bit_i += 1;
+        if (bit_i == 32) {
+            int_i += 1;
+            bit_i = 0;
+        }
+    }
+
+    free(line);
+
+    return num_ints_per_record;
+}
+//}}}
+
 //{{{ START eq, gt, ne, gte, lt, lte: records_plt
 //{{{ unsigned int eq_records_plt(struct plt_file pf,
 unsigned int eq_records_plt(struct plt_file pf,
@@ -715,6 +764,18 @@ unsigned int gt_records_plt(struct plt_file pf,
 {
     // TODO: need constants for upper bound.
     return range_records_plt(pf, record_ids, num_r, test_value+1, 4, R);
+}
+//}}}
+
+//{{{ unsigned int gt_fields_plt(struct plt_file pf,
+unsigned int gt_fields_plt(struct plt_file pf,
+                           unsigned int *field_ids,
+                           unsigned int num_f,
+                           unsigned int test_value,
+                           unsigned int **R)
+{
+    // TODO: need constants for upper bound.
+    return range_fields_plt(pf, field_ids, num_f, test_value+1, 4, R);
 }
 //}}}
 

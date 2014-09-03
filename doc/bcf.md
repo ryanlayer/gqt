@@ -49,3 +49,13 @@
         echo $p
         plink --file $p --make-bed --out $p
     done
+
+### Query file
+
+#### find variants where 1805 and 4805 are homo_alt
+bcftools view -Ou -s 1805,4805 trio.trim.vep.bcf | \
+    bcftools view -i 'FORMAT/GT"1/1"'
+
+
+    bcftools view -O b 10.1e4.var.vcf > 10.1e4.var.bcf
+    bcftools view -Ou -s I1,I2,I3,I4,I5 10.1e4.var.bcf 

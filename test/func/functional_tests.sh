@@ -151,6 +151,7 @@ cat plink.frq  \
 echo -en "\n" >> plink.out
 gtq sum ipwahbm \
     -i ../data/10.1e4.ind.wahbm \
+    -b ../data/10.1e4.ind.bim \
     -n 10 \
     -r 0,1,2,3,4,5,6,7,8,9 \
     -u 2 \

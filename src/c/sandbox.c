@@ -10,7 +10,22 @@
 #include "quick_file.h"
 #include "timer.h"
 
+
+int sandbox(int argc, char **argv)
+{
+
+	struct output_buffer outbuf;
+	init_out_buf(&outbuf, NULL);
+	append_out_buf(&outbuf, "Neil has ", 9);
+	append_integer_to_out_buf(&outbuf, 3112);
+	append_out_buf(&outbuf, " points.\n", 9);
+	append_out_buf(&outbuf, "beer.\n", 6);
+	free_out_buf(&outbuf);
+}
+
+/*
 void spit_back_file(char *inFile);
+
 
 int sandbox(int argc, char **argv)
 {
@@ -53,3 +68,5 @@ void spit_back_file(char *inFile) {
 	quick_file_delete(&qfile);
 	free_out_buf(&outbuf);
 }
+
+*/

@@ -13,6 +13,7 @@ int gt(int argc, char **argv);
 int sort(int argc, char **argv);
 int count(int argc, char **argv);
 int sum(int argc, char **argv);
+int sandbox(int argc, char **argv);
 
 int main(int argc, char **argv)
 {
@@ -26,6 +27,7 @@ int main(int argc, char **argv)
     else if (strcmp(cmd,"sort") == 0) return sort(argc-2, argv+2);
     else if (strcmp(cmd,"count") == 0) return count(argc-2, argv+2);
     else if (strcmp(cmd,"sum") == 0) return sum(argc-2, argv+2);
+    else if (strcmp(cmd,"sandbox") == 0) return sandbox(argc-2, argv+2);
     else {
         printf("Unknown command\n");
         return gtq_help(argc, argv);

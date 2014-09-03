@@ -6,7 +6,8 @@
 #include <ctype.h>
 #include "genotq.h"
 #include "timer.h"
-#include "quickFile.h"
+#include "quick_file.h"
+#include "output_buffer.h"
 
 int count_help();
 
@@ -250,7 +251,7 @@ int count(int argc, char **argv)
 int count_help()
 {
     printf("usage:   gtq count <type> -o <opperation> -i <input file> "
-           "-q <query value> -n <number of records> -r <record ids>\n"
+           "-q <query value> -n <number of records> -r <record ids> -b<bim file>\n"
            "op:\n"
            "        gt         Greater than\n"
            "        lt         Less than\n"
@@ -496,17 +497,27 @@ void print_count_result(unsigned int *R,
                         unsigned int num_fields,
                         char *bim)
 {
-    unsigned int i;
-    struct QuickFileInfo qFile;
+
+    struct quick_file_info qfile;
+    struct output_buffer out_buf;
+    size_t i=0;
 
     if (bim != NULL) {
-    	quickFileInit(bim, &qFile);
+    	quick_file_init(bim, &qfile);
     }
 
-    for(i = 0; i < num_fields; ++i) {
-        if (i!= 0)
-            printf(" ");
-        printf("%s %u", (bim != NULL ? qFile.lines[i] : ""), R[i]);
+    init_out_buf(&out_buf, NULL);
+
+
+    for(; i < num_fields; ++i) {
+        if (bim != NULL) {
+	    append_out_buf(&out_buf, qfile.lines[i], qfile.line_lens[i]);
+        }
+        append_out_buf(&out_buf, "\t", 1);
+        append_integer_to_out_buf(&out_buf,  R[i]);
+        append_out_buf(&out_buf, "\n", 1);
     }
-    printf("\n");
+    append_out_buf(&out_buf, "\n", 1);
+    quick_file_delete(&qfile);
+    free_out_buf(&out_buf);
 }

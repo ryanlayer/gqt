@@ -389,7 +389,7 @@ unsigned int avx_add_n_wahbm(unsigned int *R,
                              unsigned int r_size,
                              unsigned int *wah,
                              unsigned int wah_size);
-
+#ifdef __AVX2__
 void avx_add_n(unsigned int bits,
              __m256i *s_1,
              __m256i *s_2,
@@ -399,6 +399,7 @@ void avx_add_n(unsigned int bits,
              __m256i *N,
              __m256i *R_avx,
              unsigned int field_i);
+#endif
 
 ////////////END//////////////////////////////////////////////////////
 #endif

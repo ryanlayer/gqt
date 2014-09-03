@@ -5,6 +5,8 @@
 #include <ctype.h>
 #include "genotq.h"
 #include "timer.h"
+#include "quick_file.h"
+#include "output_buffer.h"
 
 int sum_help();
 
@@ -16,7 +18,8 @@ int sum_plt(char *in,
               unsigned int range_exclude,
               int x_is_set,
               int time,
-              int quiet);
+              int quiet,
+              char *bim);
 int sum_ubin(char *in,
                unsigned int *R,
                unsigned int num_records,
@@ -25,7 +28,8 @@ int sum_ubin(char *in,
                unsigned int range_exclude,
                int x_is_set,
                int time,
-               int quiet);
+               int quiet,
+               char *bim);
 int sum_wah(char *in,
               unsigned int *R,
               unsigned int num_records,
@@ -34,7 +38,8 @@ int sum_wah(char *in,
               unsigned int range_exclude,
               int x_is_set,
               int time,
-              int quiet);
+              int quiet,
+              char *bim);
 int sum_wahbm(char *in,
                 unsigned int *R,
                 unsigned int num_records,
@@ -43,7 +48,8 @@ int sum_wahbm(char *in,
                 unsigned int range_exclude,
                 int x_is_set,
                 int time,
-                int quiet);
+                int quiet,
+                char *bim);
 
 int sum_in_place_wahbm(char *in,
                          unsigned int *R,
@@ -54,7 +60,8 @@ int sum_in_place_wahbm(char *in,
                          int x_is_set,
                          int a_is_set,
                          int time,
-                         int quiet);
+                         int quiet,
+                         char *bim);
 
 int sum_compressed_in_place_wahbm(char *in,
                                     unsigned int *R,
@@ -64,11 +71,13 @@ int sum_compressed_in_place_wahbm(char *in,
                                     unsigned int range_exclude,
                                     int x_is_set,
                                     int time,
-                                    int quiet);
+                                    int quiet,
+                                    char *bim);
 
 
 void print_sum_result(unsigned int *R,
-                        unsigned int num_fields);
+                        unsigned int num_fields,
+                        char *bim);
 
 
 int sum(int argc, char **argv)
@@ -92,7 +101,7 @@ int sum(int argc, char **argv)
 
     uint32_t range_start = 0, range_end = 3, range_exclude = 0;
 
-    while ((c = getopt (argc, argv, "ahi:r:n:Qtu:l:e:x:")) != -1) {
+    while ((c = getopt (argc, argv, "ahi:r:n:b:Qtu:l:e:x:")) != -1) {
         switch (c) {
         case 'a':
             a_is_set = 1;
@@ -181,7 +190,8 @@ int sum(int argc, char **argv)
                          range_exclude,
                          x_is_set,
                          t_is_set,
-                         Q_is_set);
+                         Q_is_set,
+                         bim);
 
     else if (strcmp(type, "ubin") == 0)
         return sum_ubin(in,
@@ -192,7 +202,8 @@ int sum(int argc, char **argv)
                           range_exclude,
                           x_is_set,
                           t_is_set,
-                          Q_is_set);
+                          Q_is_set,
+                          bim);
 
     else if (strcmp(type, "wah") == 0)
         return sum_wah(in,
@@ -203,7 +214,8 @@ int sum(int argc, char **argv)
                          range_exclude,
                          x_is_set,
                          t_is_set,
-                         Q_is_set);
+                         Q_is_set,
+                         bim);
 
     else if (strcmp(type, "wahbm") == 0)
         return sum_wahbm(in,
@@ -214,7 +226,8 @@ int sum(int argc, char **argv)
                            range_exclude,
                            x_is_set,
                            t_is_set,
-                           Q_is_set);
+                           Q_is_set,
+                           bim);
 
     else if (strcmp(type, "ipwahbm") == 0)
         return sum_in_place_wahbm(in,
@@ -226,7 +239,8 @@ int sum(int argc, char **argv)
                                     x_is_set,
                                     a_is_set,
                                     t_is_set,
-                                    Q_is_set);
+                                    Q_is_set,
+                                    bim);
 
     else if (strcmp(type, "cipwahbm") == 0)
         return sum_compressed_in_place_wahbm(in,
@@ -237,7 +251,8 @@ int sum(int argc, char **argv)
                                              range_exclude,
                                              x_is_set,
                                              t_is_set,
-                                             Q_is_set);
+                                             Q_is_set,
+                                             bim);
 
 
     return 1;
@@ -250,6 +265,7 @@ int sum_help()
            "                        -r <record ids CSV>\n"
            "                        -l <inclusive lower bound>\n"
            "                        -u <inclusive upper bound>\n"
+           "                        -b <bim file>\n"
            "                        -x <exlcude>\n"
            "\ttypes:\n"
            "\t\tplt       Plain text \n"
@@ -271,7 +287,8 @@ int sum_plt(char *in,
               unsigned int range_exclude,
               int x_is_set,
               int time,
-              int quiet)
+              int quiet,
+              char *bim)
 {
 #if 0
     start();
@@ -294,7 +311,7 @@ int sum_plt(char *in,
         fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
-        print_sum_result(pf_R, pf.num_fields);
+        print_sum_result(pf_R, pf.num_fields, bim);
 
 
     free(pf_R);
@@ -311,7 +328,8 @@ int sum_ubin(char *in,
                unsigned int range_exclude,
                int x_is_set,
                int time,
-               int quiet)
+               int quiet,
+               char *bim)
 
 {
 #if 0
@@ -335,7 +353,7 @@ int sum_ubin(char *in,
         fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
-        print_sum_result(uf_R, uf.num_fields);
+        print_sum_result(uf_R, uf.num_fields, bim);
 
     free(uf_R);
     fclose(uf.file);
@@ -351,7 +369,8 @@ int sum_wah(char *in,
               unsigned int range_exclude,
               int x_is_set,
               int time,
-              int quiet)
+              int quiet,
+              char *bim)
 
 {
     return 0;
@@ -366,7 +385,8 @@ int sum_in_place_wahbm(char *in,
                          int x_is_set,
                          int a_is_set,
                          int time,
-                         int quiet)
+                         int quiet,
+                         char *bim)
 
 {
     start();
@@ -401,7 +421,7 @@ int sum_in_place_wahbm(char *in,
     }
 
     if (quiet == 0)
-        print_sum_result(wf_R, wf.num_fields);
+        print_sum_result(wf_R, wf.num_fields, bim);
 
     free(wf_R);
     fclose(wf.file);
@@ -418,7 +438,8 @@ int sum_compressed_in_place_wahbm(char *in,
                                     unsigned int range_exclude,
                                     int x_is_set,
                                     int time,
-                                    int quiet)
+                                    int quiet,
+                                    char *bim)
 
 {
 #if 0
@@ -442,7 +463,7 @@ int sum_compressed_in_place_wahbm(char *in,
         fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
-        print_sum_result(wf_R, wf.num_fields);
+        print_sum_result(wf_R, wf.num_fields, bim);
 
     free(wf_R);
     fclose(wf.file);
@@ -461,7 +482,8 @@ int sum_wahbm(char *in,
                 unsigned int range_exclude,
                 int x_is_set,
                 int time,
-                int quiet)
+                int quiet,
+                char *bim)
 
 {
 #if 0
@@ -485,7 +507,7 @@ int sum_wahbm(char *in,
         fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
-        print_sum_result(wf_R, wf.num_fields);
+        print_sum_result(wf_R, wf.num_fields, bim);
 
     free(wf_R);
     fclose(wf.file);
@@ -494,13 +516,31 @@ int sum_wahbm(char *in,
 }
 
 void print_sum_result(unsigned int *R,
-                        unsigned int num_fields)
+                        unsigned int num_fields,
+                        char *bim)
 {
-    unsigned int i;
-    for(i = 0; i < num_fields; ++i) {
-        if (i!= 0)
-            printf(" ");
-        printf("%u", R[i]);
+	struct quick_file_info qfile;
+	struct output_buffer out_buf;
+	size_t i=0;
+
+    if (bim != NULL) {
+    	quick_file_init(bim, &qfile);
     }
-    printf("\n");
+
+	init_out_buf(&out_buf, NULL);
+
+
+	for(; i < num_fields; ++i) {
+		if (bim != NULL) {
+			append_out_buf(&out_buf, qfile.lines[i], qfile.line_lens[i]);
+		}
+		append_out_buf(&out_buf, "\t", 1);
+		append_integer_to_out_buf(&out_buf,  R[i]);
+		append_out_buf(&out_buf, "\n", 1);
+	}
+	append_out_buf(&out_buf, "\n", 1);
+	quick_file_delete(&qfile);
+	free_out_buf(&out_buf);
+
+
 }

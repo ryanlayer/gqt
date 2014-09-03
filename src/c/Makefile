@@ -1,6 +1,6 @@
 BIN=../../bin
 OBJ=../../obj
-CFLAGS=-g
+#CFLAGS=-g
 CFLAGS=-O3
 #CFLAGS=-Wall -O0 -g -fno-inline -fkeep-inline-functions -D_FILE_OFFSET_BITS=64 -fPIC -DDEBUG -D_DEBUG
 #CFLAGS+=-mavx -mavx2
@@ -11,8 +11,8 @@ GRABIX_ROOT=~/src/grabix
 CC=gcc
 
 LIB= timer.o \
-	quickFile.o \
-	bufOut.o \
+	quick_file.o \
+	output_buffer.o \
     pthread_pool.o \
     genotq.o \
     convert.o \
@@ -57,8 +57,8 @@ $(BIN)/gt_records_grabix: $(OBJS) gt_records_grabix.cpp $(GRABIX_ROOT)/grabix.cp
 	g++ -c $(GRABIX_ROOT)/grabix.cpp -o $(OBJ)/grabix.o
 	gcc -c $(GRABIX_ROOT)/bgzf.c -o $(OBJ)/bgzf.o
 	g++ -g gt_records_grabix.cpp \
-		quickFile.c \
-		bufOut.c \
+		quick_file.c \
+		buf_out.c \
 		genotq.c \
 		wah.c \
 		wahbm.c \

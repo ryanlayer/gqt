@@ -6,10 +6,11 @@
  */
 
 #include <unistd.h>
-#include "bufOut.h"
-#include "quickFile.h"
+#include "output_buffer.h"
+#include "quick_file.h"
+#include "timer.h"
 
-void spitBackFile(char *inFile);
+void spit_back_file(char *inFile);
 
 int sandbox(int argc, char **argv)
 {
@@ -23,25 +24,32 @@ int sandbox(int argc, char **argv)
 	}
 
 	in = argv[1];
-	spitBackFile(in);
+	spit_back_file(in);
 	return 0;
 }
 
-void spitBackFile(char *inFile) {
+void spit_back_file(char *inFile) {
 
-	struct QuickFileInfo qFile;
-	struct OutputBuffer outBuf;
+	struct quick_file_info qfile;
+	struct output_buffer outbuf;
 	int i=0;
 
-	quickFileInit(inFile, &qFile);
+	start();
+	quick_file_init(inFile, &qfile);
+	stop();
+	fprintf(stderr, "READING AND PARSING THE FILE TOOK %lu MICROSECONDS.\n", report());
 
-	initOutBuf(&outBuf, NULL);
+	init_out_buf(&outbuf, NULL);
 
 
-	for(; i < qFile.numLines; ++i) {
-		appendOutBuf(&outBuf, qFile.lines[i], qFile.lineLens[i]);
-		appendOutBuf(&outBuf, "\n", 1);
+	start();
+	for(; i < qfile.num_lines; ++i) {
+		append_out_buf(&outbuf, qfile.lines[i], qfile.line_lens[i]);
+		append_out_buf(&outbuf, "\n", 1);
 	}
-	quickFileDelete(&qFile);
-	freeOutBuf(&outBuf);
+	stop();
+	fprintf(stderr, "PRINTING THE FILE TOOK %lu MICROSECONDS.\n", report());
+
+	quick_file_delete(&qfile);
+	free_out_buf(&outbuf);
 }

@@ -13,19 +13,19 @@
 /* This will read and store a newline delimited file as an array of char *'s,
  * with a corresponding array of line lengths. */
 
-struct QuickFileInfo {
-	char *mainBuf;
+struct quick_file_info {
+	char *main_buf;
 	char ** lines;
-	size_t *lineLens; /* store length of each line, because strlen is actually quite slow. */
-	size_t numLines;
-	size_t fileLen;
+	size_t *line_lens; /* store length of each line, because strlen is actually quite slow. */
+	size_t num_lines;
+	size_t file_len;
 };
 
 /* Just pass a file name and a pointer to the above struct into this method */
-void quickFileInit(char *filename, struct QuickFileInfo *qFile);
+void quick_file_init(char *filename, struct quick_file_info *qfile);
 
 /* Don't forget to pass the struct back to this method for memory clean-up */
-void quickFileDelete(struct QuickFileInfo *qFile);
+void quick_file_delete(struct quick_file_info *qfile);
 
 
 

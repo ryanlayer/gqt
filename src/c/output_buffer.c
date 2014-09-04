@@ -58,23 +58,31 @@ void append_integer_to_out_buf(struct output_buffer *out_buf, int data) {
 
 	int copy_val = data;
 	int num_chars = 0;
-	char digits[10];
-
+	char digits[16];
+	memset(digits, 0, 16);
+	int curr_pos = 0;
+	int isNeg = 0;
+	int maskVal = 0;
 	if (data < 0) {
 		/* Negative number. Include space for minus sign. */
 		copy_val = data * -1;
-		num_chars = 1;
-	}
+		isNeg = 1;	}
 	do {
-		num_chars++;
+		digits[14 - curr_pos] = copy_val - (copy_val / 10 * 10) + 48; /* 48 is ascii for zero */
+		curr_pos++;
 		copy_val /= 10;
 	}
 	while (copy_val > 0);
+	if (isNeg) {
+		digits[14 - curr_pos] = '-';
+		curr_pos++;
+	}
 
 
-	if (num_chars + out_buf->curr_pos >= output_buffer_main_buf_size * 3 / 4) {
+
+	if (curr_pos + out_buf->curr_pos >= output_buffer_main_buf_size ) {
 		flush_out_buf(out_buf);
 	}
-	sprintf(out_buf->main_buf + out_buf->curr_pos, "%u", data);
-	out_buf->curr_pos += num_chars;
+	memcpy(out_buf->main_buf + out_buf->curr_pos, digits + 15 - curr_pos, curr_pos);
+	out_buf->curr_pos += curr_pos;
 }

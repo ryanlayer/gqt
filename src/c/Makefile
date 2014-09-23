@@ -40,7 +40,6 @@ PROG=read_binary_uints \
 LIST=$(addprefix $(BIN)/, $(PROG))
 
 all: $(LIST)
-	# make the "obj/" and "bin/" directories, if they don't exist
 	@mkdir -p $(OBJ)
 	@mkdir -p $(BIN)
 
@@ -49,9 +48,6 @@ $(OBJ)/%.o: %.c
 
 $(BIN)/%: %.c $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ -lc -lm  -pthread
-clean:
-	rm -rf $(BIN)/*
-	rm -rf $(OBJ)/*
 
 $(BIN)/gt_records_grabix: $(OBJS) gt_records_grabix.cpp $(GRABIX_ROOT)/grabix.cpp
 	g++ -c $(GRABIX_ROOT)/grabix.cpp -o $(OBJ)/grabix.o

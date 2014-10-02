@@ -59,7 +59,7 @@ int view(int argc, char **argv)
 
 int view_help()
 {
-    printf("usage:   gtq view <type> -i <input file>\n"
+    printf("usage:   gqt view <type> -i <input file>\n"
            "         plt   Plain text\n"
            "         ubin  Uncompressed binary\n"
            "         wah   WAH-encoded uncompressed binary to WAH \n"

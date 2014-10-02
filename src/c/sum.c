@@ -260,7 +260,7 @@ int sum(int argc, char **argv)
 
 int sum_help()
 {
-    printf("usage:   gtq sum <type> -i <input file>\n"
+    printf("usage:   gqt sum <type> -i <input file>\n"
            "                        -n <number of records>\n"
            "                        -r <record ids CSV>\n"
            "                        -l <inclusive lower bound>\n"

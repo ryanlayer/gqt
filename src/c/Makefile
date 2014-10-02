@@ -34,7 +34,7 @@ OBJS=$(addprefix $(OBJ)/, $(LIB))
 
 
 PROG=read_binary_uints \
-	gtq 
+	gqt 
 
 
 LIST=$(addprefix $(BIN)/, $(PROG))

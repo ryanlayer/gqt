@@ -105,7 +105,7 @@ int convert(int argc, char **argv)
 
 int convert_help()
 {
-    printf("usage:   gtq covert <type> -i <input file> -o <output file>\n"
+    printf("usage:   gqt covert <type> -i <input file> -o <output file>\n"
            "         plt-invert        Switch records to fields\n"
            "         plt-invert-ubin   Switch records to fields\n"
            "         plt-ubin          Plain text to uncompress binary\n"

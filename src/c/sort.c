@@ -74,7 +74,7 @@ int sort(int argc, char **argv)
 
 int sort_help()
 {
-    printf("usage:   gtq sort <type> -i <input file> -o <output file>\n"
+    printf("usage:   gqt sort <type> -i <input file> -o <output file>\n"
            "         plt-field-freq     Sort a plain text file by field "
                                         "frequency\n"
     );

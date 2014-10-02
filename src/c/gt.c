@@ -236,7 +236,7 @@ int gt(int argc, char **argv)
 
 int gt_help()
 {
-    printf("usage:   gtq gt <type> -i <input file> -q <query value> "
+    printf("usage:   gqt gt <type> -i <input file> -q <query value> "
                 "-n <number of records> -r <record ids> -b <bim file>\n"
            "         plt       Plain text \n"
            "         ubin      Uncompressed binary\n"

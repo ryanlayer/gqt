@@ -250,7 +250,7 @@ int count(int argc, char **argv)
 
 int count_help()
 {
-    printf("usage:   gtq count <type> -o <opperation> -i <input file> "
+    printf("usage:   gqt count <type> -o <opperation> -i <input file> "
            "-q <query value> -n <number of records> -r <record ids> -b<bim file>\n"
            "op:\n"
            "        gt         Greater than\n"

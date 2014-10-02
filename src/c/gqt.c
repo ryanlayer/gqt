@@ -2,11 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PROGRAM_NAME  "gtq"
+#define PROGRAM_NAME  "gqt"
 #define VERSION "0.0.1"
 
 
-int gtq_help(int argc, char **argv);
+int gqt_help(int argc, char **argv);
 int convert(int argc, char **argv);
 int view(int argc, char **argv);
 int gt(int argc, char **argv);
@@ -17,7 +17,7 @@ int sandbox(int argc, char **argv);
 
 int main(int argc, char **argv)
 {
-    if (argc < 2) return gtq_help(argc, argv);
+    if (argc < 2) return gqt_help(argc, argv);
 
     char *cmd = argv[1];
 
@@ -30,11 +30,11 @@ int main(int argc, char **argv)
     else if (strcmp(cmd,"sandbox") == 0) return sandbox(argc-2, argv+2);
     else {
         printf("Unknown command\n");
-        return gtq_help(argc, argv);
+        return gqt_help(argc, argv);
     }
 }
 
-int gtq_help(int argc, char **argv)
+int gqt_help(int argc, char **argv)
 {
     printf("%s, v%s\n"
            "usage:   %s <command> [options]\n"

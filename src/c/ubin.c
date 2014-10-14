@@ -172,6 +172,75 @@ unsigned int convert_file_by_name_ubin_to_wahbm(char *ubin_in, char *wah_out)
 }
 //}}}
 
+//{{{ unsigned int convert_hdf5_ind_ubin_to_ind_wah(struct hdf5_file hdf5_f,
+unsigned int convert_hdf5_ind_ubin_to_ind_wah(struct hdf5_file hdf5_f,
+                                              char *wah_out)
+{
+    FILE *wf = fopen(wah_out,"wb");
+
+    if (!wf) {
+        printf("Unable to open %s\n", wah_out);
+        return 1;
+    }
+
+    //struct ubin_file uf = init_ubin_file(ubin_in);
+
+    //write header for WAH bitmap index file
+    fwrite(&(hdf5_f.num_vars), sizeof(int), 1, wf);
+    fwrite(&(hdf5_f.num_inds), sizeof(int), 1, wf);
+    int zero = 0;
+    int k;
+    for (k = 0; k < hdf5_f.num_inds*4; ++k)
+        fwrite(&zero, sizeof(int), 1, wf);
+
+    int num_ints_per_record = 1 + ((hdf5_f.num_vars - 1) / 16);
+    int num_bytes_per_record = num_ints_per_record * 4;
+
+    unsigned int *c = (unsigned int *)
+        malloc(num_ints_per_record*sizeof(unsigned int));
+
+    int i,j,wah_i = 0, offset_total  = 0;
+
+    // skip to the target record and read in the full record
+    //fseek(uf.file, uf.header_offset, SEEK_SET);
+
+    for (i = 0; i < hdf5_f.num_inds; ++i) {
+        //fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
+        int r = read_hdf5_r_gt(hdf5_f, i, c);
+         
+        unsigned int *wah;
+        unsigned int *wah_sizes;
+        unsigned int wah_len = ubin_to_bitmap_wah(c,
+                                                  num_ints_per_record,
+                                                  hdf5_f.num_vars,
+                                                  &wah,
+                                                  &wah_sizes);
+
+        fseek(wf,sizeof(unsigned int)* (2+4* wah_i),  SEEK_SET);
+        for (j = 0; j < 4; ++j) {
+            offset_total += wah_sizes[j];
+            fwrite(&offset_total, sizeof(unsigned int), 1, wf);
+            //fprintf(stderr,"%u\t%u\n", wah_sizes[j], offset_total);
+        }
+
+        fseek(wf,0,SEEK_END);
+        size_t ret = fwrite(wah, sizeof(unsigned int), wah_len, wf);
+        if (ret != wah_len)
+            fprintf(stderr, "ret:%zu != wah_len:%u\n", ret, wah_len);
+
+        wah_i+=1;
+        free(wah);
+        free(wah_sizes);
+    }
+
+    free(c);
+
+    fclose(wf);
+    //fclose(uf.file);
+    return 0;
+}
+//}}}
+
 //{{{ unsigned int convert_file_by_name_ubin_to_wah(char *ubin_in,
 unsigned int convert_file_by_name_ubin_to_wah(char *ubin_in, char *wah_out)
 {

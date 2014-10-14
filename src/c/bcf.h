@@ -31,4 +31,14 @@ uint32_t pack_sum_count_prefix_bcf_line(struct bcf_file bcf_f,
 
 uint32_t md_bcf_line(struct bcf_file bcf_f,
                      char **md);
+
+void push_bcf_gt_md(pri_queue *q,
+                    struct bcf_file *bcf_f,
+                    struct hdf5_file *hdf5_f);
+
+int convert_file_by_name_bcf_to_wahbm_bim(char *in,
+                                          uint32_t num_fields,
+                                          uint32_t num_records,
+                                          char *wah_out,
+                                          char *bim_out);
 #endif

@@ -6,6 +6,11 @@
 #include "genotq.h"
 
 int convert_help();
+int bcf_wahbm(char *in,
+              char *wah_out,
+              char *bim_out,
+              unsigned int num_fields,
+              unsigned int num_records);
 int plt_ubin(char *in, char *out);
 int plt_vcf(char *in, char *out);
 int ubin_plt(char *in, char *out);
@@ -24,15 +29,20 @@ int convert(int argc, char **argv)
     if (argc < 2) return convert_help();
 
     int c;
-    char *in, *out;
+    char *in, *out, *bim;
     unsigned int num_fields, num_records;
     int i_is_set = 0, 
         o_is_set = 0, 
         f_is_set = 0, 
+        b_is_set = 0, 
         r_is_set = 0; 
 
-    while ((c = getopt (argc, argv, "hi:o:f:r:")) != -1) {
+    while((c = getopt (argc, argv, "hi:o:f:r:b:")) != -1) {
         switch (c) {
+            case 'b':
+                b_is_set = 1;
+                bim = optarg;
+                break;
             case 'i':
                 i_is_set = 1;
                 in = optarg;
@@ -91,6 +101,23 @@ int convert(int argc, char **argv)
 
         return vcf_plt(in, out, num_fields, num_records);
     } 
+    if (strcmp(type, "bcf-wahbm") == 0) {
+        if (f_is_set == 0) {
+            printf("Number of fields is not set\n");
+            return convert_help();
+        }
+        if (r_is_set == 0) {
+            printf("Number of records is not set\n");
+            return convert_help();
+        }
+        if (b_is_set == 0) {
+            printf("Bim file is not set\n");
+            return convert_help();
+        }
+
+        return bcf_wahbm(in, out, bim, num_fields, num_records);
+    } 
+
     if (strcmp(type, "plt-ubin") == 0)  return plt_ubin(in, out);
     if (strcmp(type, "plt-vcf") == 0)  return plt_vcf(in, out);
     if (strcmp(type, "plt-invert") == 0)  return plt_invert(in, out);
@@ -110,15 +137,19 @@ int convert_help()
            "         plt-invert-ubin   Switch records to fields\n"
            "         plt-ubin          Plain text to uncompress binary\n"
            "         plt-vcf           Plain text to VCF\n"
+           "         ubin-plt          Uncompressed binary to plain text\n"
            "         ubin-wahbm        Uncompressed binary to WAH bitmap\n"
            "         ubin-wahbm16      Uncompressed binary to 16-bit WAH "
                                        "bitmap\n"
            "         ubin-wah          Uncompressed binary to WAH \n"
            "         vcf-plt           VCF to by-variant plain text\n"
+           "         bcf-wahbm         BCF to by-individual sorted WAH bitmap\n"
+           "         -b                BIM output file name"
+                                       "(required for bcf-wahbm)\n"
            "         -r                Number of records "
-                                       "(required for vcf-plt)\n"
+                                       "(required for vcf-plt and bcf-wahbm)\n"
            "         -f                Number of fields "
-                                       "(required for vcf-plt)\n"
+                                       "(required for vcf-plt and bcf-wahbm)\n"
     );
 
     return 0;
@@ -171,4 +202,17 @@ int vcf_plt(char *in,
             unsigned int num_records)
 {
     return convert_file_by_name_vcf_to_plt(in, num_fields, num_records, out);
+}
+
+int bcf_wahbm(char *in,
+              char *wah_out,
+              char *bim_out,
+              unsigned int num_fields,
+              unsigned int num_records)
+{
+    return convert_file_by_name_bcf_to_wahbm_bim(in,
+                                                 num_fields,
+                                                 num_records,
+                                                 wah_out,
+                                                 bim_out);
 }

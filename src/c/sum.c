@@ -84,6 +84,12 @@ int sum(int argc, char **argv)
 {
     if (argc < 2) return sum_help();
 
+    int avx_is_on = 0;
+
+#ifdef __AVX2__
+    avx_is_on = 1;
+#endif
+
     int c;
     char *in, *out, *record_ids, *op, *bim;
     unsigned int num_records;
@@ -180,6 +186,11 @@ int sum(int argc, char **argv)
 
     unsigned int R[num_records];
     parse_cmd_line_int_csv(R, num_records, record_ids);
+
+    if ((a_is_set == 1) && (avx_is_on == 0 )) {
+        printf("AVX support not included at compile time\n");
+        return sum_help();
+    }
 
     if (strcmp(type, "plt") == 0)
         return sum_plt(in,
@@ -519,28 +530,26 @@ void print_sum_result(unsigned int *R,
                         unsigned int num_fields,
                         char *bim)
 {
-	struct quick_file_info qfile;
-	struct output_buffer out_buf;
-	size_t i=0;
+    struct quick_file_info qfile;
+    struct output_buffer out_buf;
+    size_t i=0;
 
     if (bim != NULL) {
-    	quick_file_init(bim, &qfile);
+        quick_file_init(bim, &qfile);
     }
 
-	init_out_buf(&out_buf, NULL);
+    init_out_buf(&out_buf, NULL);
 
 
-	for(; i < num_fields; ++i) {
-		if (bim != NULL) {
-			append_out_buf(&out_buf, qfile.lines[i], qfile.line_lens[i]);
-		}
-		append_out_buf(&out_buf, "\t", 1);
-		append_integer_to_out_buf(&out_buf,  R[i]);
-		append_out_buf(&out_buf, "\n", 1);
-	}
-	append_out_buf(&out_buf, "\n", 1);
-	quick_file_delete(&qfile);
-	free_out_buf(&out_buf);
-
-
+    for(; i < num_fields; ++i) {
+        if (bim != NULL) {
+            append_out_buf(&out_buf, qfile.lines[i], qfile.line_lens[i]);
+        }
+        append_out_buf(&out_buf, "\t", 1);
+        append_integer_to_out_buf(&out_buf,  R[i]);
+        append_out_buf(&out_buf, "\n", 1);
+    }
+    append_out_buf(&out_buf, "\n", 1);
+    quick_file_delete(&qfile);
+    free_out_buf(&out_buf);
 }

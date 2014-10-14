@@ -92,10 +92,10 @@ int gt(int argc, char **argv)
 
     while ((c = getopt (argc, argv, "hi:q:r:n:b:fQt")) != -1) {
         switch (c) {
-			case 'b':
-				b_is_set = 1;
-				bim = optarg;
-				break;
+            case 'b':
+                b_is_set = 1;
+                bim = optarg;
+                break;
             case 'r':
                 r_is_set = 1;
                 record_ids= optarg;
@@ -157,6 +157,11 @@ int gt(int argc, char **argv)
 
     if (r_is_set == 0) {
         printf("Record IDs are not set\n");
+        return gt_help();
+    } 
+
+    if (n_is_set == 0) {
+        printf("Bim file not set\n");
         return gt_help();
     } 
 

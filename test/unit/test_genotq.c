@@ -4904,10 +4904,13 @@ void test_bcf_read(void)
 void test_hdf5(void)
 {
     uint32_t num_vars = 43;
+    uint32_t num_inds = 10;
     char *hdf5_file_name = "../data/10.1e4.var.h5";
-    struct hdf5_file hdf5_f = init_hdf5_file(hdf5_file_name, num_vars);
+    struct hdf5_file hdf5_f = init_hdf5_file(hdf5_file_name,
+                                             num_vars,
+                                             num_inds);
 
-    uint32_t num_ints = 1 + ((num_vars - 1) / 32);
+    uint32_t num_ints = 1 + ((num_inds - 1) / 32);
 
     uint32_t in[3][num_ints], out[3][num_ints];
 
@@ -4938,6 +4941,7 @@ void test_hdf5(void)
     read_hdf5_gt(hdf5_f, 0, out[0]);
     read_hdf5_gt(hdf5_f, 1, out[1]);
     read_hdf5_gt(hdf5_f, 2, out[2]);
+
 
     for (i = 0; i < num_ints; ++i) {
         TEST_ASSERT_EQUAL(in[0][i], out[0][i]);
@@ -4974,12 +4978,13 @@ void test_pack_sum_count_prefix_bcf_line(void)
                                                    &sum,
                                                    &prefix_len);
 
-    free(packed_ints);
 
     TEST_ASSERT_EQUAL(1, packed_ints_len);
     TEST_ASSERT_EQUAL(2420379648, packed_ints[0]);
     TEST_ASSERT_EQUAL(6, sum);
     TEST_ASSERT_EQUAL(0, prefix_len);
+
+    free(packed_ints);
 
     r = read_unpack_next_bcf_line(&bcf_f,
                                   &num_samples,
@@ -5033,6 +5038,7 @@ void test_md_bcf_line(void)
 }
 //}}}
 
+//{{{void test_pq(void)
 void test_pq(void)
 {
 
@@ -5068,10 +5074,182 @@ void test_pq(void)
 
     priority p;
 
+    uint32_t A[5] = {5, 1, 4, 3, 2};
+    uint32_t a_i = 0;
+
     while ( priq_top(q, &p) != NULL ) {
         int *d = priq_pop(q, &p);
-        printf("%d\n", *d);
+        TEST_ASSERT_EQUAL(A[a_i], *d);
+        a_i += 1;
+    }
+}
+//}}}
+
+
+void test_rotate_sort_bcf_to_wahbm(void)
+{
+    uint32_t num_vars = 43;
+    uint32_t num_inds = 10;
+
+    char *hdf5_file_name = "../data/10.1e4.var.h5";
+    struct hdf5_file hdf5_f = init_hdf5_file(hdf5_file_name,
+                                             num_vars,
+                                             num_inds);
+
+    char *bcf_file_name = "../data/10.1e4.var.bcf";
+    struct bcf_file bcf_f = init_bcf_file(bcf_file_name);
+
+    pri_queue q = priq_new(0);
+
+    push_bcf_gt_md(&q, &bcf_f, &hdf5_f);
+
+    uint32_t *gt = (uint32_t *) malloc(hdf5_f.num_gt_ints*sizeof(uint32_t));
+    int r = read_hdf5_gt(hdf5_f, 3, gt);
+
+    char *md_out;
+    read_hdf5_md(hdf5_f, 0, &md_out);
+
+    //1 4   V4  A   T   100 PASS    N=A GT  
+    //0|1 0|0 0|0 0|0 0|1 0|0 0|0 0|0 0|0 0|0 
+    //1 0 0 0 1 0 0 0 0 0
+    //01000000010000000000000000000000 -> 1077936128
+    
+    TEST_ASSERT_EQUAL(1077936128, gt[0]);
+    //TEST_ASSERT_EQUAL(0, strcmp("1\t4\tV4\tA\tT", md_out));
+
+
+    sort_rotate_gt_md(&q, &hdf5_f, "tmp.bim");
+
+    /*01000001010101010101000001010101 -> 1096110165
+     *01010101010000000001010101101000 -> 1430263144
+     *00000000000000000001010000000000 -> 5120
+     *                      |--------|
+     */
+
+    free(gt);
+    gt = (uint32_t *) malloc(hdf5_f.num_r_gt_ints*sizeof(uint32_t));
+    r = read_hdf5_r_gt(hdf5_f, 0, gt);
+
+    TEST_ASSERT_EQUAL(1096110165, gt[0]);
+    TEST_ASSERT_EQUAL(1430263144, gt[1]);
+    TEST_ASSERT_EQUAL(5120, gt[2]);
+
+
+    uint32_t A_0[10] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    uint32_t A_5[10] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+    uint32_t i;
+
+    for  (i = 0; i < num_inds; ++i){
+        r = read_hdf5_r_gt(hdf5_f, i, gt);
+        TEST_ASSERT_EQUAL(A_0[i], gt[0] >> 30);
+        TEST_ASSERT_EQUAL(A_5[i], (gt[0] >> (30-5*2))&3);
     }
 
+    r = convert_hdf5_ind_ubin_to_ind_wah(hdf5_f, "tmp.hdf5.wah");
 
+    struct wah_file wf = init_wahbm_file("tmp.hdf5.wah");
+
+
+    TEST_ASSERT_EQUAL(num_inds,wf.num_records);
+    TEST_ASSERT_EQUAL(num_vars,wf.num_fields);
+
+    unsigned int test_record, test_bitmap;
+    unsigned int *ints, num_ints;
+    unsigned int *wah_bms[4], wah_sizes[4];
+    unsigned int *wah_ints[4], wah_num_ints[4];
+    unsigned int two_bit, bit, ubin_int_i, ubin_bit_i,
+                 wah_int_i, wah_bit_i, field_i;
+
+    for (test_record = 0; test_record < 8; ++test_record) {
+        field_i = 0;
+        //num_ints = get_ubin_record(uf, test_record, &ints);
+        r = read_hdf5_r_gt(hdf5_f, test_record, gt);
+        num_ints = hdf5_f.num_r_gt_ints;
+        for (test_bitmap = 0; test_bitmap < 4; ++test_bitmap) {
+            wah_sizes[test_bitmap] = get_wah_bitmap(wf,
+                                                    test_record,
+                                                    test_bitmap,
+                                                    &(wah_bms[test_bitmap]));
+            wah_num_ints[test_bitmap] = wah_to_ints(wah_bms[test_bitmap],
+                                                    wah_sizes[test_bitmap],
+                                                    &(wah_ints[test_bitmap]));
+        }
+
+        wah_int_i = 0;
+        wah_bit_i = 0;
+
+        for (ubin_int_i = 0; ubin_int_i < num_ints; ++ubin_int_i) {
+            for (ubin_bit_i = 0; ubin_bit_i < 16; ++ubin_bit_i) {
+                two_bit = (gt[ubin_int_i] >> (30-(ubin_bit_i*2))) & 3;
+
+                for (test_bitmap = 0; test_bitmap < 4; ++test_bitmap) {
+                    bit = (wah_ints[test_bitmap][wah_int_i] >> 
+                            (31-wah_bit_i)) & 1;
+
+                    if (test_bitmap == two_bit)
+                        TEST_ASSERT_EQUAL(1,bit);
+                    else
+                        TEST_ASSERT_EQUAL(0,bit);
+                }
+
+                wah_bit_i += 1;
+
+                if (wah_bit_i == 32) {
+                    wah_int_i += 1;
+                    wah_bit_i = 0;
+                }
+
+
+                field_i += 1;
+                if (field_i == wf.num_fields)
+                    break;
+            }
+            if (field_i == wf.num_fields)
+                break;
+        }
+        for (test_bitmap = 0; test_bitmap < 4; ++test_bitmap)
+            free(wah_bms[test_bitmap]);
+    }
+
+    fclose(wf.file);
+    free(wf.record_offsets);
+
+    close_hdf5_file(hdf5_f);
+    remove(hdf5_file_name);
 }
+
+//{{{void test_append_hdf5_array(void)
+void test_append_hdf5_array(void)
+{
+    uint32_t num_vars = 43;
+    uint32_t num_inds = 10;
+
+    char *hdf5_file_name = "../data/10.1e4.var.h5";
+    struct hdf5_file hdf5_f = init_hdf5_file(hdf5_file_name,
+                                             num_vars,
+                                             num_inds);
+
+
+    int r = init_r_gt(hdf5_f);
+
+    uint32_t I[5] = {rand(), rand(), rand(), rand(), rand()};
+    uint32_t C[5] = {rand()%2, rand()%2, rand()%2, rand()%2, rand()%2};
+
+    set_r_gt(hdf5_f, 1, C[0], I[0]);
+    set_r_gt(hdf5_f, 2, C[1], I[1]);
+    set_r_gt(hdf5_f, 3, C[2], I[2]);
+    set_r_gt(hdf5_f, 4, C[3], I[3]);
+    set_r_gt(hdf5_f, 5, C[4], I[4]);
+
+    uint32_t *r_gt_out =
+        (uint32_t *)malloc(hdf5_f.num_r_gt_ints * sizeof(uint32_t));
+
+    uint32_t i;
+
+    for (i = 0; i < 5; ++i) {
+        read_hdf5_r_gt(hdf5_f, i+1, r_gt_out);
+        TEST_ASSERT_EQUAL(I[i], r_gt_out[C[i]]);
+    }
+    close_hdf5_file(hdf5_f);
+}
+//}}}

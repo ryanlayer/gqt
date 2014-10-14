@@ -4,6 +4,7 @@
 #include "genotq.h"
 
 // From http://www.hackersdelight.org/hdcodetxt/nlz.c.txt
+//{{{int nlz1(unsigned x)
 int nlz1(unsigned x)
 {
     int n;
@@ -17,7 +18,9 @@ int nlz1(unsigned x)
     if (x <= 0x7FFFFFFF) {n = n + 1;}
     return n;
 }
+//}}}
 
+//{{{struct bcf_file init_bcf_file(char *file_name)
 struct bcf_file init_bcf_file(char *file_name)
 {
     struct bcf_file bcf_f;
@@ -30,8 +33,9 @@ struct bcf_file init_bcf_file(char *file_name)
 
     return bcf_f;
 }
+//}}}
 
-
+//{{{int read_unpack_next_bcf_line(struct bcf_file *bcf_f,
 int read_unpack_next_bcf_line(struct bcf_file *bcf_f,
                               int *num_samples,
                               int *num_gts_per_sample)
@@ -52,7 +56,9 @@ int read_unpack_next_bcf_line(struct bcf_file *bcf_f,
 
     return r;
 }
+//}}}
 
+//{{{uint32_t pack_sum_count_prefix_bcf_line(struct bcf_file bcf_f,
 uint32_t pack_sum_count_prefix_bcf_line(struct bcf_file bcf_f,
                                         uint32_t num_samples,
                                         uint32_t num_gts_per_sample,
@@ -98,7 +104,9 @@ uint32_t pack_sum_count_prefix_bcf_line(struct bcf_file bcf_f,
 
     return num_ints;
 }
+//}}}
 
+//{{{uint32_t md_bcf_line(struct bcf_file bcf_f,
 uint32_t md_bcf_line(struct bcf_file bcf_f,
                      char **md)
 {
@@ -119,4 +127,76 @@ uint32_t md_bcf_line(struct bcf_file bcf_f,
             bcf_f.line->d.allele[1]);
 
     return len;
+}
+//}}}}
+
+//{{{ void push_bcf_gt_md(pri_queue *q,
+void push_bcf_gt_md(pri_queue *q,
+                    struct bcf_file *bcf_f,
+                    struct hdf5_file *hdf5_f)
+{
+    int num_samples, num_gts_per_sample;
+    uint32_t *packed_ints;
+    uint32_t sum, prefix_len, packed_ints_len;
+    int r;
+    char *md;
+    uint32_t md_len;
+
+    int i,j;
+
+    priority p;
+
+    for (i = 0; i < hdf5_f->num_vars; ++i) {
+
+        r = read_unpack_next_bcf_line(bcf_f,
+                                      &num_samples,
+                                      &num_gts_per_sample);
+
+        packed_ints_len = pack_sum_count_prefix_bcf_line(*bcf_f,
+                                                         num_samples,
+                                                         num_gts_per_sample,
+                                                         &packed_ints,
+                                                         &sum,
+                                                         &prefix_len);
+        md_len = md_bcf_line(*bcf_f, &md);
+
+        write_hdf5_gt(*hdf5_f, i, packed_ints, md);
+
+        p.sum = sum;
+        p.len = prefix_len;
+        int *j = (int *) malloc (sizeof(int));
+        j[0] = i;
+        priq_push(*q, j, p);
+
+        free(packed_ints);
+        free(md);
+    }
+}
+//}}}
+
+int convert_file_by_name_bcf_to_wahbm_bim(char *in,
+                                          uint32_t num_fields,
+                                          uint32_t num_records,
+                                          char *wah_out,
+                                          char *bim_out)
+{
+
+    struct hdf5_file hdf5_f = init_hdf5_file(".tmp.h5",
+                                             num_records, //num_vars,
+                                             num_fields); //num_inds);
+
+    struct bcf_file bcf_f = init_bcf_file(in);
+
+    pri_queue q = priq_new(0);
+
+    push_bcf_gt_md(&q, &bcf_f, &hdf5_f);
+
+    sort_rotate_gt_md(&q, &hdf5_f, bim_out);
+
+    int r = convert_hdf5_ind_ubin_to_ind_wah(hdf5_f, wah_out);
+
+    close_hdf5_file(hdf5_f);
+    remove(".tmp.h5");
+
+    return r;
 }

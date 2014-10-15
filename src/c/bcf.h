@@ -18,6 +18,8 @@ int nlz1(unsigned x);
 
 struct bcf_file init_bcf_file(char *file_name);
 
+void close_bcf_file(struct bcf_file *bcf_f);
+
 int read_unpack_next_bcf_line(struct bcf_file *bcf_f,
                               int *num_samples,
                               int *num_gts_per_sample);

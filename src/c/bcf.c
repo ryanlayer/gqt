@@ -195,8 +195,23 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 
     int r = convert_hdf5_ind_ubin_to_ind_wah(hdf5_f, wah_out);
 
+    priq_free(q);
     close_hdf5_file(hdf5_f);
+    close_bcf_file(&bcf_f);
     remove(".tmp.h5");
 
     return r;
+}
+
+
+void close_bcf_file(struct bcf_file *bcf_f)
+{
+    //htsFile *fp;
+    //bcf_hdr_t *hdr;
+    //bcf1_t *line;
+    //unsigned int num_records;
+    //int32_t *gt;
+    bcf_hdr_destroy(bcf_f->hdr);
+    bcf_destroy1(bcf_f->line);
+    hts_close(bcf_f->fp);
 }

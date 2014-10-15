@@ -148,6 +148,8 @@ int read_hdf5_gt(struct hdf5_file hdf5_f, uint32_t id, uint32_t *gt)
                                 name,
                                 H5P_DEFAULT);
 
+    // HERE
+
     int status = H5Dread(dataset_id,
                          H5T_NATIVE_INT,
                          H5S_ALL,
@@ -168,6 +170,7 @@ int read_hdf5_r_gt(struct hdf5_file hdf5_f, uint32_t id, uint32_t *r_gt)
                                 name,
                                 H5P_DEFAULT);
 
+    // HERE
     int status = H5Dread(dataset_id,
                          H5T_NATIVE_INT,
                          H5S_ALL,
@@ -194,18 +197,20 @@ int read_hdf5_md(struct hdf5_file hdf5_f, uint32_t id, char **md)
     /* Create a data type to refer to. */
     //hid_t datatype = H5Tcopy (H5T_C_S1);
     
-    char *out[0];
+    //char *out[0];
 
     int status = H5Dread(dataset_id,
                          datatype,
                          H5S_ALL,
                          H5S_ALL,
                          H5P_DEFAULT,
-                         out);
+                         md);
 
-    *md = (char *) malloc(strlen(out[0]) * sizeof(char));
-    strcpy(*md, out[0]);
-    free(out[0]);
+    assert(status >= 0);
+
+    //*md = (char *) malloc(strlen(out[0]) * sizeof(char));
+    //strcpy(*md, out[0]);
+    //free(out[0]);
 
     status = H5Dclose (dataset_id);
     status = H5Tclose (datatype);
@@ -226,11 +231,11 @@ int close_hdf5_file(struct hdf5_file hdf5_f)
 }
 //}}}
 
-//{{{int 
+//{{{ int init_r_gt(struct hdf5_file hdf5_f)
 int init_r_gt(struct hdf5_file hdf5_f)
 {
     uint32_t *r_gt = (uint32_t *) 
-        malloc(hdf5_f.num_r_gt_ints * sizeof(uint32_t));
+        calloc(hdf5_f.num_r_gt_ints,sizeof(uint32_t));
 
     uint32_t i;
     char r_gt_name[11];

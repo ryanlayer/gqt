@@ -66,8 +66,9 @@ uint32_t pack_sum_count_prefix_bcf_line(struct bcf_file bcf_f,
                                         uint32_t *sum,
                                         uint32_t *prefix_len)
 {
-    uint32_t num_ints = 1 + ((num_samples - 1) / 32);
+    uint32_t num_ints = 1 + ((num_samples - 1) / 16);
     *packed_ints = calloc(num_ints, sizeof(uint32_t));
+    //fprintf(stderr, "pack_sum_count_prefix_bcf_line\tnum_ints:%u\n",num_ints); 
     int32_t *gt_i = bcf_f.gt;
 
     uint32_t two_bit_i = 0, int_i = 0;
@@ -81,6 +82,7 @@ uint32_t pack_sum_count_prefix_bcf_line(struct bcf_file bcf_f,
             gt += bcf_gt_allele(gt_i[j]);
         }
 
+        //fprintf(stderr, "pack_sum_count_prefix_bcf_line\tint_i:%u\n",int_i); 
         (*packed_ints)[int_i] += gt << (30 - 2*two_bit_i);
         two_bit_i += 1;
         if (two_bit_i == 16) {

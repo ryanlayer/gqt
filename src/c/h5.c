@@ -281,7 +281,9 @@ int set_r_gt(struct hdf5_file hdf5_f,
     char r_gt_name[11];
     sprintf(r_gt_name, "r%u", r_gt_i);
 
+
     hid_t dataset = H5Dopen(hdf5_f.file_id, r_gt_name, H5P_DEFAULT);
+    assert(dataset >= 0);
     hid_t dataspace = H5Dget_space (dataset); 
 
 
@@ -303,6 +305,11 @@ int set_r_gt(struct hdf5_file hdf5_f,
                        dataspace,
                        H5P_DEFAULT,
                        o);
+    assert(status >= 0);
+
+    H5Dclose (dataset);
+    H5Sclose (dataspace);
+    H5Sclose (memspace);
 
     return status;
 }
@@ -331,7 +338,6 @@ void sort_rotate_gt_md(pri_queue *q,
 
     while ( priq_top(*q, &p) != NULL ) {
         int *d = priq_pop(*q, &p);
-
         read_hdf5_md(*hdf5_f, *d, &md_out);
         fprintf(f, "%s\n", md_out);
         free(md_out);
@@ -346,6 +352,7 @@ void sort_rotate_gt_md(pri_queue *q,
         //printf("\n");
 
         two_bit_i += 1;
+
         if (two_bit_i == 16) {
             for (i = 0; i < hdf5_f->num_inds; ++i) {
                 set_r_gt(*hdf5_f, i, int_i, gt_buff[i]);
@@ -357,6 +364,7 @@ void sort_rotate_gt_md(pri_queue *q,
         }
 
     }
+    
 
     if (two_bit_i > 0) {
         for (i = 0; i < hdf5_f->num_inds; ++i) {

@@ -123,5 +123,3 @@ If you have compiled in AVX2 support (uncomment line 7 of the Makefile in gqt/sr
             -i 1kg.chr22.bcf.wahbm \
             -n 100 \
             -r $Q
-
-

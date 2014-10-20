@@ -67,7 +67,8 @@ not yet had time to focus on optimizing or parallelizing this conversion.  If
 you are impatient, we have posted all of the converted files described above on
 our lab [website](http://quinlanlab.cs.virginia.edu/gqt-example/).
 
-*Step 1*. Download the Phase 1 1000 genomes chr22 file
+*Step 1*. Download the Phase 1 1000 genomes chr22 file.
+
 	$ wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20110521/ALL.chr22.phase1_release_v3.20101123.snps_indels_svs.genotypes.vcf.gz
 
 *Step 2*. Use the new (and very nice) version of [bcftools](http://samtools.github.io/bcftools/) to convert the file VCF to BCF.

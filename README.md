@@ -1,11 +1,13 @@
+Overview
+========
 Genome Query Tools (GQT) is a tool and C API for storing and querying
-large-scale genotype data sets like those produced by 1000 Genomes.  Genotypes
+large-scale genotype data sets like those produced by 1000 Genomes. Genotypes
 are represented by compressed bitmap indices, which reduce the storage and
 compute burden by orders of magnitude. This index can significantly expand the
 capabilities of population-scale analyses by providing interactive-speed
 queries to data sets with millions of individuals.
 
-GQT takes a BCF as input and produces two files, a compressed index (.wahbm)
+GQT takes a BCF as input and produces two files, a (very small) compressed index (.wahbm)
 and a summary of the variant metadata (.bim). This process rotates the data,
 sorts it by alternate allele frequency, converts it to a bitmap index, then
 finally compresses the data using the Word Aligned Hybrid (WAH) encoding
@@ -19,7 +21,7 @@ logical operations, which can compare 32 genotypes in a single fast operation.
 WAH encoding gives near-optimal compression while allowing bit-wise logical
 operations without inflation.
 
-The combine result these steps creates an index that is only a fraction of the
+The combined result of these steps creates an index that is only a fraction of the
 source BCF size, and queries against that index complete in seconds.  In the
 case of chr22 from 1000 Genomes, the BCF file is 11G and the WAH index is 42M,
 and the alternate allele frequency count for 100 of those individuals can be

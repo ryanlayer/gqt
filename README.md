@@ -118,18 +118,18 @@ choose the ids associated with your set of interest.  We will soon move most of
 these options to a config file that can be specified on the command line, which
 will make selecting large groups much less error prone.
  
-        $ Q=`seq 0 99|tr '\n' ',' | sed -e "s/,$//"`
-        $ gqt sum ipwahbm \
-            -b 1kg.chr22.bcf.bim \
-            -i 1kg.chr22.bcf.wahbm \
-            -n 100 \
-            -r $Q
+    $ Q=`seq 0 99|tr '\n' ',' | sed -e "s/,$//"`
+    $ gqt sum ipwahbm \
+         -b 1kg.chr22.bcf.bim \
+         -i 1kg.chr22.bcf.wahbm \
+         -n 100 \
+         -r $Q
 
 If you have compiled in AVX2 support (uncomment line 7 of the Makefile in gqt/src/c) you can get much better performance by using the "-a" option.
 
-        $ gqt sum ipwahbm \
-            -a \
-            -b 1kg.chr22.bcf.bim \
-            -i 1kg.chr22.bcf.wahbm \
-            -n 100 \
-            -r $Q
+    $ gqt sum ipwahbm \
+         -a \
+         -b 1kg.chr22.bcf.bim \
+         -i 1kg.chr22.bcf.wahbm \
+         -n 100 \
+         -r $Q

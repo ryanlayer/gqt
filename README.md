@@ -39,9 +39,9 @@ GQT depends on htslib and hdf5.
 
 *Step 1*. Install htslib.
 
-    git clone https://github.com/samtools/htslib.git
-    cd htslib
-    make
+    $ git clone https://github.com/samtools/htslib.git
+    $ cd htslib
+    $ make
 
 
 *Step 2*. Install hdf5. We recommend downloading one of the statically-linked binary distributions from
@@ -52,15 +52,15 @@ reflect ther locations.
 
 *Step 4*. Compile GQT
 
-    cd gqt/
-    make
+    $ cd gqt/
+    $ make
 
 *Step 5*. Test GQT
 
-    cd gqt/src/test/unit
-    make
-    cd ../func
-    bash functional_tests.sh
+    $ cd gqt/src/test/unit
+    $ make
+    $ cd ../func
+    $ bash functional_tests.sh
 
 
 Example usage

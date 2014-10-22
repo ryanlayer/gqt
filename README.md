@@ -28,7 +28,7 @@ and the alternate allele frequency count for 100 of those individuals can be
 found in 0.188 seconds.
 
 The following [slides](http://quinlanlab.org/pdf/presentations/gtqGI2014v6.pdf) provides a 
-conceptual overview, as weel as more details about the choice of bitmaps and the word-aligned 
+conceptual overview, as well as more details about the choice of bitmaps and the word-aligned 
 hybrid strategy for this problem.
 
 

@@ -237,7 +237,6 @@ unsigned int convert_hdf5_ind_ubin_to_ind_wah(struct hdf5_file hdf5_f,
     free(c);
 
     fclose(wf);
-    fclose(uf.file);
     return 0;
 }
 //}}}

@@ -1,11 +1,13 @@
+Overview
+========
 Genome Query Tools (GQT) is a tool and C API for storing and querying
-large-scale genotype data sets like those produced by 1000 Genomes.  Genotypes
+large-scale genotype data sets like those produced by 1000 Genomes. Genotypes
 are represented by compressed bitmap indices, which reduce the storage and
 compute burden by orders of magnitude. This index can significantly expand the
 capabilities of population-scale analyses by providing interactive-speed
 queries to data sets with millions of individuals.
 
-GQT takes a BCF as input and produces two files, a compressed index (.wahbm)
+GQT takes a BCF as input and produces two files, a (very small) compressed index (.wahbm)
 and a summary of the variant metadata (.bim). This process rotates the data,
 sorts it by alternate allele frequency, converts it to a bitmap index, then
 finally compresses the data using the Word Aligned Hybrid (WAH) encoding
@@ -19,11 +21,17 @@ logical operations, which can compare 32 genotypes in a single fast operation.
 WAH encoding gives near-optimal compression while allowing bit-wise logical
 operations without inflation.
 
-The combine result these steps creates an index that is only a fraction of the
+The combined result of these steps creates an index that is only a fraction of the
 source BCF size, and queries against that index complete in seconds.  In the
 case of chr22 from 1000 Genomes, the BCF file is 11G and the WAH index is 42M,
 and the alternate allele frequency count for 100 of those individuals can be
 found in 0.188 seconds.
+
+The following [slides](http://quinlanlab.org/pdf/presentations/gtqGI2014v6.pdf) provides a 
+conceptual overview, as well as more details about the choice of bitmaps and the word-aligned 
+hybrid strategy for this problem.
+
+
 
 Installation
 ============
@@ -31,9 +39,9 @@ GQT depends on htslib and hdf5.
 
 *Step 1*. Install htslib.
 
-    git clone https://github.com/samtools/htslib.git
-    cd htslib
-    make
+    $ git clone https://github.com/samtools/htslib.git
+    $ cd htslib
+    $ make
 
 
 *Step 2*. Install hdf5. We recommend downloading one of the statically-linked binary distributions from
@@ -44,15 +52,15 @@ reflect ther locations.
 
 *Step 4*. Compile GQT
 
-    cd gqt/
-    make
+    $ cd gqt/
+    $ make
 
 *Step 5*. Test GQT
 
-    cd gqt/src/test/unit
-    make
-    cd ../func
-    bash functional_tests.sh
+    $ cd gqt/src/test/unit
+    $ make
+    $ cd ../func
+    $ bash functional_tests.sh
 
 
 Example usage
@@ -67,7 +75,8 @@ not yet had time to focus on optimizing or parallelizing this conversion.  If
 you are impatient, we have posted all of the converted files described above on
 our lab [website](http://quinlanlab.cs.virginia.edu/gqt-example/).
 
-*Step 1*. Download the Phase 1 1000 genomes chr22 file
+*Step 1*. Download the Phase 1 1000 genomes chr22 file.
+
 	$ wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20110521/ALL.chr22.phase1_release_v3.20101123.snps_indels_svs.genotypes.vcf.gz
 
 *Step 2*. Use the new (and very nice) version of [bcftools](http://samtools.github.io/bcftools/) to convert the file VCF to BCF.
@@ -109,18 +118,18 @@ choose the ids associated with your set of interest.  We will soon move most of
 these options to a config file that can be specified on the command line, which
 will make selecting large groups much less error prone.
  
-        $ Q=`seq 0 99|tr '\n' ',' | sed -e "s/,$//"`
-        $ gqt sum ipwahbm \
-            -b 1kg.chr22.bcf.bim \
-            -i 1kg.chr22.bcf.wahbm \
-            -n 100 \
-            -r $Q
+    $ Q=`seq 0 99|tr '\n' ',' | sed -e "s/,$//"`
+    $ gqt sum ipwahbm \
+         -b 1kg.chr22.bcf.bim \
+         -i 1kg.chr22.bcf.wahbm \
+         -n 100 \
+         -r $Q
 
 If you have compiled in AVX2 support (uncomment line 7 of the Makefile in gqt/src/c) you can get much better performance by using the "-a" option.
 
-        $ gqt sum ipwahbm \
-            -a \
-            -b 1kg.chr22.bcf.bim \
-            -i 1kg.chr22.bcf.wahbm \
-            -n 100 \
-            -r $Q
+    $ gqt sum ipwahbm \
+         -a \
+         -b 1kg.chr22.bcf.bim \
+         -i 1kg.chr22.bcf.wahbm \
+         -n 100 \
+         -r $Q

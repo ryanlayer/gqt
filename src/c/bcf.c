@@ -2,6 +2,7 @@
 #include <htslib/vcf.h>
 #include <htslib/kstring.h>
 #include "genotq.h"
+#include "timer.h"
 
 // From http://www.hackersdelight.org/hdcodetxt/nlz.c.txt
 //{{{int nlz1(unsigned x)
@@ -176,6 +177,7 @@ void push_bcf_gt_md(pri_queue *q,
 }
 //}}}
 
+//{{{int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                                           uint32_t num_fields,
                                           uint32_t num_records,
@@ -191,29 +193,71 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 
     pri_queue q = priq_new(0);
 
+#ifdef time_convert_file_by_name_bcf_to_wahbm_bim
+    unsigned long t1 = 0, t2 = 0, t3 = 0;
+#endif
+
+
+#ifdef time_convert_file_by_name_bcf_to_wahbm_bim
+    start();
+#endif
+
     push_bcf_gt_md(&q, &bcf_f, &hdf5_f);
+
+#ifdef time_convert_file_by_name_bcf_to_wahbm_bim
+    stop();
+    t1 = report();
+#endif
+
+#ifdef time_convert_file_by_name_bcf_to_wahbm_bim
+    start();
+#endif
 
     sort_rotate_gt_md(&q, &hdf5_f, bim_out);
 
+#ifdef time_convert_file_by_name_bcf_to_wahbm_bim
+    stop();
+    t2 = report();
+#endif
+
+#ifdef time_convert_file_by_name_bcf_to_wahbm_bim
+    start();
+#endif
+
     int r = convert_hdf5_ind_ubin_to_ind_wah(hdf5_f, wah_out);
+
+#ifdef time_convert_file_by_name_bcf_to_wahbm_bim
+    stop();
+    t3 = report();
+#endif
+
+    
+#ifdef time_convert_file_by_name_bcf_to_wahbm_bim
+    double t = t1 + t2 + t3 + 0.0;
+    fprintf(stderr, "push_bcf_gt_md: %lu %f\t"
+                    "sort_rotate_gt_md: %lu %f\t"
+                    "convert_hdf5_ind_ubin_to_ind_wah: %lu %f\n",
+                    t1, t1/t,
+                    t2, t2/t,
+                    t3, t3/t
+           );
+#endif
 
     priq_free(q);
     close_hdf5_file(hdf5_f);
     close_bcf_file(&bcf_f);
     remove(".tmp.h5");
 
-    return r;
+    //return r;
+    return 0;
 }
+//}}}
 
-
+//{{{void close_bcf_file(struct bcf_file *bcf_f)
 void close_bcf_file(struct bcf_file *bcf_f)
 {
-    //htsFile *fp;
-    //bcf_hdr_t *hdr;
-    //bcf1_t *line;
-    //unsigned int num_records;
-    //int32_t *gt;
     bcf_hdr_destroy(bcf_f->hdr);
     bcf_destroy1(bcf_f->line);
     hts_close(bcf_f->fp);
 }
+//}}}

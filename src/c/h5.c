@@ -1,9 +1,10 @@
-#include "genotq.h"
 #include <stdio.h>
 #include <hdf5.h>
 #include <assert.h>
 #include <string.h>
 #include <sys/param.h>
+#include "genotq.h"
+#include "timer.h"
 
 //{{{struct hdf5_file init_hdf5_file(char *hdf5_file_name,
 struct hdf5_file init_hdf5_file(char *hdf5_file_name,
@@ -27,8 +28,8 @@ struct hdf5_file init_hdf5_file(char *hdf5_file_name,
     assert(hdf5_f.file_id >= 0);
 
     // Set up compression
-    hdf5_f.plist_id = H5Pcreate(H5P_DATASET_CREATE);
-    assert(hdf5_f.plist_id >= 0);
+    //hdf5_f.plist_id = H5Pcreate(H5P_DATASET_CREATE);
+    //assert(hdf5_f.plist_id >= 0);
 
     hsize_t  c_dim[1];
     if (MIN(hdf5_f.num_gt_ints, hdf5_f.num_r_gt_ints)  < 10)
@@ -36,11 +37,11 @@ struct hdf5_file init_hdf5_file(char *hdf5_file_name,
     else
         c_dim[0] = 10;
 
-    int status = H5Pset_chunk(hdf5_f.plist_id, 1, c_dim);
-    assert(status >= 0);
+    //int status = H5Pset_chunk(hdf5_f.plist_id, 1, c_dim);
+    //assert(status >= 0);
 
-    status = H5Pset_deflate (hdf5_f.plist_id, 6);
-    assert(status >= 0);
+    //status = H5Pset_deflate (hdf5_f.plist_id, 6);
+    //assert(status >= 0);
 
     // Set up genotype space
     hsize_t gt_dim[1];
@@ -63,6 +64,13 @@ struct hdf5_file init_hdf5_file(char *hdf5_file_name,
     hdf5_f.r_gt_dataspace_id = H5Screate_simple(1, r_gt_dim, NULL);
     assert(hdf5_f.r_gt_dataspace_id >= 0);
 
+    hsize_t r_gts_dim[2];
+    r_gts_dim[0] = hdf5_f.num_inds; //rows
+    r_gts_dim[1] = hdf5_f.num_r_gt_ints; //cols
+
+    //hdf5_f.r_gts_dataspace_id = H5Screate_simple(1, r_gt_dim, NULL);
+    hdf5_f.r_gts_dataspace_id = H5Screate_simple(2, r_gts_dim, NULL);
+    assert(hdf5_f.r_gts_dataspace_id >= 0);
 
     return hdf5_f;
 }
@@ -82,7 +90,8 @@ int write_hdf5_gt(struct hdf5_file hdf5_f,
                                   H5T_STD_I32BE,
                                   hdf5_f.gt_dataspace_id,
                                   H5P_DEFAULT,
-                                  hdf5_f.plist_id,
+                                  //hdf5_f.plist_id,
+                                  H5P_DEFAULT,
                                   H5P_DEFAULT);
     assert(dataset_id >= 0);
 
@@ -182,6 +191,43 @@ int read_hdf5_r_gt(struct hdf5_file hdf5_f, uint32_t id, uint32_t *r_gt)
 }
 //}}}
 
+//{{{int read_hdf5_r_gts(struct hdf5_file hdf5_f, uint32_t id, uint32_t *gt)
+int read_hdf5_r_gts(struct hdf5_file hdf5_f, uint32_t id, uint32_t *r_gt)
+{
+    hsize_t offset[2] = {id,0};
+    hsize_t count[2] = {1, hdf5_f.num_r_gt_ints};
+
+    char *r_gts_name = "r";
+
+    hid_t dataset = H5Dopen(hdf5_f.file_id, r_gts_name, H5P_DEFAULT);
+    assert(dataset >= 0);
+    hid_t dataspace = H5Dget_space (dataset); 
+
+    int status = H5Sselect_hyperslab (dataspace,
+                                      H5S_SELECT_SET,
+                                      offset,
+                                      NULL, 
+                                      count,
+                                      NULL);
+
+    hsize_t dim[2] = {1, hdf5_f.num_r_gt_ints};  
+    hid_t memspace = H5Screate_simple (2, dim, NULL);   
+
+    status = H5Dread(dataset,
+                     H5T_NATIVE_INT,
+                     memspace,
+                     dataspace,
+                     H5P_DEFAULT,
+                     r_gt);
+    assert(status >= 0);
+
+    H5Dclose (dataset);
+    H5Sclose (dataspace);
+    H5Sclose (memspace);
+
+    return status;
+}
+//}}}
 
 //{{{int read_hdf5_md(struct hdf5_file hdf5_f, uint32_t id, char **md)
 int read_hdf5_md(struct hdf5_file hdf5_f, uint32_t id, char **md)
@@ -224,8 +270,8 @@ int read_hdf5_md(struct hdf5_file hdf5_f, uint32_t id, char **md)
 int close_hdf5_file(struct hdf5_file hdf5_f)
 {
     int status = H5Sclose(hdf5_f.gt_dataspace_id);
-    status |= H5Pclose(hdf5_f.plist_id);
-    status |= H5Fclose(hdf5_f.file_id);
+    //status |= H5Pclose(hdf5_f.plist_id);
+    //status |= H5Fclose(hdf5_f.file_id);
 
     return status;
 }
@@ -234,8 +280,10 @@ int close_hdf5_file(struct hdf5_file hdf5_f)
 //{{{ int init_r_gt(struct hdf5_file hdf5_f)
 int init_r_gt(struct hdf5_file hdf5_f)
 {
+    /*
     uint32_t *r_gt = (uint32_t *) 
         calloc(hdf5_f.num_r_gt_ints,sizeof(uint32_t));
+    */
 
     uint32_t i;
     char r_gt_name[11];
@@ -246,10 +294,12 @@ int init_r_gt(struct hdf5_file hdf5_f)
                                       H5T_STD_I32BE,
                                       hdf5_f.r_gt_dataspace_id,
                                       H5P_DEFAULT,
-                                      hdf5_f.plist_id,
+                                      //hdf5_f.plist_id,
+                                      H5P_DEFAULT,
                                       H5P_DEFAULT);
         assert(dataset_id >= 0);
 
+        /*
         int status = H5Dwrite(dataset_id,
                               H5T_NATIVE_INT,
                               H5S_ALL,
@@ -258,14 +308,39 @@ int init_r_gt(struct hdf5_file hdf5_f)
                               r_gt);
         assert(status >= 0);
 
-        status = H5Dclose(dataset_id);
+        */
+        int status = H5Dclose(dataset_id);
         assert(status >= 0);
     }
 
-    free(r_gt);
+    //free(r_gt);
 
     return 0;
 
+}
+//}}}
+
+//{{{ int init_r_gt(struct hdf5_file hdf5_f)
+int init_r_gts(struct hdf5_file hdf5_f)
+{
+    uint32_t i;
+    char *r_gts_name = "r";
+
+
+    hid_t dataset_id = H5Dcreate2(hdf5_f.file_id,
+                                  r_gts_name,
+                                  H5T_STD_I32BE,
+                                  hdf5_f.r_gts_dataspace_id,
+                                  H5P_DEFAULT,
+                                  //hdf5_f.plist_id,
+                                  H5P_DEFAULT,
+                                  H5P_DEFAULT);
+    assert(dataset_id >= 0);
+
+    int status = H5Dclose(dataset_id);
+    assert(status >= 0);
+
+    return 0;
 }
 //}}}
 
@@ -315,6 +390,48 @@ int set_r_gt(struct hdf5_file hdf5_f,
 }
 //}}}
 
+//{{{int set_r_gts(struct hdf5_file hdf5_f,
+int set_r_gts(struct hdf5_file hdf5_f,
+              uint32_t i,
+              uint32_t **v)
+{
+    hsize_t offset[2] = {0,i};
+    hsize_t count[2] = {hdf5_f.num_inds, 1};
+
+    char *r_gts_name = "r";
+
+    hid_t dataset = H5Dopen(hdf5_f.file_id, r_gts_name, H5P_DEFAULT);
+    assert(dataset >= 0);
+    hid_t dataspace = H5Dget_space (dataset); 
+
+
+    int status = H5Sselect_hyperslab (dataspace,
+                                      H5S_SELECT_SET,
+                                      offset,
+                                      NULL, 
+                                      count,
+                                      NULL);
+
+    hsize_t dim[2] = {hdf5_f.num_inds, 1};  
+    hid_t memspace = H5Screate_simple (2, dim, NULL);   
+
+    status = H5Dwrite (dataset,
+                       H5T_NATIVE_INT,
+                       memspace,
+                       dataspace,
+                       H5P_DEFAULT,
+                       *v);
+    assert(status >= 0);
+
+    H5Dclose (dataset);
+    H5Sclose (dataspace);
+    H5Sclose (memspace);
+
+    return status;
+}
+//}}}
+
+//{{{void sort_rotate_gt_md(pri_queue *q,
 void sort_rotate_gt_md(pri_queue *q,
                        struct hdf5_file *hdf5_f,
                        char *md_out_file_name)
@@ -322,60 +439,141 @@ void sort_rotate_gt_md(pri_queue *q,
 
     FILE *f = fopen(md_out_file_name, "w");
 
-    uint32_t i, two_bit_i = 0, int_i = 0;
-    int r = init_r_gt(*hdf5_f);
+    uint32_t i, buf_int_i = 0, two_bit_i = 0, int_i = 0;
+
+    int r = init_r_gts(*hdf5_f);
 
     char *md_out;
 
     uint32_t *gt_out =
             (uint32_t *)malloc(hdf5_f->num_gt_ints * sizeof(uint32_t));
 
-    uint32_t *gt_buff =
-            (uint32_t *)malloc(hdf5_f->num_inds * sizeof(uint32_t));
-    memset(gt_buff, 0 , hdf5_f->num_inds * sizeof(uint32_t));
+    uint32_t **gt_buff, *gt_buff_data;
+
+    gt_buff_data = (uint32_t *)calloc(hdf5_f->num_inds, sizeof(uint32_t*));
+
+    gt_buff = (uint32_t **)malloc(hdf5_f->num_inds * sizeof(uint32_t*));
+    for (i = 0; i < hdf5_f->num_inds; ++i)
+        gt_buff[i] = gt_buff_data + i;
+    
+    //gt_buff[0] = (uint32_t *)malloc(hdf5_f->num_inds * sizeof(uint32_t));
+    //memset(gt_buff[0], 0 , hdf5_f->num_inds * sizeof(uint32_t));
 
     priority p;
 
+
+#ifdef time_sort_rotate_gt_md
+    unsigned long t_read_hdf5_md = 0,
+                  t_write_md = 0,
+                  t_read_hdf5_gt = 0,
+                  t_rotate = 0,
+                  t_set_r_gt = 0;
+#endif
+
     while ( priq_top(*q, &p) != NULL ) {
         int *d = priq_pop(*q, &p);
+
+#ifdef time_sort_rotate_gt_md
+        start();
+#endif
         read_hdf5_md(*hdf5_f, *d, &md_out);
+#ifdef time_sort_rotate_gt_md
+        stop();
+        t_read_hdf5_md += report();
+#endif
+
+#ifdef time_sort_rotate_gt_md
+        start();
+#endif
         fprintf(f, "%s\n", md_out);
+#ifdef time_sort_rotate_gt_md
+        stop();
+        t_write_md += report();
+#endif
         free(md_out);
 
+#ifdef time_sort_rotate_gt_md
+        start();
+#endif
         read_hdf5_gt(*hdf5_f, *d, gt_out);
+#ifdef time_sort_rotate_gt_md
+        stop();
+        t_read_hdf5_gt += report();
+#endif
 
+#ifdef time_sort_rotate_gt_md
+        start();
+#endif
         for (i = 0; i < hdf5_f->num_inds; ++i) {
-            //printf("%u ", (gt_out[0] >> (30 - i*2)) & 3);
             int bb = (gt_out[0] >> (30 - i*2)) & 3;
-            gt_buff[i] += bb << (30 - two_bit_i*2);
+            gt_buff[i][0] += bb << (30 - two_bit_i*2);
         }
-        //printf("\n");
+#ifdef time_sort_rotate_gt_md
+        stop();
+        t_rotate += report();
+#endif
 
         two_bit_i += 1;
 
         if (two_bit_i == 16) {
-            for (i = 0; i < hdf5_f->num_inds; ++i) {
-                set_r_gt(*hdf5_f, i, int_i, gt_buff[i]);
-            }
 
-            memset(gt_buff, 0, hdf5_f->num_inds * sizeof(uint32_t));
+#ifdef time_sort_rotate_gt_md
+            start();
+#endif
+            set_r_gts(*hdf5_f, int_i, gt_buff);
+#ifdef time_sort_rotate_gt_md
+            stop();
+            t_set_r_gt += report();
+#endif
+
+            memset(gt_buff_data, 0 , hdf5_f->num_inds * sizeof(uint32_t));
+
+            //memset(gt_buff[0], 0, hdf5_f->num_inds * sizeof(uint32_t));
             two_bit_i = 0;
             int_i += 1;
         }
 
     }
     
-
+#ifdef time_sort_rotate_gt_md
+    start();
+#endif
     if (two_bit_i > 0) {
-        for (i = 0; i < hdf5_f->num_inds; ++i) {
-            set_r_gt(*hdf5_f, i, int_i, gt_buff[i]);
-        }
+        set_r_gts(*hdf5_f, int_i, gt_buff);
     }
+#ifdef time_sort_rotate_gt_md
+    stop();
+    t_set_r_gt += report();
+#endif
+
+
+#ifdef time_sort_rotate_gt_md
+    float t = t_read_hdf5_md +
+                      t_write_md +
+                      t_read_hdf5_gt +
+                      t_rotate +
+                      t_set_r_gt;
+    fprintf(stderr, "t_read_hdf5_md: %lu %f\t"
+                     "t_write_md: %lu %f\t"
+                     "t_read_hdf5_gt: %lu %f\t"
+                     "t_rotate: %lu %f\t"
+                     "t_set_r_gt: %lu %f\n",
+                     t_read_hdf5_md,
+                     t_read_hdf5_md/t,
+                     t_write_md,
+                     t_write_md/t,
+                     t_read_hdf5_gt,
+                     t_read_hdf5_gt/t,
+                     t_rotate,
+                     t_rotate/t,
+                     t_set_r_gt,
+                     t_set_r_gt/t);
+#endif
 
     free(gt_out);
+
     free(gt_buff);
+    free(gt_buff_data);
     fclose(f);
 }
-
-
-
+///}}}

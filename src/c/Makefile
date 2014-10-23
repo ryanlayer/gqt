@@ -9,6 +9,8 @@ CFLAGS=-O3
 #CFLAGS+=-Dtime_count_range_records_compressed_in_place_wahbm
 #CFLAGS+=-Dtime_count_range_records_in_place_wahbm
 #CFLAGS+=-Dtime_sum_range_records_in_place_wahbm
+#CFLAGS+=-Dtime_convert_file_by_name_bcf_to_wahbm_bim
+#CFLAGS+=-Dtime_sort_rotate_gt_md
 GRABIX_ROOT=~/src/grabix
 CC=gcc
 

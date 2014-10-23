@@ -21,6 +21,8 @@ int sandbox(int argc, char **argv)
 	append_out_buf(&outbuf, " points.\n", 9);
 	append_out_buf(&outbuf, "beer.\n", 6);
 	free_out_buf(&outbuf);
+
+        return 0;
 }
 
 /*

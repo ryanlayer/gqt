@@ -11,7 +11,8 @@ struct hdf5_file
           plist_id,
           gt_dataspace_id,
           md_dataspace_id,
-          r_gt_dataspace_id;
+          r_gt_dataspace_id,
+          r_gts_dataspace_id;
     uint32_t num_gt_ints,
              num_r_gt_ints,
              num_vars,
@@ -34,12 +35,20 @@ int read_hdf5_md(struct hdf5_file hdf5_f, uint32_t id, char **md);
 
 int init_r_gt(struct hdf5_file hdf5_f);
 
+int init_r_gts(struct hdf5_file hdf5_f);
+
 int set_r_gt(struct hdf5_file hdf5_f,
              uint32_t r_gt_i,
              uint32_t i,
              uint32_t v);
 
+int set_r_gts(struct hdf5_file hdf5_f,
+              uint32_t i,
+              uint32_t **v);
+
 int read_hdf5_r_gt(struct hdf5_file hdf5_f, uint32_t id, uint32_t *r_gt);
+
+int read_hdf5_r_gts(struct hdf5_file hdf5_f, uint32_t id, uint32_t *r_gt);
 
 int close_hdf5_file(struct hdf5_file hdf5_f);
 

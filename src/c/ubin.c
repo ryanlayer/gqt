@@ -206,7 +206,8 @@ unsigned int convert_hdf5_ind_ubin_to_ind_wah(struct hdf5_file hdf5_f,
 
     for (i = 0; i < hdf5_f.num_inds; ++i) {
         //fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
-        int r = read_hdf5_r_gt(hdf5_f, i, c);
+        //int r = read_hdf5_r_gt(hdf5_f, i, c);
+        int r = read_hdf5_r_gts(hdf5_f, i, c);
          
         unsigned int *wah;
         unsigned int *wah_sizes;
@@ -236,7 +237,7 @@ unsigned int convert_hdf5_ind_ubin_to_ind_wah(struct hdf5_file hdf5_f,
     free(c);
 
     fclose(wf);
-    //fclose(uf.file);
+    fclose(uf.file);
     return 0;
 }
 //}}}

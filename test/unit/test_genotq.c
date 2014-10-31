@@ -4900,144 +4900,6 @@ void test_bcf_read(void)
 }
 //}}}
 
-//{{{void test_hdf5(void)
-void test_hdf5(void)
-{
-    uint32_t num_vars = 43;
-    uint32_t num_inds = 10;
-    char *hdf5_file_name = "../data/10.1e4.var.h5";
-    struct hdf5_file hdf5_f = init_hdf5_file(hdf5_file_name,
-                                             num_vars,
-                                             num_inds);
-
-    uint32_t num_ints = 1 + ((num_inds - 1) / 32);
-
-    uint32_t in[3][num_ints], out[3][num_ints];
-
-    uint32_t i;
-    for (i = 0; i < num_ints; ++i){
-        in[0][i] = rand();
-        in[1][i] = rand();
-        in[2][i] = rand();
-    }
-
-    write_hdf5_gt(hdf5_f, 0, in[0], "zero");
-    write_hdf5_gt(hdf5_f, 1, in[1], "one");
-    write_hdf5_gt(hdf5_f, 2, in[2], "two");
-
-    char *md_out;
-    read_hdf5_md(hdf5_f, 0, &md_out);
-    TEST_ASSERT_EQUAL(0, strcmp("zero", md_out));
-    free(md_out);
-
-    read_hdf5_md(hdf5_f, 1, &md_out);
-    TEST_ASSERT_EQUAL(0, strcmp("one", md_out));
-    free(md_out);
-
-    read_hdf5_md(hdf5_f, 2, &md_out);
-    TEST_ASSERT_EQUAL(0, strcmp("two", md_out));
-    free(md_out);
-
-    read_hdf5_gt(hdf5_f, 0, out[0]);
-    read_hdf5_gt(hdf5_f, 1, out[1]);
-    read_hdf5_gt(hdf5_f, 2, out[2]);
-
-
-    for (i = 0; i < num_ints; ++i) {
-        TEST_ASSERT_EQUAL(in[0][i], out[0][i]);
-        TEST_ASSERT_EQUAL(in[0][i], out[0][i]);
-        TEST_ASSERT_EQUAL(in[0][i], out[0][i]);
-    }
-
-    close_hdf5_file(hdf5_f);
-
-    TEST_ASSERT_EQUAL(0, remove(hdf5_file_name));
-
-}
-//}}}
-
-//{{{void test_pack_sum_count_prefix_bcf_line(void)
-void test_pack_sum_count_prefix_bcf_line(void)
-{
-    char *bcf_file_name = "../data/10.1e4.var.bcf";
-    struct bcf_file bcf_f = init_bcf_file(bcf_file_name);
-
-    int num_samples, num_gts_per_sample;
-
-    int r = read_unpack_next_bcf_line(&bcf_f,
-                                      &num_samples,
-                                      &num_gts_per_sample);
-
-    uint32_t *packed_ints;
-    uint32_t sum, prefix_len, packed_ints_len;
-
-    packed_ints_len = pack_sum_count_prefix_bcf_line(bcf_f,
-                                                   num_samples,
-                                                   num_gts_per_sample,
-                                                   &packed_ints,
-                                                   &sum,
-                                                   &prefix_len);
-
-
-    TEST_ASSERT_EQUAL(1, packed_ints_len);
-    TEST_ASSERT_EQUAL(2420379648, packed_ints[0]);
-    TEST_ASSERT_EQUAL(6, sum);
-    TEST_ASSERT_EQUAL(0, prefix_len);
-
-    free(packed_ints);
-
-    r = read_unpack_next_bcf_line(&bcf_f,
-                                  &num_samples,
-                                  &num_gts_per_sample);
-
-    packed_ints_len = pack_sum_count_prefix_bcf_line(bcf_f,
-                                                   num_samples,
-                                                   num_gts_per_sample,
-                                                   &packed_ints,
-                                                   &sum,
-                                                   &prefix_len);
-
-    TEST_ASSERT_EQUAL(1, packed_ints_len);
-    TEST_ASSERT_EQUAL(16384, packed_ints[0]);
-    TEST_ASSERT_EQUAL(1, sum);
-    TEST_ASSERT_EQUAL(17, prefix_len);
-
-    free(packed_ints);
-}
-//}}}
-
-//{{{void test_md_bcf_line
-void test_md_bcf_line(void)
-{
-    char *bcf_file_name = "../data/10.1e4.var.bcf";
-    struct bcf_file bcf_f = init_bcf_file(bcf_file_name);
-
-    int num_samples, num_gts_per_sample;
-    char *md;
-    uint32_t md_len;
-
-    int r = read_unpack_next_bcf_line(&bcf_f,
-                                      &num_samples,
-                                      &num_gts_per_sample);
-    md_len = md_bcf_line(bcf_f,
-                         &md);
-
-    TEST_ASSERT_EQUAL(0, strcmp("1\t0\tV1\tA\tT", md));
-
-    free(md);
-
-    r = read_unpack_next_bcf_line(&bcf_f,
-                                  &num_samples,
-                                  &num_gts_per_sample);
-    md_len = md_bcf_line(bcf_f,
-                         &md);
-
-    TEST_ASSERT_EQUAL(0, strcmp("1\t1\tV2\tA\tT", md));
-
-    free(md);
-}
-//}}}
-
 //{{{void test_pq(void)
 void test_pq(void)
 {
@@ -5059,7 +4921,7 @@ void test_pq(void)
     int p3_d = 3;
 
     p4.sum = 4;
-    p4.len = 1;
+    p4.len = 3;
     int p4_d = 4;
 
     p5.sum = 1;
@@ -5074,7 +4936,7 @@ void test_pq(void)
 
     priority p;
 
-    uint32_t A[5] = {5, 1, 4, 3, 2};
+    uint32_t A[5] = {5, 1, 4, 2, 3};
     uint32_t a_i = 0;
 
     while ( priq_top(q, &p) != NULL ) {
@@ -5085,8 +4947,346 @@ void test_pq(void)
 }
 //}}}
 
+//{{{void test_push_bcf_gt_md(void)
+void test_push_bcf_gt_md(void)
+{
+    uint32_t num_inds = 10;
+    uint32_t num_vars = 43;
+    
+    char *bcf_file_name = "../data/10.1e4.var.bcf";
+    char *gt_of_name = ".gt.tmp.packed";
+    char *md_of_name = ".md.tmp.packed";
 
-void test_rotate_sort_bcf_to_wahbm(void)
+    struct bcf_file bcf_f = init_bcf_file(bcf_file_name);
+    pri_queue q = priq_new(0);
+
+    uint32_t *md_index = (uint32_t *) malloc(num_vars * sizeof(uint32_t));
+
+    push_bcf_gt_md(&q,
+                   &bcf_f,
+                   md_index,
+                   num_inds,
+                   num_vars,
+                   gt_of_name,
+                   md_of_name);
+
+
+    // some select entries from the meta data
+    char *md_A_0 = "1\t1\tV1\tA\tT";
+    char *md_A_1 = "1\t2\tV2\tA\tT";
+    char *md_A_30 = "1\t31\tV31\tA\tT";
+    char *md_A_42 = "1\t43\tV43\tA\tT";
+
+    FILE *md_of = fopen(md_of_name, "r");
+
+    // Test 0
+    uint32_t start = 0;
+    uint32_t len = md_index[0] - start;
+    fseek(md_of, start*sizeof(char), SEEK_SET);
+    char buf_0[len+1];
+    fread(buf_0, sizeof(char), len, md_of);
+    buf_0[len] = '\0';
+    TEST_ASSERT_EQUAL(0, strcmp(buf_0, md_A_0));
+
+    // Test 1
+    start = md_index[1-1];
+    len = md_index[1] - start;
+    fseek(md_of, start*sizeof(char), SEEK_SET);
+    char buf_1[len+1];
+    fread(buf_1, sizeof(char), len, md_of);
+    buf_1[len] = '\0';
+    TEST_ASSERT_EQUAL(0, strcmp(buf_1, md_A_1));
+
+    // Test 30
+    start = md_index[30-1];
+    len = md_index[30] - start;
+    fseek(md_of, start*sizeof(char), SEEK_SET);
+    char buf_30[len+1];
+    fread(buf_30, sizeof(char), len, md_of);
+    buf_30[len] = '\0';
+    TEST_ASSERT_EQUAL(0, strcmp(buf_30, md_A_30));
+
+    // Test 42
+    start = md_index[42-1];
+    len = md_index[42] - start;
+    fseek(md_of, start*sizeof(char), SEEK_SET);
+    char buf_42[len+1];
+    fread(buf_42, sizeof(char), len, md_of);
+    buf_42[len] = '\0';
+    TEST_ASSERT_EQUAL(0, strcmp(buf_42, md_A_42));
+
+    fclose(md_of);
+    remove(md_of_name);
+
+    /*
+     * Test some select lines from the genotypes:
+     * 0:  2 1 0 0 1 0 1 0 0 1 -> 2420379648
+     * 1:  0 0 0 0 0 0 0 0 1 0 -> 16384
+     * 30: 1 1 0 0 0 0 0 1 0 0 -> 1342242816
+     * 42: 0 0 0 0 0 0 0 1 1 0 -> 81920
+     */
+    uint32_t gt_A[4] = {2420379648, 16384, 1342242816, 81920};
+    uint32_t gt_T[4] = {0,1,30,42};
+
+    uint32_t num_ind_ints = 1 + ((num_inds - 1) / 16); // should be 1
+
+    FILE *gt_of = fopen(gt_of_name, "rb");
+
+    uint32_t i_buff;
+
+    uint32_t i;
+    for (i = 0; i < 4; ++i) {
+        fseek(gt_of, gt_T[i]*num_ind_ints*sizeof(uint32_t), SEEK_SET);
+        fread(&i_buff, sizeof(uint32_t), num_ind_ints, gt_of);
+        TEST_ASSERT_EQUAL(gt_A[i], i_buff);
+    }
+    fclose(gt_of);
+    remove(gt_of_name);
+
+    // Test the priority q order
+    priority p;
+    i = 0;
+    uint32_t last_sum = 0, last_len = 10;
+    while ( priq_top(q, &p) != NULL ) {
+        int *d = priq_pop(q, &p);
+        if (p.sum == last_sum)
+            TEST_ASSERT_EQUAL(1, last_len >= p.len);
+        else
+            TEST_ASSERT_EQUAL(1, last_sum <= p.sum);
+        last_sum = p.sum;
+        last_len = p.len;
+    }
+
+    priq_free(q);
+    close_bcf_file(&bcf_f); 
+}
+//}}}
+
+//{{{void test_sort_gt_md(void)
+void test_sort_gt_md(void)
+{
+    uint32_t num_inds = 10;
+    uint32_t num_vars = 43;
+    
+    char *bcf_file_name = "../data/10.1e4.var.bcf";
+    char *gt_of_name = ".gt.tmp.packed";
+    char *s_gt_of_name = ".s.gt.tmp.packed";
+    char *md_of_name = ".md.tmp.packed";
+    char *bim_name = "md.bim";
+
+    struct bcf_file bcf_f = init_bcf_file(bcf_file_name);
+    pri_queue q_t = priq_new(0);
+    pri_queue q = priq_new(0);
+
+    uint32_t *md_index = (uint32_t *) malloc(num_vars * sizeof(uint32_t));
+
+    push_bcf_gt_md(&q,
+                   &bcf_f,
+                   md_index,
+                   num_inds,
+                   num_vars,
+                   gt_of_name,
+                   md_of_name);
+
+    sort_gt_md(&q,
+               md_index,
+               num_inds,
+               num_vars,
+               gt_of_name,
+               s_gt_of_name,
+               md_of_name,
+               bim_name);
+
+    // close the bcf and open/process it again so we can get the 
+    // prioirity q
+    close_bcf_file(&bcf_f); 
+    bcf_f = init_bcf_file(bcf_file_name);
+    push_bcf_gt_md(&q_t,
+                   &bcf_f,
+                   md_index,
+                   num_inds,
+                   num_vars,
+                   gt_of_name,
+                   md_of_name);
+
+    // Push the zero-based ids into an arry
+    uint32_t P[43];
+    uint32_t i = 0;
+    priority p;
+    while ( priq_top(q_t, &p) != NULL ) {
+        int *d = priq_pop(q_t, &p);
+        P[i] = *d;
+        i+=1;
+    }
+
+    // Make sure the zero-based ids match the one-based id in the 
+    // sorted bim file
+    FILE *md_out = fopen(bim_name,"r");
+    char line[100];
+    i = 0;
+    char *pch;
+    while(fgets(line, 100, md_out) != NULL) {
+        pch = strtok(line, "\t");
+        pch = strtok(NULL, "\t");
+        TEST_ASSERT_EQUAL(P[i]+1, atoi(pch));
+        i+=1;
+    }
+    fclose(md_out);
+
+
+    // Grab the sorted file in order and the unsored file in the order
+    // defined by the priority queue and make sure they match
+    FILE *gt_of = fopen(gt_of_name,"rb");
+    FILE *s_gt_of = fopen(s_gt_of_name,"rb");
+    uint32_t gt, s_gt;
+    for (i = 0; i < num_vars; ++i) {
+        fseek(s_gt_of, i*sizeof(uint32_t), SEEK_SET);
+        fread(&s_gt, sizeof(uint32_t), 1, s_gt_of);
+
+        fseek(gt_of, P[i]*sizeof(uint32_t), SEEK_SET);
+        fread(&gt, sizeof(uint32_t), 1, gt_of);
+
+        TEST_ASSERT_EQUAL(gt, s_gt);
+    }
+    fclose(gt_of);
+    fclose(s_gt_of);
+
+    priq_free(q);
+    priq_free(q_t);
+    close_bcf_file(&bcf_f); 
+    free(md_index);
+}
+//}}}
+
+//{{{void test_rotate_encode_wahbm(void)
+void test_rotate_encode_wahbm(void)
+{
+    uint32_t num_inds = 10;
+    uint32_t num_vars = 43;
+    
+    char *bcf_file_name = "../data/10.1e4.var.bcf";
+    char *gt_of_name = ".gt.tmp.packed";
+    char *s_gt_of_name = ".s.gt.tmp.packed";
+    char *r_s_gt_of_name = ".r.s.gt.tmp.packed";
+    char *md_of_name = ".md.tmp.packed";
+    char *bim_name = "md.bim";
+
+    struct bcf_file bcf_f = init_bcf_file(bcf_file_name);
+    pri_queue q = priq_new(0);
+
+    uint32_t *md_index = (uint32_t *) malloc(num_vars * sizeof(uint32_t));
+
+    push_bcf_gt_md(&q,
+                   &bcf_f,
+                   md_index,
+                   num_inds,
+                   num_vars,
+                   gt_of_name,
+                   md_of_name);
+
+    sort_gt_md(&q,
+               md_index,
+               num_inds,
+               num_vars,
+               gt_of_name,
+               s_gt_of_name,
+               md_of_name,
+               bim_name);
+
+    rotate_encode_wahbm(num_inds,
+                        num_vars,
+                        s_gt_of_name,
+                        r_s_gt_of_name);
+
+    FILE *s_gt_of = fopen(s_gt_of_name,"rb");
+    uint32_t n_r[43];
+    uint32_t i;
+    for (i = 0; i < num_vars; ++i) {
+        fseek(s_gt_of, i*sizeof(uint32_t), SEEK_SET);
+        fread(&(n_r[i]), sizeof(uint32_t), 1, s_gt_of);
+    }
+    fclose(s_gt_of);
+
+    uint32_t num_var_ints = 1 + ((num_vars - 1) / 16);
+
+    FILE *r_s_gt_of = fopen(r_s_gt_of_name,"rb");
+    uint32_t *r = (uint32_t *) 
+            malloc(num_inds*num_var_ints*sizeof(uint32_t));
+    for (i = 0; i < num_vars; ++i) {
+        fread(r, sizeof(uint32_t), num_inds*num_var_ints, r_s_gt_of);
+    }
+    fclose(r_s_gt_of);
+
+
+    // test ind 0
+    uint32_t v = 0;
+
+    for (i = 0; i < 16; ++i) {
+        v += ((n_r[i] >> 30) & 3) << (30 - i*2);
+    }
+    TEST_ASSERT_EQUAL(v, r[0]);
+
+    v = 0;
+    for (; i < 32; ++i) {
+        v += ((n_r[i] >> 30) & 3) << (30 - i*2);
+    }
+    TEST_ASSERT_EQUAL(v, r[1]);
+
+    v = 0;
+    for (; i < num_vars; ++i) {
+        v += ((n_r[i] >> 30) & 3) << (30 - i*2);
+    }
+    TEST_ASSERT_EQUAL(v, r[2]);
+
+    // test ind 6 
+    v = 0;
+    for (i = 0; i < 16; ++i) {
+        v += ((n_r[i] >> (30-2*6)) & 3) << (30 - i*2);
+    }
+    TEST_ASSERT_EQUAL(v, r[0+num_var_ints*6]);
+
+    v = 0;
+    for (; i < 32; ++i) {
+        v += ((n_r[i] >> (30-2*6)) & 3) << (30 - i*2);
+    }
+    TEST_ASSERT_EQUAL(v, r[1+num_var_ints*6]);
+
+    v = 0;
+    for (; i < num_vars; ++i) {
+        v += ((n_r[i] >> (30-2*6)) & 3) << (30 - i*2);
+    }
+    TEST_ASSERT_EQUAL(v, r[2+num_var_ints*6]);
+
+    // test ind 9
+    v = 0;
+    for (i = 0; i < 16; ++i) {
+        v += ((n_r[i] >> (30-2*9)) & 3) << (30 - i*2);
+    }
+    TEST_ASSERT_EQUAL(v, r[0+num_var_ints*9]);
+
+    v = 0;
+    for (; i < 32; ++i) {
+        v += ((n_r[i] >> (30-2*9)) & 3) << (30 - i*2);
+    }
+    TEST_ASSERT_EQUAL(v, r[1+num_var_ints*9]);
+
+    v = 0;
+    for (; i < num_vars; ++i) {
+        v += ((n_r[i] >> (30-2*9)) & 3) << (30 - i*2);
+    }
+    TEST_ASSERT_EQUAL(v, r[2+num_var_ints*9]);
+
+
+    priq_free(q);
+    close_bcf_file(&bcf_f); 
+    free(md_index);
+}
+//}}}
+
+
+#if 0
+//{{{ void test_rotate_sort_bcf_to_wahbm(void)
+//void test_rotate_sort_bcf_to_wahbm(void)
 {
     uint32_t num_vars = 43;
     uint32_t num_inds = 10;
@@ -5217,9 +5417,104 @@ void test_rotate_sort_bcf_to_wahbm(void)
     close_hdf5_file(hdf5_f);
     remove(hdf5_file_name);
 }
+//}}}
+#endif
 
+#if 0
+//{{{void test_hdf5(void)
+//void test_hdf5(void)
+{
+    uint32_t num_vars = 43;
+    uint32_t num_inds = 10;
+    char *hdf5_file_name = "../data/10.1e4.var.h5";
+    struct hdf5_file hdf5_f = init_hdf5_file(hdf5_file_name,
+                                             num_vars,
+                                             num_inds);
+
+    uint32_t num_ints = 1 + ((num_inds - 1) / 32);
+
+    uint32_t in[3][num_ints], out[3][num_ints];
+
+    uint32_t i;
+    for (i = 0; i < num_ints; ++i){
+        in[0][i] = rand();
+        in[1][i] = rand();
+        in[2][i] = rand();
+    }
+
+    write_hdf5_gt(hdf5_f, 0, in[0], "zero");
+    write_hdf5_gt(hdf5_f, 1, in[1], "one");
+    write_hdf5_gt(hdf5_f, 2, in[2], "two");
+
+    char *md_out;
+    read_hdf5_md(hdf5_f, 0, &md_out);
+    TEST_ASSERT_EQUAL(0, strcmp("zero", md_out));
+    free(md_out);
+
+    read_hdf5_md(hdf5_f, 1, &md_out);
+    TEST_ASSERT_EQUAL(0, strcmp("one", md_out));
+    free(md_out);
+
+    read_hdf5_md(hdf5_f, 2, &md_out);
+    TEST_ASSERT_EQUAL(0, strcmp("two", md_out));
+    free(md_out);
+
+    read_hdf5_gt(hdf5_f, 0, out[0]);
+    read_hdf5_gt(hdf5_f, 1, out[1]);
+    read_hdf5_gt(hdf5_f, 2, out[2]);
+
+
+    for (i = 0; i < num_ints; ++i) {
+        TEST_ASSERT_EQUAL(in[0][i], out[0][i]);
+        TEST_ASSERT_EQUAL(in[0][i], out[0][i]);
+        TEST_ASSERT_EQUAL(in[0][i], out[0][i]);
+    }
+
+    close_hdf5_file(hdf5_f);
+
+    TEST_ASSERT_EQUAL(0, remove(hdf5_file_name));
+
+}
+//}}}
+#endif
+
+#if 0
+//{{{void test_md_bcf_line
+//void test_md_bcf_line(void)
+{
+    char *bcf_file_name = "../data/10.1e4.var.bcf";
+    struct bcf_file bcf_f = init_bcf_file(bcf_file_name);
+
+    int num_samples, num_gts_per_sample;
+    char *md;
+    uint32_t md_len;
+
+    int r = read_unpack_next_bcf_line(&bcf_f,
+                                      &num_samples,
+                                      &num_gts_per_sample);
+    md_len = md_bcf_line(bcf_f,
+                         &md);
+
+    TEST_ASSERT_EQUAL(0, strcmp("1\t0\tV1\tA\tT", md));
+
+    free(md);
+
+    r = read_unpack_next_bcf_line(&bcf_f,
+                                  &num_samples,
+                                  &num_gts_per_sample);
+    md_len = md_bcf_line(bcf_f,
+                         &md);
+
+    TEST_ASSERT_EQUAL(0, strcmp("1\t1\tV2\tA\tT", md));
+
+    free(md);
+}
+//}}}
+#endif
+
+#if 0
 //{{{void test_append_hdf5_array(void)
-void test_append_hdf5_array(void)
+//void test_append_hdf5_array(void)
 {
     uint32_t num_vars = 43;
     uint32_t num_inds = 10;
@@ -5253,3 +5548,56 @@ void test_append_hdf5_array(void)
     close_hdf5_file(hdf5_f);
 }
 //}}}
+#endif
+
+#if 0
+//{{{void test_pack_sum_count_prefix_bcf_line(void)
+//void test_pack_sum_count_prefix_bcf_line(void)
+{
+    char *bcf_file_name = "../data/10.1e4.var.bcf";
+    struct bcf_file bcf_f = init_bcf_file(bcf_file_name);
+
+    int num_samples, num_gts_per_sample;
+
+    int r = read_unpack_next_bcf_line(&bcf_f,
+                                      &num_samples,
+                                      &num_gts_per_sample);
+
+    uint32_t *packed_ints;
+    uint32_t sum, prefix_len, packed_ints_len;
+
+    packed_ints_len = pack_sum_count_prefix_bcf_line(bcf_f,
+                                                   num_samples,
+                                                   num_gts_per_sample,
+                                                   &packed_ints,
+                                                   &sum,
+                                                   &prefix_len);
+
+
+    TEST_ASSERT_EQUAL(1, packed_ints_len);
+    TEST_ASSERT_EQUAL(2420379648, packed_ints[0]);
+    TEST_ASSERT_EQUAL(6, sum);
+    TEST_ASSERT_EQUAL(0, prefix_len);
+
+    free(packed_ints);
+
+    r = read_unpack_next_bcf_line(&bcf_f,
+                                  &num_samples,
+                                  &num_gts_per_sample);
+
+    packed_ints_len = pack_sum_count_prefix_bcf_line(bcf_f,
+                                                   num_samples,
+                                                   num_gts_per_sample,
+                                                   &packed_ints,
+                                                   &sum,
+                                                   &prefix_len);
+
+    TEST_ASSERT_EQUAL(1, packed_ints_len);
+    TEST_ASSERT_EQUAL(16384, packed_ints[0]);
+    TEST_ASSERT_EQUAL(1, sum);
+    TEST_ASSERT_EQUAL(17, prefix_len);
+
+    free(packed_ints);
+}
+//}}}
+#endif

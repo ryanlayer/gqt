@@ -36,7 +36,26 @@ uint32_t md_bcf_line(struct bcf_file bcf_f,
 
 void push_bcf_gt_md(pri_queue *q,
                     struct bcf_file *bcf_f,
-                    struct hdf5_file *hdf5_f);
+                    uint32_t *md_index,
+                    uint32_t num_inds,
+                    uint32_t num_vars,
+                    char *gt_of_name,
+                    char *md_of_name);
+
+
+void sort_gt_md(pri_queue *q,
+                uint32_t *md_index,
+                uint32_t num_inds,
+                uint32_t num_vars,
+                char *gt_of_name,
+                char *s_gt_of_name,
+                char *md_of_name,
+                char *bim_out);
+
+void rotate_encode_wahbm(uint32_t num_inds,
+                         uint32_t num_vars,
+                         char *s_gt_of_name,
+                         char *r_s_gt_of_name);
 
 int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                                           uint32_t num_fields,

@@ -102,9 +102,9 @@ int pricmp(priority a, priority b)
         return -1;
     else if  (a.sum > b.sum)
         return 1;
-    else if  (a.len < b.len)
-        return -1;
     else if  (a.len > b.len)
+        return -1;
+    else if  (a.len < b.len)
         return 1;
     else
         return 0;

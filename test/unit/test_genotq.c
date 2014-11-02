@@ -4860,8 +4860,9 @@ void test_avx_add_wahbm_2(void)
 }
 //}}}
 
+#if 0
 //{{{void test_bcf_read(void)
-void test_bcf_read(void)
+//void test_bcf_read(void)
 {
     char *bcf_file_name = "../data/10.1e4.var.bcf";
     struct bcf_file bcf_f = init_bcf_file(bcf_file_name);
@@ -4899,7 +4900,7 @@ void test_bcf_read(void)
     }
 }
 //}}}
-
+#endif
 //{{{void test_pq(void)
 void test_pq(void)
 {
@@ -5213,6 +5214,7 @@ void test_rotate_encode_wahbm(void)
     uint32_t *r = (uint32_t *) 
             malloc(num_inds*num_var_ints*sizeof(uint32_t));
     for (i = 0; i < num_vars; ++i) {
+        fseek(r_s_gt_of, 2*sizeof(uint32_t), SEEK_SET);
         fread(r, sizeof(uint32_t), num_inds*num_var_ints, r_s_gt_of);
     }
     fclose(r_s_gt_of);

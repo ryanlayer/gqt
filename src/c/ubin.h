@@ -338,6 +338,8 @@ unsigned int count_range_records_ubin(struct ubin_file uf,
 
 unsigned int convert_file_by_name_ubin_to_plt(char *ubin_in, char *plt_out);
 
+/*
 unsigned int convert_hdf5_ind_ubin_to_ind_wah(struct hdf5_file hdf5_f,
                                               char *wah_out);
+*/
 #endif

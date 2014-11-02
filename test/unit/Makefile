@@ -32,7 +32,6 @@ all: clean $(TEST_NAMES) test
 	    $(SRC)/plt.c \
 	    $(SRC)/pq.c \
 	    $(SRC)/bcf.c \
-	    $(SRC)/h5.c \
 	    $(SRC)/ubin.c \
 	    $(SRC)/wah.c \
 	    $(SRC)/wahbm.c \

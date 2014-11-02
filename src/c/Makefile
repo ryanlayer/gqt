@@ -1,7 +1,7 @@
 BIN=../../bin
 OBJ=../../obj
 HTS_ROOT=$(HOME)/src/htslib
-HDF5_ROOT=$(HOME)/src/hdf5-1.8.7-mac-intel-x86_64-static
+#HDF5_ROOT=$(HOME)/src/hdf5-1.8.7-mac-intel-x86_64-static
 #CFLAGS=-g
 CFLAGS=-O3
 #CFLAGS=-Wall -O0 -g -fno-inline -fkeep-inline-functions -D_FILE_OFFSET_BITS=64 -fPIC -DDEBUG -D_DEBUG
@@ -17,7 +17,6 @@ CC=gcc
 LIB= timer.o \
      pq.o \
      bcf.o \
-     h5.o \
      quick_file.o \
      output_buffer.o \
      pthread_pool.o \
@@ -52,18 +51,15 @@ all: $(LIST)
 
 $(OBJ)/%.o: %.c 
 	$(CC) -c $(CFLAGS) -o $@ $< \
-		-I$(HDF5_ROOT)/include \
 		-I$(HTS_ROOT) 
 
 
 $(BIN)/%: %.c $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ \
-		-I$(HDF5_ROOT)/include \
 		-I$(HTS_ROOT) \
-		-L$(HDF5_ROOT)/lib \
 		-DSAMTOOLS=1 \
 		$(HTS_ROOT)/libhts.a \
-		-lz -lm  -pthread -lhdf5 -lsz 
+		-lz -lm  -pthread
 
 $(BIN)/gt_records_grabix: $(OBJS) gt_records_grabix.cpp $(GRABIX_ROOT)/grabix.cpp
 	g++ -c $(GRABIX_ROOT)/grabix.cpp -o $(OBJ)/grabix.o

@@ -172,6 +172,7 @@ unsigned int convert_file_by_name_ubin_to_wahbm(char *ubin_in, char *wah_out)
 }
 //}}}
 
+#if 0
 //{{{ unsigned int convert_hdf5_ind_ubin_to_ind_wah(struct hdf5_file hdf5_f,
 unsigned int convert_hdf5_ind_ubin_to_ind_wah(struct hdf5_file hdf5_f,
                                               char *wah_out)
@@ -240,6 +241,7 @@ unsigned int convert_hdf5_ind_ubin_to_ind_wah(struct hdf5_file hdf5_f,
     return 0;
 }
 //}}}
+#endif
 
 //{{{ unsigned int convert_file_by_name_ubin_to_wah(char *ubin_in,
 unsigned int convert_file_by_name_ubin_to_wah(char *ubin_in, char *wah_out)

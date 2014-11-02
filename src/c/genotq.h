@@ -2,7 +2,6 @@
 #define __GENOTQ_H__
 
 #include <stdint.h>
-#include "h5.h"
 #include "pq.h"
 #include "bcf.h"
 #include "plt.h"

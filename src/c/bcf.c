@@ -36,104 +36,6 @@ struct bcf_file init_bcf_file(char *file_name)
 }
 //}}}
 
-//{{{int read_unpack_next_bcf_line(struct bcf_file *bcf_f,
-int read_unpack_next_bcf_line(struct bcf_file *bcf_f,
-                              int *num_samples,
-                              int *num_gts_per_sample)
-{
-    int r = bcf_read(bcf_f->fp, bcf_f->hdr, bcf_f->line);
-
-    if (r < 0)
-        return r; 
-
-    int ntmp = bcf_f->line->n_sample;
-    bcf_unpack(bcf_f->line, BCF_UN_ALL);
-    *num_gts_per_sample = bcf_get_genotypes(bcf_f->hdr,
-                                            bcf_f->line,
-                                            &(bcf_f->gt),
-                                            &ntmp);
-    *num_samples = bcf_hdr_nsamples(bcf_f->hdr);
-    *num_gts_per_sample /= *num_samples;
-
-    return r;
-}
-//}}}
-
-//{{{uint32_t pack_sum_count_prefix_bcf_line(struct bcf_file bcf_f,
-uint32_t pack_sum_count_prefix_bcf_line(struct bcf_file bcf_f,
-                                        uint32_t num_samples,
-                                        uint32_t num_gts_per_sample,
-                                        uint32_t **packed_ints,
-                                        uint32_t *sum,
-                                        uint32_t *prefix_len)
-{
-    uint32_t num_ints = 1 + ((num_samples - 1) / 16);
-    *packed_ints = calloc(num_ints, sizeof(uint32_t));
-    //fprintf(stderr, "pack_sum_count_prefix_bcf_line\tnum_ints:%u\n",num_ints); 
-    int32_t *gt_i = bcf_f.gt;
-
-    uint32_t two_bit_i = 0, int_i = 0;
-
-    *sum = 0;
-
-    uint32_t i, j, a = 0;
-    for (i = 0; i < num_samples; ++i) {
-        uint32_t gt = 0;
-        for (j=0; j< num_gts_per_sample; ++j) {
-            gt += bcf_gt_allele(gt_i[j]);
-        }
-
-        //fprintf(stderr, "pack_sum_count_prefix_bcf_line\tint_i:%u\n",int_i); 
-        (*packed_ints)[int_i] += gt << (30 - 2*two_bit_i);
-        two_bit_i += 1;
-        if (two_bit_i == 16) {
-            two_bit_i = 0;
-            int_i += 1;
-        }
-
-        *sum += gt;
-        gt_i += num_gts_per_sample;
-    }
-
-    *prefix_len = 0;
-    for (i = 0; i < num_ints; ++i) {
-        if ( (*packed_ints)[i] == 0 )
-            *prefix_len += 32;
-        else {
-            *prefix_len += nlz1((*packed_ints)[i]);
-            break;
-        }
-    }
-
-    return num_ints;
-}
-//}}}
-
-//{{{uint32_t md_bcf_line(struct bcf_file bcf_f,
-uint32_t md_bcf_line(struct bcf_file bcf_f,
-                     char **md)
-{
-    size_t len = strlen(bcf_hdr_id2name(bcf_f.hdr, bcf_f.line->rid)) +
-                 10 + // max length of pos
-                 strlen(bcf_f.line->d.id) +
-                 strlen(bcf_f.line->d.allele[0]) +
-                 strlen(bcf_f.line->d.allele[1]) +
-                 4; //tabs
-    *md = (char *) malloc(len * sizeof(char));
-
-    sprintf(*md,
-            "%s\t%d\t%s\t%s\t%s",
-            bcf_hdr_id2name(bcf_f.hdr, bcf_f.line->rid),
-            bcf_f.line->pos,
-            bcf_f.line->d.id,
-            bcf_f.line->d.allele[0],
-            bcf_f.line->d.allele[1]);
-
-    return len;
-}
-//}}}}
-
-
 //{{{int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                                           uint32_t num_fields,
@@ -177,7 +79,7 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 
     close_bcf_file(&bcf_f);
 
-    return 0;
+    return convert_file_by_name_ubin_to_wah(r_s_gt_of_name, wah_out);
 }
 //}}}
 
@@ -351,7 +253,6 @@ void sort_gt_md(pri_queue *q,
 }
 //}}}
 
-
 //{{{void rotate_encode_wahbm(uint32_t num_inds,
 void rotate_encode_wahbm(uint32_t num_inds,
                          uint32_t num_vars,
@@ -374,8 +275,8 @@ void rotate_encode_wahbm(uint32_t num_inds,
 
     // Write these to values to that this is a well-formed uncompressed 
     // packed int binary file (ubin) file
-    //fwrite(&num_vars, sizeof(uint32_t), 1, rs_gt_of);
-    //fwrite(&num_inds, sizeof(uint32_t), 1, rs_gt_of);
+    fwrite(&num_vars, sizeof(uint32_t), 1, rs_gt_of);
+    fwrite(&num_inds, sizeof(uint32_t), 1, rs_gt_of);
      
     uint32_t num_inds_to_write = num_inds;
     for (i = 0; i < num_ind_ints; ++i) { // loop over each int col
@@ -502,6 +403,103 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 
     //return r;
     return 0;
+}
+//}}}
+
+//{{{uint32_t pack_sum_count_prefix_bcf_line(struct bcf_file bcf_f,
+uint32_t pack_sum_count_prefix_bcf_line(struct bcf_file bcf_f,
+                                        uint32_t num_samples,
+                                        uint32_t num_gts_per_sample,
+                                        uint32_t **packed_ints,
+                                        uint32_t *sum,
+                                        uint32_t *prefix_len)
+{
+    uint32_t num_ints = 1 + ((num_samples - 1) / 16);
+    *packed_ints = calloc(num_ints, sizeof(uint32_t));
+    //fprintf(stderr, "pack_sum_count_prefix_bcf_line\tnum_ints:%u\n",num_ints); 
+    int32_t *gt_i = bcf_f.gt;
+
+    uint32_t two_bit_i = 0, int_i = 0;
+
+    *sum = 0;
+
+    uint32_t i, j, a = 0;
+    for (i = 0; i < num_samples; ++i) {
+        uint32_t gt = 0;
+        for (j=0; j< num_gts_per_sample; ++j) {
+            gt += bcf_gt_allele(gt_i[j]);
+        }
+
+        //fprintf(stderr, "pack_sum_count_prefix_bcf_line\tint_i:%u\n",int_i); 
+        (*packed_ints)[int_i] += gt << (30 - 2*two_bit_i);
+        two_bit_i += 1;
+        if (two_bit_i == 16) {
+            two_bit_i = 0;
+            int_i += 1;
+        }
+
+        *sum += gt;
+        gt_i += num_gts_per_sample;
+    }
+
+    *prefix_len = 0;
+    for (i = 0; i < num_ints; ++i) {
+        if ( (*packed_ints)[i] == 0 )
+            *prefix_len += 32;
+        else {
+            *prefix_len += nlz1((*packed_ints)[i]);
+            break;
+        }
+    }
+
+    return num_ints;
+}
+//}}}
+
+//{{{uint32_t md_bcf_line(struct bcf_file bcf_f,
+uint32_t md_bcf_line(struct bcf_file bcf_f,
+                     char **md)
+{
+    size_t len = strlen(bcf_hdr_id2name(bcf_f.hdr, bcf_f.line->rid)) +
+                 10 + // max length of pos
+                 strlen(bcf_f.line->d.id) +
+                 strlen(bcf_f.line->d.allele[0]) +
+                 strlen(bcf_f.line->d.allele[1]) +
+                 4; //tabs
+    *md = (char *) malloc(len * sizeof(char));
+
+    sprintf(*md,
+            "%s\t%d\t%s\t%s\t%s",
+            bcf_hdr_id2name(bcf_f.hdr, bcf_f.line->rid),
+            bcf_f.line->pos,
+            bcf_f.line->d.id,
+            bcf_f.line->d.allele[0],
+            bcf_f.line->d.allele[1]);
+
+    return len;
+}
+//}}}}
+
+//{{{int read_unpack_next_bcf_line(struct bcf_file *bcf_f,
+int read_unpack_next_bcf_line(struct bcf_file *bcf_f,
+                              int *num_samples,
+                              int *num_gts_per_sample)
+{
+    int r = bcf_read(bcf_f->fp, bcf_f->hdr, bcf_f->line);
+
+    if (r < 0)
+        return r; 
+
+    int ntmp = bcf_f->line->n_sample;
+    bcf_unpack(bcf_f->line, BCF_UN_ALL);
+    *num_gts_per_sample = bcf_get_genotypes(bcf_f->hdr,
+                                            bcf_f->line,
+                                            &(bcf_f->gt),
+                                            &ntmp);
+    *num_samples = bcf_hdr_nsamples(bcf_f->hdr);
+    *num_gts_per_sample /= *num_samples;
+
+    return r;
 }
 //}}}
 #endif

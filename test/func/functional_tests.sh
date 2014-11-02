@@ -105,60 +105,19 @@ rm -f tmp.count.plt \
     tmp.count.ipwahbm \
     tmp.count.cipwahbm
 
-#
-#$GTQ_PATH/gqt convert plt-invert \
-#    -i $DATA_PATH/10.1e4.ind.txt \
-#    -o tmp.invert 
-#
-#diff $DATA_PATH/10.1e4.var.txt \
-#    tmp.invert 
-#
-#rm tmp.invert
-#
-#$GTQ_PATH/gqt convert plt-vcf \
-#    -i $DATA_PATH/10.1e4.var.txt \
-#    -o tmp.vcf 
-#
-#diff tmp.vcf $DATA_PATH/10.1e4.var.vcf
-#
-#rm tmp.vcf
-#
-#
-#$GTQ_PATH/gqt convert  plt-invert-ubin \
-#    -i $DATA_PATH/10.1e4.ind.txt \
-#    -o tmp.i.ubin
-#
-#$GTQ_PATH/gqt view ubin -i tmp.i.ubin \
-#    > tmp.o.i.ubin
-#
-#$GTQ_PATH/gqt view ubin -i $DATA_PATH/10.1e4.var.ubin \
-#    > tmp.o.var.ubin
-#
-#diff tmp.o.var.ubin tmp.o.i.ubin
-#rm tmp.i.ubin tmp.o.i.ubin tmp.o.var.ubin
-#
-#ARGS="-o gt -q 0 -n 5 -r 1,2,4,5,7"
-#$GTQ_PATH/gqt sum ipwahbm \
-#    -i $DATA_PATH/10.1e4.ind.wahbm \
-#    $ARGS 
-#
-#$GTQ_PATH/gqt count ipwahbm \
-#    -i $DATA_PATH/10.1e4.ind.wahbm \
-#    $ARGS 
-#
-#
-#
-#
-
 plink --file ../data/10.1e4.ind --freq >/dev/null
-cat plink.frq  \
+
+cat plink.frq \
     | grep -v "CHR" \
-    | awk '{ if ($3=="2") print $5*$6; else print (1-$5)*$6}' \
-    | tr '\n' ' ' \
-    > plink.out
+    | awk '{OFS="\t";
+            if ($3=="2") 
+                print $1,$2,$5*$6; 
+            else 
+                print $1,$2,(1-$5)*$6
+            }' \
+    > plink.frq.common
 
-echo -en "\n" >> plink.out
-
+echo -en "\n" >> plink.frq.common
 
 $GTQ_PATH/gqt sum ipwahbm \
     -i ../data/10.1e4.ind.wahbm \
@@ -168,6 +127,8 @@ $GTQ_PATH/gqt sum ipwahbm \
     -u 2 \
     -l 1 \
     > gqt.out
+
+cat gqt.out | cut -f 1,2,7 > gqt.out.common
 
 $GTQ_PATH/gqt sum ipwahbm \
     -a \
@@ -179,26 +140,22 @@ $GTQ_PATH/gqt sum ipwahbm \
     -l 1 \
     > gqt.out.a
 
-if [ -n "`diff -w gqt.out plink.out`" ]
+cat gqt.out.a | cut -f 1,2,7 > gqt.out.a.common
+
+if [ -n "`diff -w gqt.out.common plink.frq.common`" ]
 then 
     echo "ERROR: gqt sum does not match plink"
-    #cat gqt.out
-    #cat plink.out
-    echo
 else
-    echo
-    rm plink.out plink.frq plink.log
+    echo "SUCCESS: gqt sum matches plink"
+    rm -f gqt.out.common plink.frq.common plink.frq
 fi
 
 if [ -n "`diff -w gqt.out gqt.out.a`" ]
 then 
     echo "ERROR: gqt sum does not match gqt sum -a"
-    #cat gqt.out
-    #cat gqt.out.a
-    echo
 else
-    echo
-    rm gqt.out gqt.out.a
+    echo "SUCCESS: gqt sum matches gqt sum -a"
+    rm -f gqt.out gqt.out.a
 fi
 
 $GTQ_PATH/gqt convert vcf-plt \
@@ -255,21 +212,19 @@ $GTQ_PATH/gqt sum ipwahbm \
     -l 1 \
     > .tmp.bcf.sort.ind.bim.out
 
-
 if [ -n "`diff -w .tmp.bcf.sort.ind.wahbm.out .tmp.bcf.sort.ind.bim.out`" ]
 then 
     echo "ERROR: gqt vcf...wahbm does not match bcf-wahbm"
-    echo
+else
+    echo "SUCCESS: gqt vcf...wahbm matches bcf-wahbm"
+    rm -f .tmp.var.plt \
+        .tmp.ind.ubin \
+        .tmp.ind.plt \
+        .tmp.sort.ind.plt \
+        .tmp.sort.ind.ubin \
+        .tmp.sort.ind.wahbm \
+        .tmp.bcf.sort.ind.bim \
+        .tmp.bcf.sort.ind.wahbm \
+        .tmp.bcf.sort.ind.wahbm.out \
+        .tmp.bcf.sort.ind.bim.out
 fi
-
-
-rm -f .tmp.var.plt \
-    .tmp.ind.ubin \
-    .tmp.ind.plt \
-    .tmp.sort.ind.plt \
-    .tmp.sort.ind.ubin \
-    .tmp.sort.ind.wahbm \
-    .tmp.bcf.sort.ind.bim \
-    .tmp.bcf.sort.ind.wahbm \
-    .tmp.bcf.sort.ind.wahbm.out \
-    .tmp.bcf.sort.ind.bim.out

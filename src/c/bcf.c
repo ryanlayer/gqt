@@ -79,7 +79,12 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 
     close_bcf_file(&bcf_f);
 
-    return convert_file_by_name_ubin_to_wah(r_s_gt_of_name, wah_out);
+    int r = convert_file_by_name_ubin_to_wahbm(r_s_gt_of_name, wah_out);
+    remove(gt_of_name);
+    remove(s_gt_of_name);
+    remove(r_s_gt_of_name);
+    remove(md_of_name);
+    return r;
 }
 //}}}
 

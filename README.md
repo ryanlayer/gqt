@@ -56,6 +56,7 @@ GQT depends on htslib and sqlit3.
     $ make
 
 *Step 2*. Download sqlite amalgamation source.
+
     $ wget http://www.sqlite.org/2014/sqlite-amalgamation-3080701.zip
     $ unzip sqlite-amalgamation-3080701.zip
 

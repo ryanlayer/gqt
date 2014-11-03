@@ -52,7 +52,7 @@ all: $(LIST)
 	@mkdir -p $(BIN)
 
 sqlite: 
-	$(CC) -c $(SQLITE_ROOT)/sqlite3.c
+	$(CC) -c $(SQLITE_ROOT)/sqlite3.c -o $(SQLITE_ROOT)/sqlite3.o
 
 $(OBJ)/%.o: %.c 
 	$(CC) -c $(CFLAGS) -o $@ $< \

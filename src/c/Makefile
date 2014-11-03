@@ -65,7 +65,7 @@ $(BIN)/%: %.c $(OBJS)
 		-DSAMTOOLS=1 \
 		$(HTS_ROOT)/libhts.a \
 		$(SQLITE_ROOT)/sqlite3.o \
-		-lz -lm  -pthread
+		-ldl -lz -lm  -pthread
 
 $(BIN)/gt_records_grabix: $(OBJS) gt_records_grabix.cpp $(GRABIX_ROOT)/grabix.cpp
 	g++ -c $(GRABIX_ROOT)/grabix.cpp -o $(OBJ)/grabix.o

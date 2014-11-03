@@ -109,7 +109,7 @@ unsigned int get_wah_bitmap_in_place(struct wah_file wf,
     }
 
     fseek(wf.file, wah_offset, SEEK_SET);
-    fread(*wah_bitmap,sizeof(unsigned int),wah_size,wf.file);
+    int r = fread(*wah_bitmap,sizeof(unsigned int),wah_size,wf.file);
 
     return wah_size;
 }
@@ -147,7 +147,7 @@ unsigned int get_wah_bitmaps_in_place(struct wah_file wf,
 
 
     fseek(wf.file, wah_offset, SEEK_SET);
-    fread(*wah_bitmap,sizeof(unsigned int),wah_size,wf.file);
+    int r = fread(*wah_bitmap,sizeof(unsigned int),wah_size,wf.file);
 
     return wah_size;
 }

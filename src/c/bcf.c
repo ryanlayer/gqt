@@ -239,11 +239,11 @@ void sort_gt_md(pri_queue *q,
 
         fseek(md_of, start*sizeof(char), SEEK_SET);
         char buf[len+1];
-        fread(buf, sizeof(char), len, md_of);
+        int r = fread(buf, sizeof(char), len, md_of);
         buf[len] = '\0';
 
         fseek(gt_of, (*d)*num_ind_ints*sizeof(uint32_t), SEEK_SET);
-        fread(packed_ints, sizeof(uint32_t), num_ind_ints, gt_of);
+        r = fread(packed_ints, sizeof(uint32_t), num_ind_ints, gt_of);
         fwrite(packed_ints, sizeof(uint32_t), num_ind_ints,s_gt_of);
 
         fprintf(md_out, "%s\n", buf);
@@ -292,7 +292,7 @@ void rotate_encode_wahbm(uint32_t num_inds,
                   i*sizeof(uint32_t), //col
                   SEEK_SET);
 
-            fread(&v, sizeof(uint32_t), 1, s_gt_of);
+            int r = fread(&v, sizeof(uint32_t), 1, s_gt_of);
 
             // one int corresponds to a col of 16 two-bit values
             // two_bit_i will move across the cols

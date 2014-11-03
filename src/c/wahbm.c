@@ -50,15 +50,15 @@ struct wah_file init_wahbm_file(char *file_name)
 
     // Jump to the begining of the file to grab the record size
     fseek(wf.file, 0, SEEK_SET);
-    fread(&wf.num_fields,sizeof(unsigned int),1,wf.file);
-    fread(&wf.num_records,sizeof(unsigned int),1,wf.file);
+    int r = fread(&wf.num_fields,sizeof(unsigned int),1,wf.file);
+    r = fread(&wf.num_records,sizeof(unsigned int),1,wf.file);
 
     wf.record_offsets = (unsigned int *) 
             malloc(sizeof (unsigned int)*wf.num_records*4);
 
     unsigned int i;
     for (i = 0; i < wf.num_records*4; ++i)
-        fread(&(wf.record_offsets[i]),sizeof(unsigned int),1,wf.file);
+        r = fread(&(wf.record_offsets[i]),sizeof(unsigned int),1,wf.file);
 
 
     wf.header_offset = ftell(wf.file);
@@ -237,7 +237,7 @@ unsigned int get_wah_bitmap(struct wah_file wf,
 
     *wah_bitmap = (unsigned int *) malloc(sizeof(unsigned int)*wah_size);
     fseek(wf.file, wah_offset, SEEK_SET);
-    fread(*wah_bitmap,sizeof(unsigned int),wah_size,wf.file);
+    int r = fread(*wah_bitmap,sizeof(unsigned int),wah_size,wf.file);
 
     return wah_size;
 }

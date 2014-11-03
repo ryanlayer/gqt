@@ -29,8 +29,8 @@ struct ubin_file init_ubin_file(char *file_name)
 
     // Jump to the begining of the file to grab the record size
     fseek(uf.file, 0, SEEK_SET);
-    fread(&uf.num_fields,sizeof(unsigned int),1,uf.file);
-    fread(&uf.num_records,sizeof(unsigned int),1,uf.file);
+    int r = fread(&uf.num_fields,sizeof(unsigned int),1,uf.file);
+    r = fread(&uf.num_records,sizeof(unsigned int),1,uf.file);
     uf.header_offset = ftell(uf.file);
 
     return uf;
@@ -71,7 +71,7 @@ unsigned int convert_file_by_name_ubin_to_wahbm16(char *ubin_in,
     fseek(uf.file, uf.header_offset, SEEK_SET);
 
     for (i = 0; i < uf.num_records; ++i) {
-        fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
+        int r =fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
          
         uint16_t *wah;
         unsigned int *wah_sizes;
@@ -137,7 +137,7 @@ unsigned int convert_file_by_name_ubin_to_wahbm(char *ubin_in, char *wah_out)
     fseek(uf.file, uf.header_offset, SEEK_SET);
 
     for (i = 0; i < uf.num_records; ++i) {
-        fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
+        int r = fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
          
         unsigned int *wah;
         unsigned int *wah_sizes;
@@ -204,7 +204,7 @@ unsigned int convert_file_by_name_ubin_to_wah(char *ubin_in, char *wah_out)
     fseek(uf.file, uf.header_offset, SEEK_SET);
 
     for (i = 0; i < uf.num_records; ++i) {
-        fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
+        int r = fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
          
         unsigned int *wah;
         unsigned int wah_len = ints_to_wah(c,
@@ -250,7 +250,10 @@ unsigned int get_ubin_record(struct ubin_file uf,
                    malloc(sizeof(unsigned int)*num_ints_per_record);
 
     fseek(uf.file, ubin_offset, SEEK_SET);
-    fread(*ubin_record,sizeof(unsigned int),num_ints_per_record,uf.file);
+    int r = fread(*ubin_record,
+                   sizeof(unsigned int),
+                   num_ints_per_record,
+                   uf.file);
 
     return num_ints_per_record;
 }
@@ -541,7 +544,7 @@ unsigned int print_ubin(struct ubin_file uf,
             fseek(uf.file, uf.header_offset + 
                         record_ids[i]*num_bytes_per_record, 
                         SEEK_SET);
-            fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
+            int r = fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
 
             unsigned int printed_bits = 0;
 
@@ -614,7 +617,7 @@ unsigned int range_records_ubin(struct ubin_file uf,
         fseek(uf.file, uf.header_offset + // skip the record & field size field
                     record_ids[i]*num_bytes_per_record, // skip to the reccord
                     SEEK_SET);
-        fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
+        int r = fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
 
         R_int_i = 0;
         R_bit_i = 0;
@@ -673,7 +676,7 @@ unsigned int count_range_records_ubin(struct ubin_file uf,
         fseek(uf.file, uf.header_offset + // skip the record & field size field
                     record_ids[i]*num_bytes_per_record, // skip to the reccord
                     SEEK_SET);
-        fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
+        int r = fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
 
         R_int_i = 0;
         R_bit_i = 0;

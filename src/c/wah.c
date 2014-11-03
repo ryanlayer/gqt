@@ -27,15 +27,15 @@ struct wah_file init_wah_file(char *file_name)
 
     // Jump to the begining of the file to grab the record size
     fseek(wf.file, 0, SEEK_SET);
-    fread(&wf.num_fields,sizeof(unsigned int),1,wf.file);
-    fread(&wf.num_records,sizeof(unsigned int),1,wf.file);
+    int r = fread(&wf.num_fields,sizeof(unsigned int),1,wf.file);
+    r = fread(&wf.num_records,sizeof(unsigned int),1,wf.file);
 
     wf.record_offsets = (unsigned int *) 
             malloc(sizeof (unsigned int)*wf.num_records);
 
     unsigned int i;
     for (i = 0; i < wf.num_records; ++i)
-        fread(&(wf.record_offsets[i]),sizeof(unsigned int),1,wf.file);
+        r = fread(&(wf.record_offsets[i]),sizeof(unsigned int),1,wf.file);
 
 
     wf.header_offset = ftell(wf.file);
@@ -65,7 +65,7 @@ unsigned int get_wah_record(struct wah_file wf,
 
     *wah = (unsigned int *) malloc(sizeof(unsigned int)*wah_size);
     fseek(wf.file, wah_offset, SEEK_SET);
-    fread(*wah,sizeof(unsigned int),wah_size,wf.file);
+    int r = fread(*wah,sizeof(unsigned int),wah_size,wf.file);
 
     return wah_size;
 }

@@ -102,7 +102,7 @@ uint32_t convert_file_by_name_ped_to_db(char *ped_file_name, char *db_name)
         word = strtok(line, "\t");
         for (i = 0; i < num_fields - 1; ++i) { // skip added last ind_id field
             for (j = 0; j < strlen(word); ++j) 
-                field_type[i] &= isnumber((int)word[j]);
+                field_type[i] &= isdigit((int)word[j]);
             word = strtok(NULL, "\t");
         }
     }

@@ -61,7 +61,7 @@ GQT depends on htslib and sqlit3.
     $ unzip sqlite-amalgamation-3080701.zip
 
 *Step 2*. Modify the GQT Makefile by setting the `HTS_ROOT` and `SQLITE_ROOT`
-variable in src/c/Makfile to reflect ther locations.
+variable in `src/c/Makfile` to reflect their locations.
 
 *Step 3*. Compile GQT
 

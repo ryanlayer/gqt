@@ -91,7 +91,7 @@ int sum(int argc, char **argv)
 #endif
 
     int c;
-    char *in, *out, *record_ids, *op, *bim;
+    char *in, *out, *record_ids, *op, *bim, *query, *ped_db_file;
     unsigned int num_records;
     int i_is_set = 0,
         a_is_set = 0,
@@ -103,20 +103,30 @@ int sum(int argc, char **argv)
         u_is_set = 0,
         l_is_set = 0,
         e_is_set = 0,
+        q_is_set = 0,
+        d_is_set = 0,
         x_is_set = 0;
 
     uint32_t range_start = 0, range_end = 3, range_exclude = 0;
 
-    while ((c = getopt (argc, argv, "ahi:r:n:b:Qtu:l:e:x:")) != -1) {
+    while ((c = getopt (argc, argv, "ahi:r:n:b:Qtu:l:e:x:q:d:")) != -1) {
         switch (c) {
         case 'a':
             a_is_set = 1;
             break;
+        case 'd':
+        	d_is_set = 1;
+        	ped_db_file = optarg;
+        	break;
+        case 'q':
+        	q_is_set = 1;
+        	query = optarg;
+        	break;
         case 'b':
         	b_is_set = 1;
         	bim = optarg;
         	break;
-       case 'u':
+        case 'u':
             u_is_set = 1;
             range_end = atoi(optarg);
             break;
@@ -174,18 +184,33 @@ int sum(int argc, char **argv)
         return sum_help();
     }
 
-    if (n_is_set == 0) {
-        printf("Number of records is not set\n");
+    if ( ((q_is_set == 1) && (d_is_set == 0)) ||
+         ((q_is_set == 0) && (d_is_set == 1)) ) {
+        printf("Both query and PED database name must be set\n");
         return sum_help();
     }
 
-    if (r_is_set == 0) {
-        printf("Record IDs are not set\n");
-        return sum_help();
+    if ((q_is_set == 0) && (d_is_set == 0)) {
+        if (n_is_set == 0) {
+            printf("Number of records is not set\n");
+            return sum_help();
+        }
+
+        if (r_is_set == 0) {
+            printf("Record IDs are not set\n");
+            return sum_help();
+        }
     }
 
-    unsigned int R[num_records];
-    parse_cmd_line_int_csv(R, num_records, record_ids);
+    unsigned int *R;
+
+    if (q_is_set == 1) {
+        num_records = resolve_ind_query(&R, query, ped_db_file);
+        fprintf(stderr, "num_records:%u\n", num_records);
+    } else {
+        R = (unsigned int *) malloc(num_records * sizeof(unsigned int));
+        parse_cmd_line_int_csv(R, num_records, record_ids);
+    }
 
     if ((a_is_set == 1) && (avx_is_on == 0 )) {
         printf("AVX support not included at compile time\n");
@@ -278,6 +303,8 @@ int sum_help()
            "                        -u <inclusive upper bound>\n"
            "                        -b <bim file>\n"
            "                        -x <exlcude>\n"
+           "                        -q <query>\n"
+           "                        -d <ped database>\n"
            "\ttypes:\n"
            "\t\tplt       Plain text \n"
            "\t\tubin      Uncompressed binary\n"

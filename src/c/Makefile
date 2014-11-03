@@ -11,10 +11,12 @@ CFLAGS=-O3
 #CFLAGS+=-Dtime_sum_range_records_in_place_wahbm
 #CFLAGS+=-Dtime_convert_file_by_name_bcf_to_wahbm_bim
 #CFLAGS+=-Dtime_sort_rotate_gt_md
-GRABIX_ROOT=~/src/grabix
+GRABIX_ROOT=$(HOME)/src/grabix
+SQLITE_ROOT=$(HOME)/src/sqlite-amalgamation-3080100
 CC=gcc
 
 LIB= timer.o \
+     ped.o \
      pq.o \
      bcf.o \
      quick_file.o \
@@ -43,15 +45,18 @@ PROG=read_binary_uints \
 	gqt 
 
 
-LIST=$(addprefix $(BIN)/, $(PROG))
+LIST=sqlite $(addprefix $(BIN)/, $(PROG))
 
 all: $(LIST)
 	@mkdir -p $(OBJ)
 	@mkdir -p $(BIN)
 
+sqlite: 
+	$(CC) -c $(SQLITE_ROOT)/sqlite3.c
+
 $(OBJ)/%.o: %.c 
 	$(CC) -c $(CFLAGS) -o $@ $< \
-		-I$(HTS_ROOT) 
+		-I$(HTS_ROOT) -I$(SQLITE_ROOT)
 
 
 $(BIN)/%: %.c $(OBJS)
@@ -59,6 +64,7 @@ $(BIN)/%: %.c $(OBJS)
 		-I$(HTS_ROOT) \
 		-DSAMTOOLS=1 \
 		$(HTS_ROOT)/libhts.a \
+		$(SQLITE_ROOT)/sqlite3.o \
 		-lz -lm  -pthread
 
 $(BIN)/gt_records_grabix: $(OBJS) gt_records_grabix.cpp $(GRABIX_ROOT)/grabix.cpp

@@ -7,35 +7,47 @@ compute burden by orders of magnitude. This index can significantly expand the
 capabilities of population-scale analyses by providing interactive-speed
 queries to data sets with millions of individuals.
 
-GQT takes a BCF as input and produces two files, a (very small) compressed index (.wahbm)
-and a summary of the variant metadata (.bim). This process rotates the data,
-sorts it by alternate allele frequency, converts it to a bitmap index, then
-finally compresses the data using the Word Aligned Hybrid (WAH) encoding
-(http://dl.acm.org/citation.cfm?id=1132864).  Rotating the typical
-variant-row/individual-column form of a BCF such that individuals become rows
-allows for more efficient memory access patterns for individual based queries
-(e.g., find the alternate allele frequency count for some set of individuals
-within the cohort).  Sorting columns (variants) improves compression.
-Converting to a bitmap index allows queries to be resolved using bit-wise
-logical operations, which can compare 32 genotypes in a single fast operation.
-WAH encoding gives near-optimal compression while allowing bit-wise logical
-operations without inflation.
+GQT takes a BCF as input and produces two files, a (very small) compressed
+index (.wahbm) and a summary of the variant metadata (.bim). This process
+rotates the data, sorts it by alternate allele frequency, converts it to a
+bitmap index, then finally compresses the data using the Word Aligned Hybrid
+(WAH) encoding (http://dl.acm.org/citation.cfm?id=1132864).  Rotating the
+typical variant-row/individual-column form of a BCF such that individuals
+become rows allows for more efficient memory access patterns for individual
+based queries (e.g., find the alternate allele frequency count for some set of
+individuals within the cohort).  Sorting columns (variants) improves
+compression.  Converting to a bitmap index allows queries to be resolved using
+bit-wise logical operations, which can compare 32 genotypes in a single fast
+operation.  WAH encoding gives near-optimal compression while allowing bit-wise
+logical operations without inflation.
 
-The combined result of these steps creates an index that is only a fraction of the
-source BCF size, and queries against that index complete in seconds.  In the
-case of chr22 from 1000 Genomes, the BCF file is 11G and the WAH index is 42M,
-and the alternate allele frequency count for 100 of those individuals can be
-found in 0.188 seconds.
+The combined result of these steps creates an index that is only a fraction of
+the source BCF size, and queries against that index complete in seconds.  In
+the case of chr22 from 1000 Genomes, the BCF file is 11G and the WAH index is
+42M, and the alternate allele frequency count for 100 of those individuals can
+be found in 0.188 seconds.
 
-The following [slides](http://quinlanlab.org/pdf/presentations/gtqGI2014v6.pdf) provides a 
-conceptual overview, as well as more details about the choice of bitmaps and the word-aligned 
-hybrid strategy for this problem.
+The following [slides](http://quinlanlab.org/pdf/presentations/gtqGI2014v6.pdf)
+provides a conceptual overview, as well as more details about the choice of
+bitmaps and the word-aligned hybrid strategy for this problem.
 
-
+GQT queries are individual-focused.  That is, results such as alternate allele
+frequency count or the set of non-reference alleles are based on a subset of
+individuals from the population.  Identifying the target individuals can either
+be done manually by selecting the individual’s zero-based ID through the
+command line argument "-r", or by querying an associated PED file
+(http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml#ped).  To query a PED
+file, you must first convert the PED file to an sqlite3
+(http://www.sqlite.org/) database by running the `gqt convert ped-db` commad
+(see below).  Once this database has been created, simply pass the conditions
+that define your target population population (e.g., `Population = 'GBR' AND
+Paternal ID ='NA19679'`).  NOTE:  all white space characters in the PED file
+will be converted to an underscore in the database (e.g., `Paternal ID` becomes
+`Paternal_ID`), and all queries must follow this syntax.
 
 Installation
 ============
-GQT depends on htslib.
+GQT depends on htslib and sqlit3.
 
 *Step 1*. Install htslib.
 
@@ -43,8 +55,12 @@ GQT depends on htslib.
     $ cd htslib
     $ make
 
-*Step 2*. Modify the GQT Makefile by setting the `HTS_ROOT` variable in src/c/Makfile to
-reflect ther locations.
+*Step 2*. Download sqlite amalgamation source.
+    $ wget http://www.sqlite.org/2014/sqlite-amalgamation-3080701.zip
+    $ unzip sqlite-amalgamation-3080701.zip
+
+*Step 2*. Modify the GQT Makefile by setting the `HTS_ROOT` and `SQLITE_ROOT`
+variable in src/c/Makfile to reflect ther locations.
 
 *Step 3*. Compile GQT
 
@@ -129,3 +145,23 @@ If you have compiled in AVX2 support (uncomment line 7 of the Makefile in gqt/sr
          -i 1kg.chr22.bcf.wahbm \
          -n 100 \
          -r $Q
+
+
+*Step 5*. Download the Phase 1 1000 genomes PED file. NOTE: this is from Phase 3, so it does not match exactly but is useful for the example.
+
+    $ wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp//release/20130502/integrated_call_samples.20130502.ALL.ped
+
+*Step 6* Covert the PED file to a PED db
+
+    $ gqt convert ped-db \
+        -i integrated_call_samples.20130502.ALL.ped \
+        -o integrated_call_samples.20130502.ALL.db
+
+*Step 7* Submit the same query as above, but this time useing a query.
+
+    $ gqt sum ipwahbm \
+         -a \
+         -b 1kg.chr22.bcf.bim \
+         -i 1kg.chr22.bcf.wahbm \
+         -d integrated_call_samples.20130502.ALL.db \
+         -q "Ind_ID < 100"

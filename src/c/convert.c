@@ -23,6 +23,7 @@ int vcf_plt(char *in,
             unsigned int num_records);
 int plt_invert(char *in, char *out);
 int plt_invert_ubin(char *in, char *out);
+int ped_db(char *in, char *out);
 
 int convert(int argc, char **argv)
 {
@@ -118,6 +119,7 @@ int convert(int argc, char **argv)
         return bcf_wahbm(in, out, bim, num_fields, num_records);
     } 
 
+    if (strcmp(type, "ped-db") == 0)  return ped_db(in, out);
     if (strcmp(type, "plt-ubin") == 0)  return plt_ubin(in, out);
     if (strcmp(type, "plt-vcf") == 0)  return plt_vcf(in, out);
     if (strcmp(type, "plt-invert") == 0)  return plt_invert(in, out);
@@ -144,6 +146,7 @@ int convert_help()
            "         ubin-wah          Uncompressed binary to WAH \n"
            "         vcf-plt           VCF to by-variant plain text\n"
            "         bcf-wahbm         BCF to by-individual sorted WAH bitmap\n"
+           "         ped-db            PED to SQLite3 database\n"
            "         -b                BIM output file name"
                                        "(required for bcf-wahbm)\n"
            "         -r                Number of records "
@@ -178,6 +181,11 @@ int ubin_wah(char *in, char *out)
 int plt_ubin(char *in, char *out)
 {
     return convert_file_by_name_plt_to_ubin(in, out);
+}
+
+int ped_db(char *in, char *out)
+{
+    return convert_file_by_name_ped_to_db(in, out);
 }
 
 int plt_vcf(char *in, char *out)

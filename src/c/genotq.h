@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "pq.h"
+#include "ped.h"
 #include "bcf.h"
 #include "plt.h"
 #include "ubin.h"

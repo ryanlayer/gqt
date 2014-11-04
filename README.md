@@ -89,12 +89,11 @@ you are impatient, we have posted all of the converted files described above on
 our lab [website](http://quinlanlab.cs.virginia.edu/gqt-example/).
 
 *Step 1*. Download the Phase 1 1000 genomes chr22 file.
--------------------------------------------------------
 
 	$ wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20110521/ALL.chr22.phase1_release_v3.20101123.snps_indels_svs.genotypes.vcf.gz
 
 *Step 2*. Use the new (and very nice) version of [bcftools](http://samtools.github.io/bcftools/) to convert the file VCF to BCF.
------------------------------------------------------------------------------------------------------------------------------------
+
 
 	$ bcftools view ALL.chr22.phase1_release_v3.20101123.snps_indels_svs.genotypes.vcf.gz > 1kg.chr22.bcf
 
@@ -160,7 +159,7 @@ If you have compiled in AVX2 support (uncomment line 7 of the Makefile in gqt/sr
         -i integrated_call_samples.20130502.ALL.ped \
         -o integrated_call_samples.20130502.ALL.db
 
-*Step 7* Submit the same query as above, but this time useing a query.
+*Step 7* Submit the same query as above, but this time using a query based on the PED file.
 
     $ gqt sum ipwahbm \
          -a \
@@ -168,3 +167,12 @@ If you have compiled in AVX2 support (uncomment line 7 of the Makefile in gqt/sr
          -i 1kg.chr22.bcf.wahbm \
          -d integrated_call_samples.20130502.ALL.db \
          -q "Ind_ID < 100"
+
+Or, construct a more interesting query based on the PED file. In this case, count the non-ref alleles observed for each variant among CEU females.
+
+    $ gqt sum ipwahbm \
+         -a \
+         -b 1kg.chr22.bcf.bim \
+         -i 1kg.chr22.bcf.wahbm \
+         -d integrated_call_samples.20130502.ALL.db \
+         -q "Population=='CEU' and Gender==2"

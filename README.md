@@ -85,8 +85,7 @@ In the example below, we demonstrate how to create a word-aligned hybrid index
 of a VCF file from the 1000 Genomes Project. We then demonstrate how to use
 this index to quickly query variants based on sample genotypes (the query
 interface is very limited, but we are actively working on it.). Please note
-that the conversion of BCF to a WAH index will take roughly 4 hours, as we have
-not yet had time to focus on optimizing or parallelizing this conversion.  If
+that the conversion of BCF to a WAH index will take only 4 or 5 minutes.  However, if
 you are impatient, we have posted all of the converted files described above on
 our lab [website](http://quinlanlab.cs.virginia.edu/gqt-example/).
 

@@ -15,6 +15,7 @@ all: clean $(TEST_NAMES) test
 %: %.c
 	#ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $@.c
 	ruby $(UNITY_ROOT)/generate_test_runner.rb $@.c
+	lex -o $(SRC)/parse_q.yy.c $(SRC)/parse_q.l
 	$(CC) -Werror -g -o $@ \
 	    -I$(HDF5_ROOT)/include \
 	    -L$(HDF5_ROOT)/lib \
@@ -37,6 +38,9 @@ all: clean $(TEST_NAMES) test
 	    $(SRC)/wahbm.c \
 	    $(SRC)/wahbm_in_place.c \
 	    $(SRC)/wahbm_compressed_in_place.c \
+	    $(SRC)/parse_q.c \
+	    $(SRC)/parse_q.yy.c \
+	    -ll \
 	    $@.c $@_Runner.c -lm 
 	rm $@_Runner.c
 

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "parse_q.h"
 #include "genotq.h"
 #include "unity.h"
 #include <math.h>
@@ -4860,47 +4861,6 @@ void test_avx_add_wahbm_2(void)
 }
 //}}}
 
-#if 0
-//{{{void test_bcf_read(void)
-//void test_bcf_read(void)
-{
-    char *bcf_file_name = "../data/10.1e4.var.bcf";
-    struct bcf_file bcf_f = init_bcf_file(bcf_file_name);
-
-    TEST_ASSERT_EQUAL(10, bcf_f.num_records);
-
-    int num_samples, num_gts_per_sample;
-
-    int r = read_unpack_next_bcf_line(&bcf_f,
-                                      &num_samples,
-                                      &num_gts_per_sample);
-
-    TEST_ASSERT_EQUAL(10, num_samples);
-    TEST_ASSERT_EQUAL(2, num_gts_per_sample);
-
-    int32_t *gt_i = bcf_f.gt;
-
-    TEST_ASSERT_EQUAL(0,
-                      strcmp("1",bcf_hdr_id2name(bcf_f.hdr, bcf_f.line->rid)));
-
-    TEST_ASSERT_EQUAL(0, bcf_f.line->pos);
-    TEST_ASSERT_EQUAL(0, strcmp("V1", bcf_f.line->d.id));
-    TEST_ASSERT_EQUAL(0, strcmp("A", bcf_f.line->d.allele[0]));
-    TEST_ASSERT_EQUAL(0, strcmp("T", bcf_f.line->d.allele[1]));
-
-    uint32_t A[20] = { 1,1,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1 };
-
-    int i, j, a = 0;
-    for (i = 0; i < num_samples; ++i) {
-        for (j=0; j< num_gts_per_sample; ++j) {
-            TEST_ASSERT_EQUAL(A[a], bcf_gt_allele(gt_i[j]));
-            a+=1;
-        }
-        gt_i += num_gts_per_sample;
-    }
-}
-//}}}
-#endif
 //{{{void test_pq(void)
 void test_pq(void)
 {
@@ -5285,6 +5245,95 @@ void test_rotate_encode_wahbm(void)
 }
 //}}}
 
+void test_parse_q(void)
+{
+    struct gqt_query q;
+
+    char qt[100];
+    int r;
+
+    strcpy(qt, "HET");
+    r = parse_q(qt, &q);
+
+    TEST_ASSERT_EQUAL(0, r);
+
+    TEST_ASSERT_EQUAL(-1, q.variant_op);
+    TEST_ASSERT_EQUAL(-1, q.op_condition);
+    TEST_ASSERT_EQUAL(0, q.genotype_condition[0]);
+    TEST_ASSERT_EQUAL(1, q.genotype_condition[1]);
+    TEST_ASSERT_EQUAL(0, q.genotype_condition[2]);
+    TEST_ASSERT_EQUAL(0, q.genotype_condition[3]);
+    TEST_ASSERT_EQUAL(-1, q.condition_value);
+
+
+    strcpy(qt, "HET HOMO_ALT");
+    r = parse_q(qt, &q);
+
+    TEST_ASSERT_EQUAL(0, r);
+
+    TEST_ASSERT_EQUAL(-1, q.variant_op);
+    TEST_ASSERT_EQUAL(-1, q.op_condition);
+    TEST_ASSERT_EQUAL(0, q.genotype_condition[0]);
+    TEST_ASSERT_EQUAL(1, q.genotype_condition[1]);
+    TEST_ASSERT_EQUAL(1, q.genotype_condition[2]);
+    TEST_ASSERT_EQUAL(0, q.genotype_condition[3]);
+    TEST_ASSERT_EQUAL(-1, q.condition_value);
+
+
+    strcpy(qt, "count(HET) >= 3");
+    r = parse_q(qt, &q);
+
+    TEST_ASSERT_EQUAL(0, r);
+
+    TEST_ASSERT_EQUAL(count, q.variant_op);
+    TEST_ASSERT_EQUAL(greater_than_equal, q.op_condition);
+    TEST_ASSERT_EQUAL(0, q.genotype_condition[0]);
+    TEST_ASSERT_EQUAL(1, q.genotype_condition[1]);
+    TEST_ASSERT_EQUAL(0, q.genotype_condition[2]);
+    TEST_ASSERT_EQUAL(0, q.genotype_condition[3]);
+    TEST_ASSERT_EQUAL(3, q.condition_value);
+
+    strcpy(qt, "pct(HOMO_REF HET) != 0.001");
+    r = parse_q(qt, &q);
+
+    TEST_ASSERT_EQUAL(0, r);
+
+    TEST_ASSERT_EQUAL(pct, q.variant_op);
+    TEST_ASSERT_EQUAL(not_equal, q.op_condition);
+    TEST_ASSERT_EQUAL(1, q.genotype_condition[0]);
+    TEST_ASSERT_EQUAL(1, q.genotype_condition[1]);
+    TEST_ASSERT_EQUAL(0, q.genotype_condition[2]);
+    TEST_ASSERT_EQUAL(0, q.genotype_condition[3]);
+    TEST_ASSERT_EQUAL(0.001, q.condition_value);
+
+
+    // test bad syntax
+    strcpy(qt, "count()");
+    r = parse_q(qt, &q);
+    TEST_ASSERT_EQUAL(1, r);
+
+    strcpy(qt, "count(HET");
+    r = parse_q(qt, &q);
+    TEST_ASSERT_EQUAL(1, r);
+
+    strcpy(qt, "count(HET) >=");
+    r = parse_q(qt, &q);
+    TEST_ASSERT_EQUAL(1, r);
+
+    strcpy(qt, "count(HET) 10");
+    r = parse_q(qt, &q);
+    TEST_ASSERT_EQUAL(1, r);
+
+    strcpy(qt, "HET == 10");
+    r = parse_q(qt, &q);
+    TEST_ASSERT_EQUAL(1, r);
+
+    strcpy(qt, "HET ==");
+    r = parse_q(qt, &q);
+    TEST_ASSERT_EQUAL(1, r);
+}
+
+//{{{  OLD
 
 #if 0
 //{{{ void test_rotate_sort_bcf_to_wahbm(void)
@@ -5603,3 +5652,46 @@ void test_rotate_encode_wahbm(void)
 }
 //}}}
 #endif
+#if 0
+//{{{void test_bcf_read(void)
+//void test_bcf_read(void)
+{
+    char *bcf_file_name = "../data/10.1e4.var.bcf";
+    struct bcf_file bcf_f = init_bcf_file(bcf_file_name);
+
+    TEST_ASSERT_EQUAL(10, bcf_f.num_records);
+
+    int num_samples, num_gts_per_sample;
+
+    int r = read_unpack_next_bcf_line(&bcf_f,
+                                      &num_samples,
+                                      &num_gts_per_sample);
+
+    TEST_ASSERT_EQUAL(10, num_samples);
+    TEST_ASSERT_EQUAL(2, num_gts_per_sample);
+
+    int32_t *gt_i = bcf_f.gt;
+
+    TEST_ASSERT_EQUAL(0,
+                      strcmp("1",bcf_hdr_id2name(bcf_f.hdr, bcf_f.line->rid)));
+
+    TEST_ASSERT_EQUAL(0, bcf_f.line->pos);
+    TEST_ASSERT_EQUAL(0, strcmp("V1", bcf_f.line->d.id));
+    TEST_ASSERT_EQUAL(0, strcmp("A", bcf_f.line->d.allele[0]));
+    TEST_ASSERT_EQUAL(0, strcmp("T", bcf_f.line->d.allele[1]));
+
+    uint32_t A[20] = { 1,1,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1 };
+
+    int i, j, a = 0;
+    for (i = 0; i < num_samples; ++i) {
+        for (j=0; j< num_gts_per_sample; ++j) {
+            TEST_ASSERT_EQUAL(A[a], bcf_gt_allele(gt_i[j]));
+            a+=1;
+        }
+        gt_i += num_gts_per_sample;
+    }
+}
+//}}}
+#endif
+
+//}}}

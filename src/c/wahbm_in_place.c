@@ -635,8 +635,20 @@ unsigned int sum_range_records_in_place_wahbm(struct wah_file wf,
 #endif
 
 #if 1
+            /*
+            unsigned int num_allels = 0;
+            if (j == 0) //homo_ref
+                num_alleles = 2;
+            else if (j == 1) //het
+                num_alleles = 1;
+            else if (j == 2) //homo_alt
+                num_alleles = 2;
+            else if (j == 3) //homo_alt
+                num_alleles = 1;
+            */
+
             r_size = add_n_wahbm(*R,
-                                 j,
+                                 1,
                                  wf.num_fields,
                                  record_new_bm,
                                  record_new_bm_size);

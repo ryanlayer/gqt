@@ -2,6 +2,7 @@
 #define __GENOTQ_H__
 
 #include <stdint.h>
+#include "parse_q.h"
 #include "pq.h"
 #include "ped.h"
 #include "bcf.h"

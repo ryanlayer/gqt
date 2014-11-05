@@ -16,6 +16,9 @@ SQLITE_ROOT=$(HOME)/src/sqlite-amalgamation-3080100
 CC=gcc
 
 LIB= timer.o \
+     query.o \
+     parse_q.yy.o \
+     parse_q.o \
      ped.o \
      pq.o \
      bcf.o \
@@ -45,11 +48,14 @@ PROG=read_binary_uints \
 	gqt 
 
 
-LIST=sqlite $(addprefix $(BIN)/, $(PROG))
+LIST=sqlite parse_q $(addprefix $(BIN)/, $(PROG))
 
 all: $(LIST)
 	@mkdir -p $(OBJ)
 	@mkdir -p $(BIN)
+
+parse_q:
+	lex -o parse_q.yy.c parse_q.l
 
 sqlite: 
 	$(CC) -c $(SQLITE_ROOT)/sqlite3.c -o $(SQLITE_ROOT)/sqlite3.o
@@ -65,7 +71,7 @@ $(BIN)/%: %.c $(OBJS)
 		-DSAMTOOLS=1 \
 		$(HTS_ROOT)/libhts.a \
 		$(SQLITE_ROOT)/sqlite3.o \
-		-ldl -lz -lm  -pthread
+		-ll -ldl -lz -lm  -pthread
 
 $(BIN)/gt_records_grabix: $(OBJS) gt_records_grabix.cpp $(GRABIX_ROOT)/grabix.cpp
 	g++ -c $(GRABIX_ROOT)/grabix.cpp -o $(OBJ)/grabix.o

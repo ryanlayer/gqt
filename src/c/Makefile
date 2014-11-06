@@ -12,7 +12,7 @@ CFLAGS=-O3
 #CFLAGS+=-Dtime_convert_file_by_name_bcf_to_wahbm_bim
 #CFLAGS+=-Dtime_sort_rotate_gt_md
 GRABIX_ROOT=$(HOME)/src/grabix
-SQLITE_ROOT=$(HOME)/src/sqlite-amalgamation-3080100
+SQLITE_ROOT=/if2/rl6sf/src/sqlite-amalgamation-3080701
 CC=gcc
 
 LIB= timer.o \
@@ -40,6 +40,7 @@ LIB= timer.o \
      sum.o \
      sandbox.o
 
+.SUFFIXES:
 
 OBJS=$(addprefix $(OBJ)/, $(LIB))
 
@@ -72,22 +73,3 @@ $(BIN)/%: %.c $(OBJS)
 		$(HTS_ROOT)/libhts.a \
 		$(SQLITE_ROOT)/sqlite3.o \
 		-ll -ldl -lz -lm  -pthread
-
-$(BIN)/gt_records_grabix: $(OBJS) gt_records_grabix.cpp $(GRABIX_ROOT)/grabix.cpp
-	g++ -c $(GRABIX_ROOT)/grabix.cpp -o $(OBJ)/grabix.o
-	gcc -c $(GRABIX_ROOT)/bgzf.c -o $(OBJ)/bgzf.o
-	g++ -g gt_records_grabix.cpp \
-		quick_file.c \
-		buf_out.c \
-		genotq.c \
-		wah.c \
-		wahbm.c \
-		wahbm_in_place.c \
-		wahbm_compressed_in_place.c \
-		sandbox.c \
-		$(OBJ)/grabix.o \
-		$(OBJ)/bgzf.o \
- 		-I $(GRABIX_ROOT)  \
-		-lstdc++ -lz \
-		-o $(BIN)/gt_records_grabix
-	

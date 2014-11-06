@@ -2,6 +2,7 @@ BIN=bin
 OBJ=obj
 
 all: 
+	@touch src/c/parse_q.yy.c
 	@mkdir -p $(OBJ)
 	@mkdir -p $(BIN)
 	cd src/c; make

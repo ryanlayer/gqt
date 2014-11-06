@@ -228,3 +228,78 @@ else
         .tmp.bcf.sort.ind.wahbm.out \
         .tmp.bcf.sort.ind.bim.out
 fi
+
+
+$GTQ_PATH/gqt convert ped-db \
+    -i ../data/10.1e4.var.ped \
+    -o .tmp.10.1e4.var.db
+
+ROWS=`sqlite3 .tmp.10.1e4.var.db "select * from ped;" | wc -l`
+
+if [ $ROWS -eq 10 ]
+then
+    echo "SUCCESS: Correct number of rows in PED db"
+else
+    echo "ERROR: 10 rows expect in PED db. $ROWS found."
+fi 
+
+ROWS=`sqlite3 .tmp.10.1e4.var.db "select * from ped where Population='ESN';"| wc -l`
+
+if [ $ROWS -eq 2 ]
+then
+    echo "SUCCESS: Correct number of rows from ESN populaiton in PED db"
+else
+    echo "ERROR: 2 rows expect in PED db. $ROWS found."
+fi 
+
+
+# count the number of homo_ref rows
+$GTQ_PATH/gqt sum ipwahbm \
+        -i ../data/10.1e4.ind.wahbm \
+        -b ../data/10.1e4.var.bim \
+        -d .tmp.10.1e4.var.db \
+        -q "Population ='ESN'" \
+        -l 0 \
+        -u 0 \
+> .tmp.homo_ref.count
+
+#ESN are the 2nd and 10th columns in the vcf
+GQT_BOTH_NUM=`cat .tmp.homo_ref.count | awk '$6==2' | wc -l`
+GQT_ONE_NUM=`cat .tmp.homo_ref.count | awk '$6==1' | wc -l`
+
+VCF_BOTH_NUM=`cat ../data/10.1e4.var.vcf  | cut -f 10- | tail -n+6 | cut -f2,10 | awk '$1=="0|0" && $2=="0|0"' | wc -l`
+VCF_ONE_NUM=`cat ../data/10.1e4.var.vcf  | cut -f 10- | tail -n+6 | cut -f2,10 | awk '($1=="0|0" || $2=="0|0") && !($1=="0|0" && $2=="0|0")' | wc -l`
+
+if [ $GQT_BOTH_NUM -eq $VCF_BOTH_NUM ]
+then
+    echo "SUCCESS: Number of HOMO_REF in both ESN match in VCF and GQT"
+else
+    echo "ERROR: Number of HOMO_REF in both ESN do not match in VCF($VCF_BOTH_NUM)  and GQT($GQT_BOTH_NUM)"
+fi 
+
+if [ $GQT_ONE_NUM -eq $VCF_ONE_NUM ]
+then
+    echo "SUCCESS: Number of HOMO_REF in only one ESN match in VCF and GQT"
+else
+    echo "ERROR: Number of HOMO_REF in only one ESN do not match in VCF($VCF_ONE_NUM)  and GQT($GQT_ONE_NUM)"
+fi 
+
+
+$GTQ_PATH/gqt query \
+        -i ../data/10.1e4.ind.wahbm \
+        -b ../data/10.1e4.var.bim \
+        -d .tmp.10.1e4.var.db \
+        -p "Population ='ESN'" \
+        -g "count(HOMO_REF) >= 1"
+
+
+$GTQ_PATH/gqt query \
+        -i ../data/10.1e4.ind.wahbm \
+        -b ../data/10.1e4.var.bim \
+        -d .tmp.10.1e4.var.db \
+        -p "Population ='ITU'" \
+        -g "HOMO_REF" \
+        -p "Population ='ESN'" \
+        -g "count(HOMO_REF) >= 1" \
+        -p "Population ='ITU'" \
+        -g "count(HOMO_REF) > 1"

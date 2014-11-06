@@ -10,10 +10,15 @@
 #include "output_buffer.h"
 
 int query_help();
-void print_result(unsigned int len,
-                  unsigned int *R,
-                  unsigned int num_fields,
-                  char *bim);
+
+void print_query_result(unsigned int *mask,
+                        unsigned int mask_len,
+                        struct gqt_query *q,
+                        unsigned int **counts,
+                        unsigned int *id_lens,
+                        unsigned int num_qs,
+                        unsigned int num_fields,
+                        char *bim);
 
 int query_cmp(uint32_t value,
               int op_condition,
@@ -56,6 +61,7 @@ int query(int argc, char **argv)
     char *id_query_list[100];
     char *gt_query_list[100];
 
+    //{{{ parse cmd line opts
     while ((c = getopt (argc, argv, "hi:p:g:d:b:")) != -1) {
         switch (c) {
         case 'i':
@@ -116,11 +122,12 @@ int query(int argc, char **argv)
         printf("Mismatched number of individual and genotype query strings\n");
         return query_help();
     }
+    //}}}
 
     struct gqt_query q[100];
-    unsigned int *gt_ints[100];
+    unsigned int *gt_mask[100];
     unsigned int *counts[100];
-    //unsigned int *R[100];
+    unsigned int id_lens[100];
 
     int r, i, j, k;
 
@@ -132,15 +139,16 @@ int query(int argc, char **argv)
     }
 
     struct wah_file wf = init_wahbm_file(wahbm_file_name);
+    unsigned int num_ints = (wf.num_fields + 32 - 1)/ 32;
 
     unsigned int len_ints;
 
     for (i = 0; i < gt_q_count; ++i) {
         unsigned int len_count_R;
         unsigned int *R;
-        uint32_t num_records = resolve_ind_query(&R,
-                                                 id_query_list[i],
-                                                 db_file_name);
+        id_lens[i] = resolve_ind_query(&R,
+                                      id_query_list[i],
+                                      db_file_name);
 
         uint32_t low_v, high_v;
 
@@ -162,75 +170,144 @@ int query(int argc, char **argv)
         else if ( q[i].genotype_condition[0] == 1)
             high_v = 1;
 
-        fprintf(stderr, "low_v:%u\thigh_v:%u\n", low_v, high_v);
 
-        unsigned int *gt_R;
-        unsigned int len_wf_R = range_records_in_place_wahbm(wf,
-                                                             R,
-                                                             num_records,
-                                                             low_v,
-                                                             high_v,
-                                                             &gt_R);
-        len_ints = wah_to_ints(gt_R,len_wf_R,&(gt_ints[i]));
-
-        if ( q[i].variant_op == p_count )
+        if ( ( q[i].variant_op == p_count ) || ( q[i].variant_op == p_pct ) ) {
             len_count_R = sum_range_records_in_place_wahbm(wf,
-                                                 R,
-                                                 num_records,
-                                                 low_v,
-                                                 high_v,
-                                                 &(counts[i]));
+                                                           R,
+                                                           id_lens[i],
+                                                           low_v,
+                                                           high_v,
+                                                           &(counts[i]));
 
-        if ( q[i].op_condition != -1) {
-            uint32_t v = 0, int_i = 0, bit_i = 0;
-            for ( j = 0; j < len_count_R; ++j) {
-                if ( query_cmp(counts[i][j],
-                               q[i].op_condition,
-                               q[i].condition_value) ) {
-                    v |= 1 << (31 - bit_i);
+            gt_mask[i] = (uint32_t *) malloc(num_ints * sizeof(uint32_t));
+
+            if ( q[i].op_condition != -1) {
+                // when a condition is set, we test each of the values to see
+                // if they meet that condition.  those results are packed into
+                // ints and c
+                uint32_t v = 0, int_i = 0, bit_i = 0;
+                for ( j = 0; j < len_count_R; ++j) {
+                    if ( query_cmp(counts[i][j],
+                                   q[i].op_condition,
+                                   q[i].condition_value) ) {
+                        v |= 1 << (31 - bit_i);
+                    }
+
+                    bit_i += 1;
+                    if ( bit_i == 32 ) {
+                        gt_mask[i][int_i] = v;
+                        int_i += 1;
+                        bit_i = 0;
+                        v = 0;
+                    }
                 }
-
-                bit_i += 1;
-                if ( bit_i == 32 ) {
-                    gt_ints[i][int_i] = v;
-
-                    int_i += 1;
-                    bit_i = 0;
-                    v = 0;
-                }
-            }
             
-            if ( bit_i > 0)
-                gt_ints[i][int_i] = v;
+                if ( bit_i > 0)
+                    gt_mask[i][int_i] = v;
+            } else {
+                // if no op is set then let everything pass
+                for (j = 0; j < num_ints; ++j)
+                    gt_mask[i][j] = -1; // set all the bits to 1
+            }
+        } else {
+            unsigned int *gt_R;
+            unsigned int len_wf_R = range_records_in_place_wahbm(wf,
+                                                                 R,
+                                                                 id_lens[i],
+                                                                 low_v,
+                                                                 high_v,
+                                                                 &gt_R);
+            len_ints = wah_to_ints(gt_R,len_wf_R,&(gt_mask[i]));
+            free(gt_R);
         }
 
         free(R);
-        free(gt_R);
+
+
     }
 
-    for (i = 0; i < len_ints; ++i) {
-        uint32_t v = ~0;
+    uint32_t *final_mask = (uint32_t *) calloc(num_ints,sizeof(uint32_t));
 
-        for (j = 0; j < gt_q_count; ++j) {
-            v &= gt_ints[j][i];
-        }
-
-        for (j = 0; j < 32; ++j) {
-            printf("%u\t%u\t", i*32 + j, (v >> (31 - j))&1);
-            for (k = 0; k < gt_q_count; ++k)
-                printf("%u\t", counts[k][i*32+j] );
-            printf("\n");
-        }
+    // combine all of the masks to see what we need to print
+    for (i = 0; i < num_ints; ++i) {
+        final_mask[i] = ~0;
+        for (j = 0; j < gt_q_count; ++j)
+            final_mask[i] &= gt_mask[j][i];
     }
 
+    for (j = 0; j < gt_q_count; ++j)
+        free(gt_mask[j]);
 
-    //free(ints);
-    //free(wf_R);
+    print_query_result(final_mask,
+                       num_ints,
+                       q,
+                       counts,
+                       id_lens,
+                       gt_q_count,
+                       wf.num_fields,
+                       bim_file_name);
+
     fclose(wf.file);
 
     return 0;
 }
 
+void print_query_result(unsigned int *mask,
+                        unsigned int mask_len,
+                        struct gqt_query *q,
+                        unsigned int **counts,
+                        unsigned int *id_lens,
+                        unsigned int num_qs,
+                        unsigned int num_fields,
+                        char *bim)
+{
+
+    fprintf(stderr, "num_qs:%u\n", num_qs);
+
+    unsigned int i,j,k,line_idx,bytes, bit_i = 0;
+
+    struct quick_file_info qfile;
+    struct output_buffer outbuf;
+
+
+    init_out_buf(&outbuf, NULL);
+    quick_file_init(bim, &qfile);
+
+    for (i=0; i < mask_len; ++i) {
+        bytes = mask[i];
+	if (bytes == 0)
+            continue; /* skip a bunch of ops if you can */
+        for (j=0; j < 32; j++) {
+            if (bytes & 1 << (31 - j)) {
+	        line_idx = i*32+j;
+	        append_out_buf(&outbuf,
+                               qfile.lines[line_idx],
+                               qfile.line_lens[line_idx]);
+                for (k=0; k < num_qs; k++) {
+
+	            append_out_buf(&outbuf,"\t",1);
+                        if ( q[k].variant_op == p_count ) 
+                            append_integer_to_out_buf(&outbuf,
+                                                      counts[k][line_idx]);
+                        else
+	                    append_out_buf(&outbuf,"-",1);
+                }
+                
+	        append_out_buf(&outbuf,"\n",1);
+            }
+	    bit_i++;
+	    if (bit_i == num_fields)
+	        break;
+        }
+
+        if (bit_i == num_fields)
+            break;
+    }
+    quick_file_delete(&qfile);
+    free_out_buf(&outbuf);
+}
+
+//{{{int query_help()
 int query_help()
 {
     printf(
@@ -286,3 +363,4 @@ int query_help()
 "\t-g \"count(HET HOMO_ALT) < 10\"\n");
     return 0;
 }
+//}}}

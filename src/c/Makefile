@@ -12,7 +12,7 @@ CFLAGS=-O3
 #CFLAGS+=-Dtime_convert_file_by_name_bcf_to_wahbm_bim
 #CFLAGS+=-Dtime_sort_rotate_gt_md
 GRABIX_ROOT=$(HOME)/src/grabix
-SQLITE_ROOT=/if2/rl6sf/src/sqlite-amalgamation-3080701
+SQLITE_ROOT=$(HOME)/src/sqlite-amalgamation-3080701
 CC=gcc
 
 LIB= timer.o \

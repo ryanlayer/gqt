@@ -268,6 +268,7 @@ GQT_BOTH_NUM=`cat .tmp.homo_ref.count | awk '$6==2' | wc -l`
 GQT_ONE_NUM=`cat .tmp.homo_ref.count | awk '$6==1' | wc -l`
 
 VCF_BOTH_NUM=`cat ../data/10.1e4.var.vcf  | cut -f 10- | tail -n+6 | cut -f2,10 | awk '$1=="0|0" && $2=="0|0"' | wc -l`
+
 VCF_ONE_NUM=`cat ../data/10.1e4.var.vcf  | cut -f 10- | tail -n+6 | cut -f2,10 | awk '($1=="0|0" || $2=="0|0") && !($1=="0|0" && $2=="0|0")' | wc -l`
 
 if [ $GQT_BOTH_NUM -eq $VCF_BOTH_NUM ]
@@ -290,16 +291,84 @@ $GTQ_PATH/gqt query \
         -b ../data/10.1e4.var.bim \
         -d .tmp.10.1e4.var.db \
         -p "Population ='ESN'" \
-        -g "count(HOMO_REF) >= 1"
+        -g "count(HOMO_REF) >= 1" \
+        > .tmp.query.out
 
+$GTQ_PATH/gqt sum ipwahbm \
+        -i ../data/10.1e4.ind.wahbm \
+        -b ../data/10.1e4.var.bim \
+        -d .tmp.10.1e4.var.db \
+        -q "Population ='ESN'" \
+        -l 0 \
+        -u 0 \
+        | awk '$6>=1' \
+        > .tmp.sum.out
+
+
+if [ -n "`diff .tmp.query.out .tmp.sum.out`" ]
+then 
+    echo "ERROR: gqt sum does not gqt query"
+else
+    echo "SUCCESS: gqt sum matches gqt query"
+    rm .tmp.sum.out .tmp.query.out
+fi
+
+
+#$GTQ_PATH/gqt query \
+#        -i ../data/10.1e4.ind.wahbm \
+#        -b ../data/10.1e4.var.bim \
+#        -d .tmp.10.1e4.var.db \
+#        -p "Population ='ITU'" \
+#        -g "HOMO_REF" \
+#        -p "Population ='ESN'" \
+#        -g "count(HOMO_REF) >= 1" \
+#        -p "Population ='ITU'" \
+#        -g "count(HOMO_REF) > 1"
+#
 
 $GTQ_PATH/gqt query \
         -i ../data/10.1e4.ind.wahbm \
         -b ../data/10.1e4.var.bim \
         -d .tmp.10.1e4.var.db \
         -p "Population ='ITU'" \
-        -g "HOMO_REF" \
-        -p "Population ='ESN'" \
-        -g "count(HOMO_REF) >= 1" \
+        -g "pct(HOMO_REF) >= 0.5" \
+        | cut -f 6 \
+        > .tmp.query.pct.out
+
+$GTQ_PATH/gqt query \
+        -i ../data/10.1e4.ind.wahbm \
+        -b ../data/10.1e4.var.bim \
+        -d .tmp.10.1e4.var.db \
         -p "Population ='ITU'" \
-        -g "count(HOMO_REF) > 1"
+        -g "count(HOMO_REF) >= 1" \
+        | cut -f 6 \
+        > .tmp.query.count.out
+
+
+if [ -n "`paste .tmp.query.pct.out .tmp.query.count.out | awk '$1*2 != $2'`" ]
+then 
+    echo "ERROR: gqt query pct does not match gqt query count"
+else
+    echo "SUCCESS: gqt query pct matches gqt query count"
+    rm .tmp.query.pct.out .tmp.query.count.out 
+fi
+
+$GTQ_PATH/gqt query \
+        -i ../data/10.1e4.ind.wahbm \
+        -b ../data/10.1e4.var.bim \
+        -d .tmp.10.1e4.var.db \
+        -p "Population ='ITU'" \
+        -g "pct(HOMO_REF) >= 0.5" \
+        -p "Population ='ITU'" \
+        -g "count(HOMO_REF) >= 1" \
+        | cut -f 6,7 \
+        > .tmp.query.pct.count.out
+
+if [ -n "`cat .tmp.query.pct.count.out | awk '$1*2 != $2'`" ]
+then 
+    echo "ERROR: gqt multi query pct and count do not match"
+else
+    echo "SUCCESS: gqt multi query pct and count match" 
+    rm .tmp.query.pct.count.out
+fi
+

@@ -19,7 +19,11 @@ void print_query_result(unsigned int *mask,
                         unsigned int num_qs,
                         unsigned int num_fields,
                         char *bim);
+int query_cmp(uint32_t value,
+              int op_condition,
+              int condition_value);
 
+//{{{int query_cmp(uint32_t value,
 int query_cmp(uint32_t value,
               int op_condition,
               int condition_value)
@@ -41,7 +45,9 @@ int query_cmp(uint32_t value,
             return -1;
     }
 }
+//}}}
 
+//{{{ int query(int argc, char **argv)
 int query(int argc, char **argv)
 {
     if (argc < 2) return query_help();
@@ -146,12 +152,20 @@ int query(int argc, char **argv)
     for (i = 0; i < gt_q_count; ++i) {
         unsigned int len_count_R;
         unsigned int *R;
+        /* 
+         * Submit the population query to the PED database and get back both
+         * the list of of ids in R and the length of R in id_lens[i]
+         */
         id_lens[i] = resolve_ind_query(&R,
                                       id_query_list[i],
                                       db_file_name);
 
         uint32_t low_v, high_v;
 
+        /*
+         * q holds the parameters of each query, first determin the range of 
+         * bitmaps to pull
+         */
         if ( q[i].genotype_condition[0] == 1)
             low_v = 0;
         else if ( q[i].genotype_condition[1] == 1)
@@ -170,7 +184,25 @@ int query(int argc, char **argv)
         else if ( q[i].genotype_condition[0] == 1)
             high_v = 1;
 
+        /*
+         * The set of variants that are printed is stored in a mask for each
+         * query, then those masks are combine to a final mask.  Each mask is a
+         * 32-bit packed int, where each bit correspons to one variant.  How
+         * those bits are set depends on the filter the user specifices.
+         *
+         * If they simply ask for a count or perecent, then there is not filter
+         * and the mask is set to all 1s.
+         *
+         * If count is followed by a condition, then the count/pct is compared
+         * to that condition and the bits are set for those that meet the
+         * condition.
+         *
+         * If no funtion is used then we simply run the wahbm range query and
+         * convert the wah results to packed ints for the mask
+         *
+         */
 
+        /* User asks for a count of percent */
         if ( ( q[i].variant_op == p_count ) || ( q[i].variant_op == p_pct ) ) {
             len_count_R = sum_range_records_in_place_wahbm(wf,
                                                            R,
@@ -181,15 +213,24 @@ int query(int argc, char **argv)
 
             gt_mask[i] = (uint32_t *) malloc(num_ints * sizeof(uint32_t));
 
-            if ( q[i].op_condition != -1) {
-                // when a condition is set, we test each of the values to see
-                // if they meet that condition.  those results are packed into
-                // ints and c
+            /* User specifies a condition */
+            if ( q[i].op_condition != -1) { 
+
+                /* Since we only find counts, when the user asks for a
+                 * perecent, just convert that back to the count that meets the
+                 * percent condition
+                 */
+                float condition_value = q[i].condition_value;
+                if ( q[i].variant_op == p_pct )
+                    condition_value *= id_lens[i];
+
+
+                /* Test to see if each count meets the condition */
                 uint32_t v = 0, int_i = 0, bit_i = 0;
                 for ( j = 0; j < len_count_R; ++j) {
                     if ( query_cmp(counts[i][j],
                                    q[i].op_condition,
-                                   q[i].condition_value) ) {
+                                   condition_value) ) {
                         v |= 1 << (31 - bit_i);
                     }
 
@@ -209,6 +250,7 @@ int query(int argc, char **argv)
                 for (j = 0; j < num_ints; ++j)
                     gt_mask[i][j] = -1; // set all the bits to 1
             }
+        /* User only gives genotype filters, no funtion/condition */
         } else {
             unsigned int *gt_R;
             unsigned int len_wf_R = range_records_in_place_wahbm(wf,
@@ -220,10 +262,7 @@ int query(int argc, char **argv)
             len_ints = wah_to_ints(gt_R,len_wf_R,&(gt_mask[i]));
             free(gt_R);
         }
-
         free(R);
-
-
     }
 
     uint32_t *final_mask = (uint32_t *) calloc(num_ints,sizeof(uint32_t));
@@ -235,8 +274,11 @@ int query(int argc, char **argv)
             final_mask[i] &= gt_mask[j][i];
     }
 
-    for (j = 0; j < gt_q_count; ++j)
+    for (j = 0; j < gt_q_count; ++j) {
         free(gt_mask[j]);
+        if ( ( q[j].variant_op == p_count ) || ( q[j].variant_op == p_pct ) )
+            free(counts[j]);
+    }
 
     print_query_result(final_mask,
                        num_ints,
@@ -246,12 +288,12 @@ int query(int argc, char **argv)
                        gt_q_count,
                        wf.num_fields,
                        bim_file_name);
-
     fclose(wf.file);
-
     return 0;
 }
+//}}}
 
+//{{{ void print_query_result(unsigned int *mask,
 void print_query_result(unsigned int *mask,
                         unsigned int mask_len,
                         struct gqt_query *q,
@@ -261,13 +303,11 @@ void print_query_result(unsigned int *mask,
                         unsigned int num_fields,
                         char *bim)
 {
-
-    fprintf(stderr, "num_qs:%u\n", num_qs);
-
     unsigned int i,j,k,line_idx,bytes, bit_i = 0;
 
     struct quick_file_info qfile;
     struct output_buffer outbuf;
+    char pct[50];
 
 
     init_out_buf(&outbuf, NULL);
@@ -284,13 +324,18 @@ void print_query_result(unsigned int *mask,
                                qfile.lines[line_idx],
                                qfile.line_lens[line_idx]);
                 for (k=0; k < num_qs; k++) {
-
 	            append_out_buf(&outbuf,"\t",1);
-                        if ( q[k].variant_op == p_count ) 
-                            append_integer_to_out_buf(&outbuf,
-                                                      counts[k][line_idx]);
-                        else
-	                    append_out_buf(&outbuf,"-",1);
+                    if ( q[k].variant_op == p_count ) 
+                        append_integer_to_out_buf(&outbuf,
+                                                  counts[k][line_idx]);
+                    else if ( q[k].variant_op == p_pct ) {
+                        sprintf(pct, "%f", 
+                                ((float)counts[k][line_idx])/
+                                ((float) id_lens[k]));
+	                append_out_buf(&outbuf,pct,strlen(pct));
+                    }
+                    else
+	                append_out_buf(&outbuf,"-",1);
                 }
                 
 	        append_out_buf(&outbuf,"\n",1);
@@ -306,6 +351,7 @@ void print_query_result(unsigned int *mask,
     quick_file_delete(&qfile);
     free_out_buf(&outbuf);
 }
+//}}}
 
 //{{{int query_help()
 int query_help()

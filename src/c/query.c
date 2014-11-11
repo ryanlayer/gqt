@@ -520,9 +520,9 @@ void print_query_result(unsigned int *mask,
 int query_help()
 {
     printf(
-"usage:   gqt query -i <wahbm file name> \\\n"
-"                   [-b <bim file name> || -s <bcf file name> && -v <vid file name>]  \\\n"                    
-"                   -d <ped database file name> \\\n"
+"usage:   gqt query -i <wahbm file> \\\n"
+"                   [-b <bim file> || -s <bcf file> && -v <vid file>]  \\\n"                    
+"                   -d <ped database file> \\\n"
 "                   -p <population query 1> \\\n"
 "                   -g <genotype query 1> \\\n"
 "                   -p <population query 2> \\\n"

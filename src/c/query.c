@@ -23,6 +23,36 @@ int query_cmp(uint32_t value,
               int op_condition,
               int condition_value);
 
+int popcount(uint32_t x);
+
+void get_bcf_query_result(unsigned int *mask,
+                        unsigned int mask_len,
+                        struct gqt_query *q,
+                        char **id_query_list,
+                        unsigned int *id_lens,
+                        unsigned int num_qs,
+                        unsigned int num_fields,
+                        char *vid_file_name,
+                        char *src_bcf_file_name);
+
+int compare_uint32_t (const void *a, const void *b);
+
+//{{{ int compare_uint32_t (const void *a, const void *b)
+int compare_uint32_t (const void *a, const void *b)
+{
+    return ( *(uint32_t*)a - *(uint32_t*)b );
+}
+//}}}
+
+//{{{int popcount(uint32_t x) {
+int popcount(uint32_t x) {
+    int count;
+    for (count=0; x; count++)
+        x &= x-1;
+    return count;
+}
+//}}}
+
 //{{{int query_cmp(uint32_t value,
 int query_cmp(uint32_t value,
               int op_condition,
@@ -57,18 +87,22 @@ int query(int argc, char **argv)
          *id_query=NULL,
          *gt_query=NULL,
          *db_file_name=NULL,
-         *bim_file_name=NULL;
+         *bim_file_name=NULL,
+         *src_bcf_file_name=NULL,
+         *vid_file_name=NULL;
     int i_is_set = 0,
         id_q_count = 0,
         gt_q_count = 0,
         d_is_set = 0,
+        v_is_set = 0,
+        s_is_set = 0,
         b_is_set = 0;
 
     char *id_query_list[100];
     char *gt_query_list[100];
 
     //{{{ parse cmd line opts
-    while ((c = getopt (argc, argv, "hi:p:g:d:b:")) != -1) {
+    while ((c = getopt (argc, argv, "hi:p:g:d:b:v:s:")) != -1) {
         switch (c) {
         case 'i':
             i_is_set = 1;
@@ -90,6 +124,14 @@ int query(int argc, char **argv)
             b_is_set = 1;
             bim_file_name = optarg;
             break;
+        case 'v':
+            v_is_set = 1;
+            vid_file_name = optarg;
+            break;
+        case 's':
+            s_is_set = 1;
+            src_bcf_file_name = optarg;
+            break;
         case 'h':
             return query_help();
         case '?':
@@ -109,13 +151,25 @@ int query(int argc, char **argv)
         }
     }
 
-    if (i_is_set == 0) {
-        printf("WAHBM file is not set\n");
+    if (((v_is_set == 1) && (s_is_set == 0)) ||
+        ((v_is_set == 0) && (s_is_set == 1)) ) {
+        printf("Either BOTH VID and source BCF must be set, or neither.\n");
         return query_help();
     }
 
-    if (b_is_set == 0) {
-        printf("BIM file is not set\n");
+    if (((v_is_set == 1) && (s_is_set == 1)) && (b_is_set == 1)) {
+        printf("Set EITHER VID/soruce BCF or bim, not BOTH.\n");
+        return query_help();
+    } 
+ 
+    if (((v_is_set == 0) && (s_is_set == 0)) && (b_is_set == 0)) {
+        printf("Must set EITHER VID/soruce BCF or bim.\n");
+        return query_help();
+    } 
+   
+
+    if (i_is_set == 0) {
+        printf("WAHBM file is not set\n");
         return query_help();
     }
 
@@ -280,19 +334,128 @@ int query(int argc, char **argv)
             free(counts[j]);
     }
 
-    print_query_result(final_mask,
-                       num_ints,
-                       q,
-                       counts,
-                       id_lens,
-                       gt_q_count,
-                       wf.num_fields,
-                       bim_file_name);
+    if ((v_is_set == 1) && (s_is_set == 1)) {
+        get_bcf_query_result(final_mask,
+                             num_ints, 
+                             q,
+                             id_query_list,
+                             id_lens,
+                             gt_q_count,
+                             wf.num_fields,
+                             vid_file_name,
+                             src_bcf_file_name);
+    } else if (b_is_set == 1){
+        print_query_result(final_mask,
+                        num_ints,
+                        q,
+                        counts,
+                        id_lens,
+                        gt_q_count,
+                        wf.num_fields,
+                        bim_file_name);
+    }
     fclose(wf.file);
     return 0;
 }
 //}}}
 
+//{{{ void get_bcf_query_result(unsigned int *mask,
+void get_bcf_query_result(unsigned int *mask,
+                        unsigned int mask_len,
+                        struct gqt_query *q,
+                        char **id_query_list,
+                        unsigned int *id_lens,
+                        unsigned int num_qs,
+                        unsigned int num_fields,
+                        char *vid_file_name,
+                        char *src_bcf_file_name)
+{
+
+    /* The VID file contains the line numbers of the variants after they have
+     * been sorted.  To reach back into the BCF file to print the metadata
+     * associated with the variants marked in the mask, we need to create a
+     * sorted list of line numbers we want.  So first we intersect the VID file
+     * and the mask, then sort it.
+     */
+    FILE *vid_f = fopen(vid_file_name, "rb");
+    uint32_t *vids = (uint32_t *) malloc(num_fields*sizeof(uint32_t));
+    fread(vids, sizeof(uint32_t), num_fields, vid_f);
+    fclose(vid_f);
+
+    uint32_t i, j, masked_vid_count = 0;
+
+    for (i = 0; i < mask_len; ++i)
+        masked_vid_count += popcount(mask[i]);
+
+    uint32_t *masked_vids = (uint32_t *)
+            malloc(masked_vid_count*sizeof(uint32_t));
+    uint32_t masked_vid_i = 0;
+
+    for (i = 0; i < mask_len; ++i) {
+        uint32_t bytes = mask[i];
+	if (bytes == 0)
+            continue; /* skip a bunch of ops if you can */
+        for (j = 0; j < 32; j++) {
+            if (bytes & 1 << (31 - j)) {
+                masked_vids[masked_vid_i] = vids[i*32 + j];
+                masked_vid_i+=1;
+            }
+        }
+        if (masked_vid_i == masked_vid_count)
+            break;
+    }
+
+    free(vids);
+
+    qsort(masked_vids, masked_vid_count, sizeof(uint32_t), compare_uint32_t);
+
+#if 0
+    char *full_query, *full_query_tmp;
+    uint32_t full_query_len;
+    for (i = 0; i < num_qs; ++i) {
+        printf("%s\n", id_query_list[i]);
+
+        full_query_len = asprintf(full_query_tmp, "%s", id_query_list[i])
+
+        //unsigned int len_count_R;
+        //unsigned int *R;
+        /* 
+         * Submit the population query to the PED database and get back both
+         * the list of of ids in R and the length of R in id_lens[i]
+         */
+        //id_lens[i] = resolve_ind_query(&R,
+                                      //id_query_list[i],
+                                      //db_file_name);
+    }
+#endif
+
+    htsFile *fp    = hts_open(src_bcf_file_name,"rb");
+    bcf_hdr_t *hdr = bcf_hdr_read(fp);
+    bcf1_t *line    = bcf_init1();
+    //bcf_hdr_set_samples(hdr, print_name_csv, 0);
+
+    htsFile *out = hts_open("-", "w");
+
+    int r = bcf_hdr_write(out, hdr);
+
+    uint32_t bcf_line_i = 0;
+    masked_vid_i = 0;
+    while ( bcf_read(fp, hdr, line) != -1) {
+        if (masked_vids[masked_vid_i] == bcf_line_i) {
+            r = bcf_unpack(line, BCF_UN_ALL);
+            r = bcf_write1(out, hdr, line);
+            masked_vid_i+=1;
+        }
+        if (masked_vid_i == masked_vid_count)
+            break;
+        bcf_line_i += 1;
+    }
+    hts_close(out);
+    hts_close(fp);
+
+}
+//}}}
+ 
 //{{{ void print_query_result(unsigned int *mask,
 void print_query_result(unsigned int *mask,
                         unsigned int mask_len,

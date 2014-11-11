@@ -5034,6 +5034,7 @@ void test_sort_gt_md(void)
     char *s_gt_of_name = ".s.gt.tmp.packed";
     char *md_of_name = ".md.tmp.packed";
     char *bim_name = "md.bim";
+    char *vid_name = "vid";
 
     struct bcf_file bcf_f = init_bcf_file(bcf_file_name);
     pri_queue q_t = priq_new(0);
@@ -5056,7 +5057,8 @@ void test_sort_gt_md(void)
                gt_of_name,
                s_gt_of_name,
                md_of_name,
-               bim_name);
+               bim_name,
+               vid_name);
 
     // close the bcf and open/process it again so we can get the 
     // prioirity q
@@ -5131,6 +5133,7 @@ void test_rotate_encode_wahbm(void)
     char *r_s_gt_of_name = ".r.s.gt.tmp.packed";
     char *md_of_name = ".md.tmp.packed";
     char *bim_name = "md.bim";
+    char *vid_name = "vid";
 
     struct bcf_file bcf_f = init_bcf_file(bcf_file_name);
     pri_queue q = priq_new(0);
@@ -5152,7 +5155,8 @@ void test_rotate_encode_wahbm(void)
                gt_of_name,
                s_gt_of_name,
                md_of_name,
-               bim_name);
+               bim_name,
+               vid_name);
 
     rotate_encode_wahbm(num_inds,
                         num_vars,
@@ -5285,8 +5289,8 @@ void test_parse_q(void)
 
     TEST_ASSERT_EQUAL(0, r);
 
-    TEST_ASSERT_EQUAL(count, q.variant_op);
-    TEST_ASSERT_EQUAL(greater_than_equal, q.op_condition);
+    TEST_ASSERT_EQUAL(p_count, q.variant_op);
+    TEST_ASSERT_EQUAL(p_greater_than_equal, q.op_condition);
     TEST_ASSERT_EQUAL(0, q.genotype_condition[0]);
     TEST_ASSERT_EQUAL(1, q.genotype_condition[1]);
     TEST_ASSERT_EQUAL(0, q.genotype_condition[2]);
@@ -5298,8 +5302,8 @@ void test_parse_q(void)
 
     TEST_ASSERT_EQUAL(0, r);
 
-    TEST_ASSERT_EQUAL(pct, q.variant_op);
-    TEST_ASSERT_EQUAL(not_equal, q.op_condition);
+    TEST_ASSERT_EQUAL(p_pct, q.variant_op);
+    TEST_ASSERT_EQUAL(p_not_equal, q.op_condition);
     TEST_ASSERT_EQUAL(1, q.genotype_condition[0]);
     TEST_ASSERT_EQUAL(1, q.genotype_condition[1]);
     TEST_ASSERT_EQUAL(0, q.genotype_condition[2]);

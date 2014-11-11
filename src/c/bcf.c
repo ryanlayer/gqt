@@ -41,7 +41,8 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                                           uint32_t num_fields,
                                           uint32_t num_records,
                                           char *wah_out,
-                                          char *bim_out)
+                                          char *bim_out,
+                                          char *vid_out)
 {
     uint32_t num_inds = num_fields;
     uint32_t num_vars = num_records;
@@ -70,7 +71,8 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                gt_of_name,
                s_gt_of_name,
                md_of_name,
-               bim_out);
+               bim_out,
+               vid_out);
 
     rotate_encode_wahbm(num_inds,
                         num_vars,
@@ -213,10 +215,12 @@ void sort_gt_md(pri_queue *q,
                 char *gt_of_name,
                 char *s_gt_of_name,
                 char *md_of_name,
-                char *bim_out)
+                char *bim_out,
+                char *vid_out)
 {
     FILE *md_of = fopen(md_of_name,"r");
     FILE *md_out = fopen(bim_out,"w");
+    FILE *v_out = fopen(vid_out,"wb");
     FILE *gt_of = fopen(gt_of_name,"rb");
     FILE *s_gt_of = fopen(s_gt_of_name,"wb");
 
@@ -247,11 +251,14 @@ void sort_gt_md(pri_queue *q,
         fwrite(packed_ints, sizeof(uint32_t), num_ind_ints,s_gt_of);
 
         fprintf(md_out, "%s\n", buf);
+
+        fwrite(d, sizeof(uint32_t), 1, v_out);
     }
 
     free(packed_ints);
 
     fclose(md_out);
+    fclose(v_out);
     fclose(md_of);
     fclose(gt_of);
     fclose(s_gt_of);

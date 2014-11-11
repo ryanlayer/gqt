@@ -9,6 +9,7 @@ int convert_help();
 int bcf_wahbm(char *in,
               char *wah_out,
               char *bim_out,
+              char *vid_out,
               unsigned int num_fields,
               unsigned int num_records);
 int plt_ubin(char *in, char *out);
@@ -30,16 +31,21 @@ int convert(int argc, char **argv)
     if (argc < 2) return convert_help();
 
     int c;
-    char *in, *out, *bim;
+    char *in, *out, *bim, *vid;
     unsigned int num_fields, num_records;
     int i_is_set = 0, 
         o_is_set = 0, 
         f_is_set = 0, 
         b_is_set = 0, 
+        v_is_set = 0, 
         r_is_set = 0; 
 
-    while((c = getopt (argc, argv, "hi:o:f:r:b:")) != -1) {
+    while((c = getopt (argc, argv, "hi:o:f:r:b:v:")) != -1) {
         switch (c) {
+            case 'v':
+                v_is_set = 1;
+                vid = optarg;
+                break;
             case 'b':
                 b_is_set = 1;
                 bim = optarg;
@@ -116,7 +122,12 @@ int convert(int argc, char **argv)
             return convert_help();
         }
 
-        return bcf_wahbm(in, out, bim, num_fields, num_records);
+        if (v_is_set == 0) {
+            printf("Vid file is not set\n");
+            return convert_help();
+        }
+
+        return bcf_wahbm(in, out, bim, vid, num_fields, num_records);
     } 
 
     if (strcmp(type, "ped-db") == 0)  return ped_db(in, out);
@@ -147,6 +158,8 @@ int convert_help()
            "         vcf-plt           VCF to by-variant plain text\n"
            "         bcf-wahbm         BCF to by-individual sorted WAH bitmap\n"
            "         ped-db            PED to SQLite3 database\n"
+           "         -v                VID output file name"
+                                       "(required for bcf-wahbm)\n"
            "         -b                BIM output file name"
                                        "(required for bcf-wahbm)\n"
            "         -r                Number of records "
@@ -215,6 +228,7 @@ int vcf_plt(char *in,
 int bcf_wahbm(char *in,
               char *wah_out,
               char *bim_out,
+              char *vid_out,
               unsigned int num_fields,
               unsigned int num_records)
 {
@@ -222,5 +236,6 @@ int bcf_wahbm(char *in,
                                                  num_fields,
                                                  num_records,
                                                  wah_out,
-                                                 bim_out);
+                                                 bim_out,
+                                                 vid_out);
 }

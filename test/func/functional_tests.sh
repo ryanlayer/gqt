@@ -189,6 +189,7 @@ $GTQ_PATH/gqt convert bcf-wahbm \
     -f 10 \
     -i ../data/10.1e4.var.bcf \
     -b .tmp.bcf.sort.ind.bim \
+    -v .tmp.bcf.sort.ind.vid \
     -o .tmp.bcf.sort.ind.wahbm
 
 $GTQ_PATH/gqt sum ipwahbm \
@@ -372,3 +373,12 @@ else
     rm .tmp.query.pct.count.out
 fi
 
+$GTQ_PATH/gqt query \
+        -i ../data/10.1e4.ind.wahbm \
+        -s ../data/10.1e4.var.bcf \
+        -v .tmp.bcf.sort.ind.vid \
+        -d .tmp.10.1e4.var.db \
+        -p "Population ='ITU'" \
+        -g "pct(HOMO_REF) >= 0.5" \
+        -p "Population ='ITU'" \
+        -g "count(HOMO_REF) >= 1" 

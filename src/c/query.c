@@ -33,7 +33,8 @@ void get_bcf_query_result(unsigned int *mask,
                         unsigned int num_qs,
                         unsigned int num_fields,
                         char *vid_file_name,
-                        char *src_bcf_file_name);
+                        char *src_bcf_file_name,
+                        int bcf_output);
 
 int compare_uint32_t (const void *a, const void *b);
 
@@ -97,12 +98,13 @@ int query(int argc, char **argv)
         v_is_set = 0,
         s_is_set = 0,
         b_is_set = 0;
+        bcf_output = 0;
 
     char *id_query_list[100];
     char *gt_query_list[100];
 
     //{{{ parse cmd line opts
-    while ((c = getopt (argc, argv, "hi:p:g:d:b:v:s:")) != -1) {
+    while ((c = getopt (argc, argv, "hi:p:g:d:b:v:s:B:")) != -1) {
         switch (c) {
         case 'i':
             i_is_set = 1;
@@ -131,6 +133,9 @@ int query(int argc, char **argv)
         case 's':
             s_is_set = 1;
             src_bcf_file_name = optarg;
+            break;
+        case 'B':
+            bcf_output = 1;
             break;
         case 'h':
             return query_help();
@@ -343,7 +348,8 @@ int query(int argc, char **argv)
                              gt_q_count,
                              wf.num_fields,
                              vid_file_name,
-                             src_bcf_file_name);
+                             src_bcf_file_name,
+                             bcf_output);
     } else if (b_is_set == 1){
         print_query_result(final_mask,
                         num_ints,
@@ -368,7 +374,8 @@ void get_bcf_query_result(unsigned int *mask,
                         unsigned int num_qs,
                         unsigned int num_fields,
                         char *vid_file_name,
-                        char *src_bcf_file_name)
+                        char *src_bcf_file_name,
+                        int bcf_output)
 {
 
     /* The VID file contains the line numbers of the variants after they have
@@ -434,7 +441,10 @@ void get_bcf_query_result(unsigned int *mask,
     bcf1_t *line    = bcf_init1();
     //bcf_hdr_set_samples(hdr, print_name_csv, 0);
 
-    htsFile *out = hts_open("-", "w");
+    if !(bcf_output)
+        htsFile *out = hts_open("-", "w");
+    else
+        htsFile *out = hts_open("-", "wb");
 
     int r = bcf_hdr_write(out, hdr);
 
@@ -522,6 +532,7 @@ int query_help()
     printf(
 "usage:   gqt query -i <wahbm file> \\\n"
 "                   [-b <bim file> || -s <bcf file> && -v <vid file>]  \\\n"                    
+"                   -B <produce BCF output. Def. VCF w/ -s and -v> \\\n"
 "                   -d <ped database file> \\\n"
 "                   -p <population query 1> \\\n"
 "                   -g <genotype query 1> \\\n"

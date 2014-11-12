@@ -97,14 +97,14 @@ int query(int argc, char **argv)
         d_is_set = 0,
         v_is_set = 0,
         s_is_set = 0,
-        b_is_set = 0;
+        b_is_set = 0,
         bcf_output = 0;
 
     char *id_query_list[100];
     char *gt_query_list[100];
 
     //{{{ parse cmd line opts
-    while ((c = getopt (argc, argv, "hi:p:g:d:b:v:s:B:")) != -1) {
+    while ((c = getopt (argc, argv, "hi:p:g:d:b:v:s:B")) != -1) {
         switch (c) {
         case 'i':
             i_is_set = 1;
@@ -441,10 +441,11 @@ void get_bcf_query_result(unsigned int *mask,
     bcf1_t *line    = bcf_init1();
     //bcf_hdr_set_samples(hdr, print_name_csv, 0);
 
-    if !(bcf_output)
-        htsFile *out = hts_open("-", "w");
+    htsFile *out;
+    if (!bcf_output)
+        out = hts_open("-", "w");
     else
-        htsFile *out = hts_open("-", "wb");
+        out = hts_open("-", "wb");
 
     int r = bcf_hdr_write(out, hdr);
 

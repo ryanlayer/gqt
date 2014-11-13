@@ -125,10 +125,10 @@ int convert(int argc, char **argv)
 int convert_help()
 {
     printf("usage:   gqt convert <type> -i <input file>\n"
-           "     Types:\n"
+           "     types:\n"
            "         bcf         create a WAH index of a BCF\n"
            "         ped         create SQLite3 database of a PED file\n\n"
-           "     Options:\n"
+           "     options:\n"
            "         -o           Output file name\n"
            "         -v           VID output file name (opt.)\n"
            "         -b           BIM output file name (opt.)\n"

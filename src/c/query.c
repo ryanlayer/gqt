@@ -402,12 +402,6 @@ int query(int argc, char **argv)
     */
 
 
-    for (j = 0; j < gt_q_count; ++j) {
-        free(gt_mask[j]);
-        if ( ( q[j].variant_op == p_count ) || ( q[j].variant_op == p_pct ) )
-            free(counts[j]);
-    }
-
     if ((v_is_set == 1) && (s_is_set == 1)) {
         get_bcf_query_result(final_mask,
                              num_ints, 
@@ -429,6 +423,13 @@ int query(int argc, char **argv)
                         wf.num_fields,
                         bim_file_name);
     }
+
+    for (j = 0; j < gt_q_count; ++j) {
+        free(gt_mask[j]);
+        if ( ( q[j].variant_op == p_count ) || ( q[j].variant_op == p_pct ) )
+            free(counts[j]);
+    }
+
     fclose(wf.file);
     return 0;
 }

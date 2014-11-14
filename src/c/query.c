@@ -315,12 +315,23 @@ int query(int argc, char **argv)
 
         /* User asks for a count of percent */
         if ( ( q[i].variant_op == p_count ) || ( q[i].variant_op == p_pct ) ) {
+
+
+#ifdef __AVX2__
+            len_count_R = avx_sum_range_records_in_place_wahbm(wf,
+                                                               R,
+                                                               id_lens[i],
+                                                               low_v,
+                                                               high_v,
+                                                               &(counts[i]));
+#else
             len_count_R = sum_range_records_in_place_wahbm(wf,
                                                            R,
                                                            id_lens[i],
                                                            low_v,
                                                            high_v,
                                                            &(counts[i]));
+#endif
 
             gt_mask[i] = (uint32_t *) malloc(num_ints * sizeof(uint32_t));
 
@@ -456,7 +467,7 @@ void get_bcf_query_result(unsigned int *mask,
      */
     FILE *vid_f = fopen(vid_file_name, "rb");
     uint32_t *vids = (uint32_t *) malloc(num_fields*sizeof(uint32_t));
-    fread(vids, sizeof(uint32_t), num_fields, vid_f);
+    int r = fread(vids, sizeof(uint32_t), num_fields, vid_f);
     fclose(vid_f);
 
     uint32_t i, j, masked_vid_count = 0;
@@ -531,7 +542,7 @@ void get_bcf_query_result(unsigned int *mask,
     else
         out = hts_open("-", "wb");
 
-    int r = bcf_hdr_write(out, hdr);
+    r = bcf_hdr_write(out, hdr);
 
     uint32_t bcf_line_i = 0;
     masked_vid_i = 0;

@@ -14,6 +14,7 @@ CFLAGS=-O3
 GRABIX_ROOT=$(HOME)/src/grabix
 SQLITE_ROOT=$(HOME)/src/sqlite-amalgamation-3080701
 CC=gcc
+LEX=flex
 
 LIB= timer.o \
      query.o \
@@ -56,7 +57,7 @@ all: $(LIST)
 	@mkdir -p $(BIN)
 
 parse_q:
-	lex -o parse_q.yy.c parse_q.l
+	$(LEX) -o parse_q.yy.c parse_q.l
 
 sqlite: 
 	$(CC) -c $(SQLITE_ROOT)/sqlite3.c -o $(SQLITE_ROOT)/sqlite3.o

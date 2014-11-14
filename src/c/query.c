@@ -219,6 +219,13 @@ int query(int argc, char **argv)
                                       id_query_list[i],
                                       db_file_name);
 
+        /*
+        fprintf(stderr, "id_query_list:");
+        for (j = 0; j < id_lens[i]; ++j)
+            fprintf(stderr, "\t%u", R[j]);
+        fprintf(stderr, "\n");
+        */
+
         uint32_t low_v, high_v;
 
         /*
@@ -322,6 +329,15 @@ int query(int argc, char **argv)
             free(gt_R);
         }
         free(R);
+
+        /*
+        fprintf(stderr,"mask[%u]:", j);
+        for (j = 0; j < num_ints; ++j)
+            fprintf(stderr,"\t%u", gt_mask[i][j]);
+        fprintf(stderr,"\n");
+        */
+                
+
     }
 
     uint32_t *final_mask = (uint32_t *) calloc(num_ints,sizeof(uint32_t));
@@ -332,6 +348,14 @@ int query(int argc, char **argv)
         for (j = 0; j < gt_q_count; ++j)
             final_mask[i] &= gt_mask[j][i];
     }
+
+    /*
+    fprintf(stderr,"final_mask[%u]:", j);
+    for (j = 0; j < num_ints; ++j)
+        fprintf(stderr,"\t%u", final_mask[j]);
+    fprintf(stderr,"\n");
+    */
+
 
     for (j = 0; j < gt_q_count; ++j) {
         free(gt_mask[j]);
@@ -391,6 +415,13 @@ void get_bcf_query_result(unsigned int *mask,
 
     uint32_t i, j, masked_vid_count = 0;
 
+    /*
+    fprintf(stderr,"vids:");
+    for (i = 0; i < num_fields; ++i)
+        fprintf(stderr,"\t%u\t", vids[i]);
+    fprintf(stderr,"\n");
+    */
+
     for (i = 0; i < mask_len; ++i)
         masked_vid_count += popcount(mask[i]);
 
@@ -403,7 +434,7 @@ void get_bcf_query_result(unsigned int *mask,
 	if (bytes == 0)
             continue; /* skip a bunch of ops if you can */
         for (j = 0; j < 32; j++) {
-            if (bytes & 1 << (31 - j)) {
+            if (bytes & (1 << (31 - j))) {
                 masked_vids[masked_vid_i] = vids[i*32 + j];
                 masked_vid_i+=1;
             }
@@ -411,6 +442,13 @@ void get_bcf_query_result(unsigned int *mask,
         if (masked_vid_i == masked_vid_count)
             break;
     }
+
+    /*
+    fprintf(stderr,"masked_vids:");
+    for (i = 0; i < masked_vid_count; ++i)
+        fprintf(stderr,"\t%u\t", masked_vids[i]);
+    fprintf(stderr,"\n");
+    */
 
     free(vids);
 

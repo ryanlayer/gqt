@@ -1,5 +1,6 @@
 Overview
 ========
+
 NOTE: GQT is in an alpha state. 
 
 Genome Query Tools (GQT) is a tool and C API for storing and querying
@@ -7,7 +8,29 @@ large-scale genotype data sets like those produced by 1000 Genomes. Genotypes
 are represented by compressed bitmap indices, which reduce the storage and
 compute burden by orders of magnitude. This index can significantly expand the
 capabilities of population-scale analyses by providing interactive-speed
-queries to data sets with millions of individuals.
+queries to data sets with millions of individuals. An example workflow:
+
+Use GQT to create a sample-based index of a BCF file containing 1092 individuals and 494328 variants.
+
+    gqt convert bcf -r 494328 -f 1092 -i 1kg.chr22.bcf 
+
+Create a database of the PED file describing the phenotypes and relationships of the 1092 samples.
+
+    gqt convert ped -i 1kg.ped 
+
+Find all variants where at least 10 GBR individuals are heterozygous.
+
+    gqt query -i 1kg.bcf -p "Population = 'GBR'" -g "count(HET) >= 10”
+
+Find all variants where all affected individuals are homozygous.
+
+    gqt query -i 1kg.bcf -p "Phenotype = 2" -g "all(HOMO_REF) >= 10”
+
+Further filter variants by total depth with bcftools.
+
+    gqt query -i 1kg.bcf -p "Phenotype = 2" -g "all(HOMO_REF) >= 10” \
+      | bcftools view - -i 'DP>50000'
+
 
 GQT takes a BCF as input and produces two files, a (very small) compressed
 index (.wahbm) and a summary of the variant metadata (.bim). This process
@@ -118,12 +141,10 @@ this smaller `.bim` file for speed and simplicity, but future versions will
 reach back into the BCF file and report the full BCF record for each variant
 that meets the genotype query criteria given to GQT by the user.
 
-	$ gqt convert bcf-wahbm   \
+	$ gqt convert bcf        \
 	    -r 494328             \
 	    -f 1092               \
 	    -i 1kg.chr22.bcf      \
-	    -b 1kg.chr22.bcf.bim  \
-	    -o 1kg.chr22.bcf.wahbm
 
 *Step 4*.  Query the BCF file using the WAH index created by GQT.  In this case
 we are going to simply find the alternate allele frequency count for some

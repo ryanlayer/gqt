@@ -206,7 +206,7 @@ int sum(int argc, char **argv)
 
     if (q_is_set == 1) {
         num_records = resolve_ind_query(&R, query, ped_db_file);
-        fprintf(stderr, "num_records:%u\n", num_records);
+        //fprintf(stderr, "num_records:%u\n", num_records);
     } else {
         R = (unsigned int *) malloc(num_records * sizeof(unsigned int));
         parse_cmd_line_int_csv(R, num_records, record_ids);

@@ -373,7 +373,7 @@ else
     rm .tmp.query.pct.count.out
 fi
 
-$GTQ_PATH/gqt query \
+BCF_R=`$GTQ_PATH/gqt query \
         -i ../data/10.1e4.ind.wahbm \
         -s ../data/10.1e4.var.bcf \
         -v .tmp.bcf.sort.ind.vid \
@@ -381,4 +381,25 @@ $GTQ_PATH/gqt query \
         -p "Population ='ITU'" \
         -g "pct(HOMO_REF) >= 0.5" \
         -p "Population ='ITU'" \
-        -g "count(HOMO_REF) >= 1" 
+        -g "count(HOMO_REF) >= 1" \
+        | grep -v "^#" \
+        | cut -f3 | sort |md5sum-lite`
+
+MD_R=`$GTQ_PATH/gqt query \
+        -i ../data/10.1e4.ind.wahbm \
+        -d .tmp.10.1e4.var.db \
+        -b ../data/10.1e4.var.bim \
+        -p "Population ='ITU'" \
+        -g "pct(HOMO_REF) >= 0.5" \
+        -p "Population ='ITU'" \
+        -g "count(HOMO_REF) >= 1" \
+        | cut -f3 | sort |md5sum-lite`
+        
+if [ "$BCF_R" == "$MD_R" ]
+then
+    echo "SUCCESS: BCF output and BIM merge output match"
+else
+    echo "ERROR: BCF output and BIM merge output do not match"
+fi 
+
+

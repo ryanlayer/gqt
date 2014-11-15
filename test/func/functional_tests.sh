@@ -513,3 +513,66 @@ else
     echo "ERROR: Autodetect failure not detected"
 fi 
 
+$GTQ_PATH/gqt convert bcf \
+    -r 43 \
+    -f 10 \
+    -i ../data/10.1e4.var.bcf 
+
+$GTQ_PATH/gqt convert bcf \
+    -r 43 \
+    -f 10 \
+    -i ../data/10.1e4.var.vcf 
+
+$GTQ_PATH/gqt convert bcf \
+    -r 43 \
+    -f 10 \
+    -i ../data/10.1e4.var.vcf.gz
+
+
+if [ `md5 -q ../data/10.1e4.var.vcf.wah` == `md5 -q ../data/10.1e4.var.bcf.wah` ]
+then
+    echo "SUCCESS: VCF-source WAH matches BCF-source WAH"
+    rm ../data/10.1e4.var.vcf.wah
+else
+    echo "SUCCESS: VCF-source WAH does not match BCF-source WAH"
+fi 
+
+if [ `md5 -q ../data/10.1e4.var.vcf.gz.wah` == `md5 -q ../data/10.1e4.var.bcf.wah` ]
+then
+    echo "SUCCESS: VCF.GZ-source WAH matches BCF-source WAH"
+    rm ../data/10.1e4.var.vcf.gz.wah
+else
+    echo "SUCCESS: VCF.GZ-source WAH does not match BCF-source WAH"
+fi 
+
+if [ `md5 -q ../data/10.1e4.var.vcf.vid` == `md5 -q ../data/10.1e4.var.bcf.vid` ]
+then
+    echo "SUCCESS: VCF-source VID matches BCF-source WAH"
+    rm ../data/10.1e4.var.vcf.vid
+else
+    echo "SUCCESS: VCF-source VID does not match BCF-source WAH"
+fi 
+
+if [ `md5 -q ../data/10.1e4.var.vcf.gz.vid` == `md5 -q ../data/10.1e4.var.bcf.vid` ]
+then
+    echo "SUCCESS: VCF.GZ-source VID matches BCF-source WAH"
+    rm ../data/10.1e4.var.vcf.gz.vid
+else
+    echo "SUCCESS: VCF.GZ-source VID does not match BCF-source WAH"
+fi 
+
+if [ `md5 -q ../data/10.1e4.var.vcf.bim` == `md5 -q ../data/10.1e4.var.bcf.bim` ]
+then
+    echo "SUCCESS: VCF-source BIM matches BCF-source WAH"
+    rm ../data/10.1e4.var.vcf.bim
+else
+    echo "SUCCESS: VCF-source BIM does not match BCF-source WAH"
+fi 
+
+if [ `md5 -q ../data/10.1e4.var.vcf.gz.bim` == `md5 -q ../data/10.1e4.var.bcf.bim` ]
+then
+    echo "SUCCESS: VCF.GZ-source BIM matches BCF-source WAH"
+    rm ../data/10.1e4.var.vcf.gz.bim
+else
+    echo "SUCCESS: VCF.GZ-source BIM does not match BCF-source WAH"
+fi 

@@ -534,7 +534,7 @@ then
     echo "SUCCESS: VCF-source WAH matches BCF-source WAH"
     rm ../data/10.1e4.var.vcf.wah
 else
-    echo "SUCCESS: VCF-source WAH does not match BCF-source WAH"
+    echo "ERROR: VCF-source WAH does not match BCF-source WAH"
 fi 
 
 if [ `md5 -q ../data/10.1e4.var.vcf.gz.wah` == `md5 -q ../data/10.1e4.var.bcf.wah` ]
@@ -542,7 +542,7 @@ then
     echo "SUCCESS: VCF.GZ-source WAH matches BCF-source WAH"
     rm ../data/10.1e4.var.vcf.gz.wah
 else
-    echo "SUCCESS: VCF.GZ-source WAH does not match BCF-source WAH"
+    echo "ERROR: VCF.GZ-source WAH does not match BCF-source WAH"
 fi 
 
 if [ `md5 -q ../data/10.1e4.var.vcf.vid` == `md5 -q ../data/10.1e4.var.bcf.vid` ]
@@ -550,7 +550,7 @@ then
     echo "SUCCESS: VCF-source VID matches BCF-source WAH"
     rm ../data/10.1e4.var.vcf.vid
 else
-    echo "SUCCESS: VCF-source VID does not match BCF-source WAH"
+    echo "ERROR: VCF-source VID does not match BCF-source WAH"
 fi 
 
 if [ `md5 -q ../data/10.1e4.var.vcf.gz.vid` == `md5 -q ../data/10.1e4.var.bcf.vid` ]
@@ -558,7 +558,7 @@ then
     echo "SUCCESS: VCF.GZ-source VID matches BCF-source WAH"
     rm ../data/10.1e4.var.vcf.gz.vid
 else
-    echo "SUCCESS: VCF.GZ-source VID does not match BCF-source WAH"
+    echo "ERROR: VCF.GZ-source VID does not match BCF-source WAH"
 fi 
 
 if [ `md5 -q ../data/10.1e4.var.vcf.bim` == `md5 -q ../data/10.1e4.var.bcf.bim` ]
@@ -566,7 +566,7 @@ then
     echo "SUCCESS: VCF-source BIM matches BCF-source WAH"
     rm ../data/10.1e4.var.vcf.bim
 else
-    echo "SUCCESS: VCF-source BIM does not match BCF-source WAH"
+    echo "ERROR: VCF-source BIM does not match BCF-source WAH"
 fi 
 
 if [ `md5 -q ../data/10.1e4.var.vcf.gz.bim` == `md5 -q ../data/10.1e4.var.bcf.bim` ]
@@ -574,5 +574,39 @@ then
     echo "SUCCESS: VCF.GZ-source BIM matches BCF-source WAH"
     rm ../data/10.1e4.var.vcf.gz.bim
 else
-    echo "SUCCESS: VCF.GZ-source BIM does not match BCF-source WAH"
+    echo "ERROR: VCF.GZ-source BIM does not match BCF-source WAH"
 fi 
+
+rm -f .tmp.test.ped
+echo -ne "Family ID\tIndividual ID\tPaternal ID\tMaternal ID\tGender\tPhenotyp\n" > .tmp.test.ped
+echo -ne "Y025\tNA18907\t0\t0\t2\t0\n" >> .tmp.test.ped
+echo -ne "NG108\tHG03519\tHG03518\tHG03517\t1\t0\n" >> .tmp.test.ped
+echo -ne "m027\tNA19758\t0\t0\t2\t0\n" >> .tmp.test.ped
+echo -ne "IT060\tHG04015\t0\t0\t1\t0\n" >> .tmp.test.ped
+echo -ne "test space here\tand here\there too\tone more\t1\t0\n" >> .tmp.test.ped
+
+$GTQ_PATH/gqt convert ped \
+    -i .tmp.test.ped
+
+SPACE_R0=`sqlite3 .tmp.test.ped.db "select Ind_ID from ped where Family_ID = 'test space here';"`
+SPACE_R1=`sqlite3 .tmp.test.ped.db "select Ind_ID from ped where Individual_ID = 'and here';"`
+SPACE_R2=`sqlite3 .tmp.test.ped.db "select Ind_ID from ped where Paternal_ID = 'here too';"`
+SPACE_R3=`sqlite3 .tmp.test.ped.db "select Ind_ID from ped where Maternal_ID = 'one more';"`
+
+if [ $SPACE_R0 -eq $SPACE_R1 ]
+then
+    if [ $SPACE_R0 -eq $SPACE_R2 ]
+    then
+        if [ $SPACE_R0 -eq $SPACE_R3 ]
+        then
+            echo "SUCCESS: Spaces acceped in cell values"
+            rm .tmp.test.ped .tmp.test.ped.db
+        else
+            echo "ERROR: Spaces not acceped in cell values"
+        fi
+    else
+        echo "ERROR: Spaces not acceped in cell values"
+    fi
+else
+    echo "ERROR: Spaces not acceped in cell values"
+fi

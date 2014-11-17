@@ -1,14 +1,13 @@
 #ruby ../auto/generate_test_runner.rb
 UNITY_ROOT=./unity
 HTS_ROOT=$(HOME)/src/htslib
-HDF5_ROOT=$(HOME)/src/hdf5-1.8.7-mac-intel-x86_64-static
 CC=gcc
 SRC=../../src/c/
 TEST_SRC=$(wildcard *.c)
 TEST_NAMES=$(TEST_SRC:.c=)
 PREFIX=Runner_
 RUNNERS=$(addprefix $(PREFIX),$(TESTS))
-
+#AVX=-mavx -mavx2
 
 all: clean $(TEST_NAMES) test
 
@@ -17,16 +16,14 @@ all: clean $(TEST_NAMES) test
 	ruby $(UNITY_ROOT)/generate_test_runner.rb $@.c
 	lex -o $(SRC)/parse_q.yy.c $(SRC)/parse_q.l
 	$(CC) -Werror -g -o $@ \
-	    -I$(HDF5_ROOT)/include \
-	    -L$(HDF5_ROOT)/lib \
-	    -lz -lhdf5 -lsz \
+	    -lz \
 	    -I$(UNITY_ROOT) \
 	    -I$(SRC) \
 	    -I$(HTS_ROOT) \
 	    -DTEST $(UNITY_ROOT)/unity.c \
 	    -DSAMTOOLS=1 \
 	    $(HTS_ROOT)/libhts.a \
-	    -mavx -mavx2 -g  -pthread \
+	    $(AVX)  -pthread \
 	    $(SRC)/genotq.c \
 	    $(SRC)/pthread_pool.c \
 	    $(SRC)/timer.c \

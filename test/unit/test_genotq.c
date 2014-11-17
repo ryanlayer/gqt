@@ -4733,6 +4733,7 @@ void test_gt_records_fields(void)
 //{{{void test_avx_gt_count_records_in_place_wahbm(void)
 void test_avx_gt_count_records_in_place_wahbm(void)
 {
+#ifdef __AVX2__
     char *in = "../data/10.1e4.ind.wahbm";
     struct wah_file wf = init_wahbm_file(in);
     unsigned int *wf_R;
@@ -4762,12 +4763,14 @@ void test_avx_gt_count_records_in_place_wahbm(void)
     for (i = 0; i < len_wf_R; ++i) 
         TEST_ASSERT_EQUAL(wf_R[i], avx_wf_R[i]);
 
+#endif
 }
 //}}}
 
 //{{{void test_avx_add_wahbm(void)
 void test_avx_add_wahbm(void)
 {
+#ifdef __AVX2__
     uint32_t W1[5] = {
         bin_char_to_int("01111000000000000000000000001111"), // 1
         bin_char_to_int("10000000000000000000000000000010"), // 2 
@@ -4827,12 +4830,14 @@ void test_avx_add_wahbm(void)
 
     for (i = 0; i < R1_len; ++i) 
         TEST_ASSERT_EQUAL(A1[i], R1[i]);
+#endif
 }
 //}}}
 
 //{{{void test_avx_add_wahbm(void)
 void test_avx_add_wahbm_2(void)
 {
+#ifdef __AVX2__
     uint32_t W1[3] = { 0 , 0 , 0};
     uint32_t W2[3] = { 0 , 0 , 0};
     uint32_t W3[3] = { 8192 , 0 , 2101248};
@@ -4858,6 +4863,7 @@ void test_avx_add_wahbm_2(void)
 
     for (i = 0; i < R1_len; ++i) 
         TEST_ASSERT_EQUAL(A[i], R1[i]);
+#endif
 }
 //}}}
 

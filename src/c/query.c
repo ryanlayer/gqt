@@ -250,7 +250,6 @@ int query(int argc, char **argv)
 
     struct wah_file wf = init_wahbm_file(wahbm_file_name);
     unsigned int num_ints = (wf.num_fields + 32 - 1)/ 32;
-
     unsigned int len_ints;
 
     for (i = 0; i < gt_q_count; ++i) {
@@ -263,6 +262,17 @@ int query(int argc, char **argv)
         id_lens[i] = resolve_ind_query(&R,
                                       id_query_list[i],
                                       db_file_name);
+
+        // Enforce that the offsets of the relevant samples is 
+        // within the number of samples in the GQT index.
+        if (id_lens[i] >= wf.num_records)
+        {
+            fprintf(stderr, "ERROR: there are more samples in the PED database (%d) that "
+                            "match this condition \nthan there are in the GQT index (%d). "
+                            "Perhaps your PED file is a superset of the\nsamples in your "
+                            "VCF/BCF file?\n", id_lens[i], wf.num_records);
+            return 1;
+        }
 
         /*
         fprintf(stderr, "id_query_list:");

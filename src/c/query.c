@@ -265,7 +265,7 @@ int query(int argc, char **argv)
 
         // Enforce that the offsets of the relevant samples is 
         // within the number of samples in the GQT index.
-        if (id_lens[i] >= wf.num_records)
+        if (id_lens[i] > wf.num_records)
         {
             fprintf(stderr, "ERROR: there are more samples in the PED database (%d) that "
                             "match this condition \nthan there are in the GQT index (%d). "

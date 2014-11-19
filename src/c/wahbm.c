@@ -581,7 +581,7 @@ unsigned int add_wahbm(unsigned int *R,
         }
 
         if ( (num_words > 1) && (fill_bit == 0) ) {
-            field_i += num_words;
+            field_i += num_words * 31;
             if (field_i >= r_size)
                 return r_size;
         } else {
@@ -1044,7 +1044,12 @@ unsigned int add_n_wahbm(unsigned int *R,
     field_i = 0;
 
     for (wah_i = 0; wah_i < wah_size; ++wah_i) {
-
+        /* From the current  value:
+         * 1) determine how many works (1 if it is a litteral and more than one
+         * if it is a fill.
+         * 2) get the bits to add, if it is a fill then take the fill bit and
+         * create a word of only that bit, other wiswe grab the literal
+         */
         if (wah[wah_i] >> 31 == 1) {
             num_words = (wah[wah_i] & 0x3fffffff);
             fill_bit = (wah[wah_i]>=0xC0000000?1:0);
@@ -1054,8 +1059,9 @@ unsigned int add_n_wahbm(unsigned int *R,
             bits = wah[wah_i];
         }
 
+        // If there is nothing to add for more than one word, skip
         if ( (num_words > 1) && (fill_bit == 0) ) {
-            field_i += num_words;
+            field_i += num_words * 31;
             if (field_i >= r_size)
                 return r_size;
         } else {
@@ -1090,6 +1096,7 @@ unsigned int add_n_wahbm(unsigned int *R,
                 }
             }
         }
+
     }
 
     return r_size;
@@ -1185,7 +1192,7 @@ unsigned int p_pool_add_n_wahbm(unsigned int *R,
         }
 
         if ( (num_words > 1) && (fill_bit == 0) ) {
-            field_i += num_words;
+            field_i += num_words * 31;
             if (field_i >= r_size)
                 return r_size;
         } else {

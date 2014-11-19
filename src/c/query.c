@@ -265,12 +265,14 @@ int query(int argc, char **argv)
 
         // Enforce that the offsets of the relevant samples is 
         // within the number of samples in the GQT index.
-        if (id_lens[i] > wf.num_records)
-        {
-            fprintf(stderr, "ERROR: there are more samples in the PED database (%d) that "
-                            "match this condition \nthan there are in the GQT index (%d). "
-                            "Perhaps your PED file is a superset of the\nsamples in your "
-                            "VCF/BCF file?\n", id_lens[i], wf.num_records);
+        if (id_lens[i] > wf.num_records) {
+            fprintf(stderr, 
+                    "ERROR: there are more samples in the PED database (%d) "
+                    "that match this condition \nthan there are in the GQT "
+                    "index (%d).  Perhaps your PED file is a superset of "
+                    "the\nsamples in your VCF/BCF file?\n", 
+                    id_lens[i], 
+                    wf.num_records);
             return 1;
         }
 
@@ -342,6 +344,7 @@ int query(int argc, char **argv)
                                                            high_v,
                                                            &(counts[i]));
 #endif
+
 
             gt_mask[i] = (uint32_t *) malloc(num_ints * sizeof(uint32_t));
 

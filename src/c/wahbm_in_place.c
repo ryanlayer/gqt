@@ -209,119 +209,6 @@ unsigned int range_records_in_place_wahbm(struct wah_file wf,
 }
 //}}}
 
-#if 0
-//{{{ unsigned int count_range_records_in_place_wahbm(struct wah_file wf,
-unsigned int count_range_records_in_place_wahbm(struct wah_file wf,
-                                                unsigned int *record_ids,
-                                                unsigned int num_r,
-                                                unsigned int start_test_value,
-                                                unsigned int end_test_value,
-                                                unsigned int **R) 
-
-{
-
-    *R = (unsigned int *) calloc(wf.num_fields,sizeof(unsigned int));
-
-    unsigned int max_wah_size = (wf.num_fields + 31 - 1)/ 31;
-
-    /*
-    unsigned int *record_new_bm = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size);
-    */
-    unsigned int *record_new_bm;
-
-    unsigned int *or_result_bm = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size);
-
-    unsigned int and_result_bm_size, record_new_bm_size, or_result_bm_size;
-    unsigned int i,j,k,r_size;
-
-
-    unsigned int *record_new_bms = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size*4);
-    unsigned int record_new_bms_sizes[4];
-    unsigned int record_new_bms_size;
-
-
-#ifdef time_count_range_records_in_place_wahbm
-    unsigned long t1 = 0, t2 = 0, t3 = 0;
-#endif
-
-    for (i = 0; i < num_r; ++i) {
-        // or the appropriate bitmaps
-        memset(or_result_bm, 0, sizeof(unsigned int)*max_wah_size);
-
-#ifdef time_count_range_records_in_place_wahbm
-            start();
-#endif
-        record_new_bms_size = get_wah_bitmaps_in_place(wf,
-                                                       record_ids[i],
-                                                       &record_new_bms,
-                                                       record_new_bms_sizes);
-#ifdef time_count_range_records_in_place_wahbm
-            stop();
-            t1+=report();
-#endif
-
-        for (j = start_test_value; j < end_test_value; ++j) {
-
-            /*
-            record_new_bm_size = get_wah_bitmap_in_place(wf,
-                                                         record_ids[i],
-                                                         j,
-                                                         &record_new_bm);
-            */
-            record_new_bm_size = record_new_bms_sizes[j];
-            record_new_bm = record_new_bms;
-            for (k = 0; k < j; ++k)
-                record_new_bm += record_new_bms_sizes[k];
-
-#ifdef time_count_range_records_in_place_wahbm
-            start();
-#endif
-            or_result_bm_size = wah_in_place_or(or_result_bm,
-                                                max_wah_size,
-                                                record_new_bm,
-                                                record_new_bm_size); 
-#ifdef time_count_range_records_in_place_wahbm
-            stop();
-            t2+=report();
-#endif
-        }
-
-#ifdef time_count_range_records_in_place_wahbm
-            start();
-#endif
-        r_size = add_wahbm(*R,
-                           wf.num_fields,
-                           or_result_bm,
-                           or_result_bm_size);
-#ifdef time_count_range_records_in_place_wahbm
-            stop();
-            t3+=report();
-#endif
-    }
-
-#ifdef time_count_range_records_in_place_wahbm
-    unsigned long tall = t1 + t2 + t3;
-    fprintf(stderr,"%lu %f\t%lu %f\t%lu %f\t%lu\n", 
-            t1,
-            ((double)t1)/((double)tall),
-            t2,
-            ((double)t2)/((double)tall),
-            t3,
-            ((double)t3)/((double)tall),
-            tall);
-
-#endif
-    free(record_new_bms);
-    free(or_result_bm);
-
-    return wf.num_fields;
-}
-//}}}
-#endif
-
 #if 1
 //{{{ unsigned int count_range_records_in_place_wahbm(struct wah_file wf,
 unsigned int count_range_records_in_place_wahbm(struct wah_file wf,
@@ -600,7 +487,6 @@ unsigned int sum_range_records_in_place_wahbm(struct wah_file wf,
                                               unsigned int **R) 
 
 {
-
     *R = (unsigned int *) calloc(wf.num_fields,sizeof(unsigned int));
 
     unsigned int max_wah_size = (wf.num_fields + 31 - 1)/ 31;
@@ -761,4 +647,118 @@ unsigned int gt_sum_records_in_place_wahbm(struct wah_file wf,
                                             R);
 }
 //}}}
+
+#if 0
+//{{{ unsigned int count_range_records_in_place_wahbm(struct wah_file wf,
+unsigned int count_range_records_in_place_wahbm(struct wah_file wf,
+                                                unsigned int *record_ids,
+                                                unsigned int num_r,
+                                                unsigned int start_test_value,
+                                                unsigned int end_test_value,
+                                                unsigned int **R) 
+
+{
+
+    *R = (unsigned int *) calloc(wf.num_fields,sizeof(unsigned int));
+
+    unsigned int max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+
+    /*
+    unsigned int *record_new_bm = (unsigned int *)
+                        malloc(sizeof(unsigned int)*max_wah_size);
+    */
+    unsigned int *record_new_bm;
+
+    unsigned int *or_result_bm = (unsigned int *)
+                        malloc(sizeof(unsigned int)*max_wah_size);
+
+    unsigned int and_result_bm_size, record_new_bm_size, or_result_bm_size;
+    unsigned int i,j,k,r_size;
+
+
+    unsigned int *record_new_bms = (unsigned int *)
+                        malloc(sizeof(unsigned int)*max_wah_size*4);
+    unsigned int record_new_bms_sizes[4];
+    unsigned int record_new_bms_size;
+
+
+#ifdef time_count_range_records_in_place_wahbm
+    unsigned long t1 = 0, t2 = 0, t3 = 0;
+#endif
+
+    for (i = 0; i < num_r; ++i) {
+        // or the appropriate bitmaps
+        memset(or_result_bm, 0, sizeof(unsigned int)*max_wah_size);
+
+#ifdef time_count_range_records_in_place_wahbm
+            start();
+#endif
+        record_new_bms_size = get_wah_bitmaps_in_place(wf,
+                                                       record_ids[i],
+                                                       &record_new_bms,
+                                                       record_new_bms_sizes);
+#ifdef time_count_range_records_in_place_wahbm
+            stop();
+            t1+=report();
+#endif
+
+        for (j = start_test_value; j < end_test_value; ++j) {
+
+            /*
+            record_new_bm_size = get_wah_bitmap_in_place(wf,
+                                                         record_ids[i],
+                                                         j,
+                                                         &record_new_bm);
+            */
+            record_new_bm_size = record_new_bms_sizes[j];
+            record_new_bm = record_new_bms;
+            for (k = 0; k < j; ++k)
+                record_new_bm += record_new_bms_sizes[k];
+
+#ifdef time_count_range_records_in_place_wahbm
+            start();
+#endif
+            or_result_bm_size = wah_in_place_or(or_result_bm,
+                                                max_wah_size,
+                                                record_new_bm,
+                                                record_new_bm_size); 
+#ifdef time_count_range_records_in_place_wahbm
+            stop();
+            t2+=report();
+#endif
+        }
+
+#ifdef time_count_range_records_in_place_wahbm
+            start();
+#endif
+        r_size = add_wahbm(*R,
+                           wf.num_fields,
+                           or_result_bm,
+                           or_result_bm_size);
+#ifdef time_count_range_records_in_place_wahbm
+            stop();
+            t3+=report();
+#endif
+    }
+
+#ifdef time_count_range_records_in_place_wahbm
+    unsigned long tall = t1 + t2 + t3;
+    fprintf(stderr,"%lu %f\t%lu %f\t%lu %f\t%lu\n", 
+            t1,
+            ((double)t1)/((double)tall),
+            t2,
+            ((double)t2)/((double)tall),
+            t3,
+            ((double)t3)/((double)tall),
+            tall);
+
+#endif
+    free(record_new_bms);
+    free(or_result_bm);
+
+    return wf.num_fields;
+}
+//}}}
+#endif
+
 

@@ -1,6 +1,7 @@
 #include <htslib/hts.h>
 #include <htslib/vcf.h>
 #include <htslib/kstring.h>
+#include <assert.h>
 #include "genotq.h"
 #include "timer.h"
 
@@ -161,11 +162,32 @@ void push_bcf_gt_md(pri_queue *q,
         // Pack genotypes
         for (j = 0; j < num_inds; ++j) {
             uint32_t gt = 0;
-            for (k = 0; k < num_gts_per_sample; ++k) {
-                gt += bcf_gt_allele(gt_i[k]);
-            }
 
+            assert(num_gts_per_sample <= 2);
+            assert(num_gts_per_sample > 0);
+
+            if (num_gts_per_sample == 1) {
+                if (bcf_gt_is_missing(gt_i[0]))
+                    gt = 3;
+                else if (bcf_gt_allele(gt_i[k]) == 0)
+                    gt = 0;
+                else
+                    gt = 1;
+            } else {
+                if (bcf_gt_is_missing(gt_i[0]) || bcf_gt_is_missing(gt_i[1]))
+                    gt = 3;
+                else if ((bcf_gt_allele(gt_i[0]) == 0 ) &&
+                         (bcf_gt_allele(gt_i[1]) == 0 ))
+                    gt = 0;
+                else if (bcf_gt_allele(gt_i[0]) == bcf_gt_allele(gt_i[1]))
+                    gt = 2;
+                else if (bcf_gt_allele(gt_i[0]) != bcf_gt_allele(gt_i[1]))
+                    gt = 1;
+
+            }
+                
             packed_ints[int_i] += gt << (30 - 2*two_bit_i);
+
             two_bit_i += 1;
             if (two_bit_i == 16) {
                 two_bit_i = 0;

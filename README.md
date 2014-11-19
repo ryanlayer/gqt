@@ -72,7 +72,7 @@ will be converted to an underscore in the database (e.g., `Paternal ID` becomes
 
 Installation
 ============
-GQT depends on htslib and sqlit3.
+GQT depends on htslib, sqlit3, and lex (flex).
 
 *Step 1*. Install htslib.
 
@@ -85,17 +85,32 @@ GQT depends on htslib and sqlit3.
     $ wget http://www.sqlite.org/2014/sqlite-amalgamation-3080701.zip
     $ unzip sqlite-amalgamation-3080701.zip
 
-*Step 2*. Modify the GQT Makefile by setting the `HTS_ROOT` and `SQLITE_ROOT`
+*Step 3*. Check to see if your system has lex/flex installed.  If not, install.
+
+    $ lex -V
+    $ flex -V
+    # if both fail then install, otherwise skip to step 4 
+    $ wget http://downloads.sourceforge.net/project/flex/flex-2.5.39.tar.bz2
+    $ bunzip2 flex-2.5.39.tar.bz2
+    $ tar xvf flex-2.5.39.tar
+    $ cd flex-2.5.39
+    $ ./configure
+    $ make
+    $ make install
+
+*Step 4*. Modify the GQT Makefile by setting the `HTS_ROOT` and `SQLITE_ROOT`
 variable in `src/c/Makfile` to reflect their locations.
 
-*Step 3*. Compile GQT
+*Step 5*. Compile GQT
 
     $ cd gqt/
     $ make
 
-*Step 4*. Test GQT
+*Step 6*. Test GQT.  First, make the same changes to `HTS_ROOT` and
+`SQLITE_ROOT` in `test/unit/Makefile`. To test AVX2 instruction, uncomment the
+`AVX` variable definition.
 
-    $ cd gqt/src/test/unit
+    $ cd test/unit
     $ make
     $ cd ../func
     $ bash functional_tests.sh

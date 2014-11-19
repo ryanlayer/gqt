@@ -57,7 +57,7 @@ all: $(LIST)
 	@mkdir -p $(BIN)
 
 parse_q:
-	$(LEX) -o parse_q.yy.c parse_q.l
+	$(LEX) -oparse_q.yy.c parse_q.l
 
 sqlite: 
 	$(CC) -c $(SQLITE_ROOT)/sqlite3.c -o $(SQLITE_ROOT)/sqlite3.o

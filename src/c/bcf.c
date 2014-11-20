@@ -117,6 +117,8 @@ void push_bcf_gt_md(pri_queue *q,
 
     int32_t *gt_p = NULL;
 
+    kstring_t md = {0,0,0};
+
     priority p;
 
     for (i = 0; i < num_vars; ++i) {
@@ -130,26 +132,6 @@ void push_bcf_gt_md(pri_queue *q,
         // Unpack all of the fields 
         bcf_unpack(bcf_f->line, BCF_UN_ALL);
 
-        // Get metadata
-        size_t len = strlen(bcf_hdr_id2name(bcf_f->hdr, bcf_f->line->rid)) +
-                     10 + // max length of pos
-                     strlen(bcf_f->line->d.id) +
-                     strlen(bcf_f->line->d.allele[0]) +
-                     strlen(bcf_f->line->d.allele[1]) +
-                     4; //tabs
-        char *md = (char *) malloc(len * sizeof(char));
-
-        sprintf(md, "%s\t%d\t%s\t%s\t%s",
-                     bcf_hdr_id2name(bcf_f->hdr, bcf_f->line->rid),
-                     bcf_f->line->pos + 1,
-                     bcf_f->line->d.id,
-                     bcf_f->line->d.allele[0],
-                     bcf_f->line->d.allele[1]); 
-
-        // Write metadata
-        md_i += strlen(md);
-        md_index[i] = md_i;
-        fprintf(md_of, "%s", md);
 
         // Get gentotypes
         uint32_t num_gts_per_sample = bcf_get_genotypes(bcf_f->hdr,
@@ -158,6 +140,7 @@ void push_bcf_gt_md(pri_queue *q,
                                                         &ntmp);
         num_gts_per_sample /= num_inds;
         int32_t *gt_i = gt_p;
+
         
         // Pack genotypes
         for (j = 0; j < num_inds; ++j) {
@@ -219,10 +202,41 @@ void push_bcf_gt_md(pri_queue *q,
         // Write to file
         fwrite(packed_ints, sizeof(uint32_t), num_ind_ints, gt_of);
 
+        // Get metadata
+        bcf_f->line->n_sample = 0;
+        vcf_format1(bcf_f->hdr, bcf_f->line, &md);
+        md_i += md.l;
+        md_index[i] = md_i;
+        fprintf(md_of, "%s", md.s);
+        md.l = 0;
+
+#if 0
+        size_t len = strlen(bcf_hdr_id2name(bcf_f->hdr, bcf_f->line->rid)) +
+                     10 + // max length of pos
+                     strlen(bcf_f->line->d.id) +
+                     strlen(bcf_f->line->d.allele[0]) +
+                     strlen(bcf_f->line->d.allele[1]) +
+                     4; //tabs
+        char *md = (char *) malloc(len * sizeof(char));
+
+        sprintf(md, "%s\t%d\t%s\t%s\t%s",
+                     bcf_hdr_id2name(bcf_f->hdr, bcf_f->line->rid),
+                     bcf_f->line->pos + 1,
+                     bcf_f->line->d.id,
+                     bcf_f->line->d.allele[0],
+                     bcf_f->line->d.allele[1]); 
+
+        // Write metadata
+        md_i += strlen(md);
+        md_index[i] = md_i;
+        fprintf(md_of, "%s", md);
+#endif
         memset(packed_ints, 0, num_ind_ints*sizeof(uint32_t));
 
-        free(md);
     }
+
+    if (md.s != 0)
+        free(md.s);
 
     free(packed_ints);
     fclose(gt_of);
@@ -273,7 +287,8 @@ void sort_gt_md(pri_queue *q,
         r = fread(packed_ints, sizeof(uint32_t), num_ind_ints, gt_of);
         fwrite(packed_ints, sizeof(uint32_t), num_ind_ints,s_gt_of);
 
-        fprintf(md_out, "%s\n", buf);
+        //fprintf(md_out, "%s\n", buf);
+        fprintf(md_out, "%s", buf);
 
         fwrite(d, sizeof(uint32_t), 1, v_out);
     }

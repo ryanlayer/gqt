@@ -65,5 +65,6 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                                           uint32_t num_records,
                                           char *wah_out,
                                           char *bim_out,
-                                          char *vid_out);
+                                          char *vid_out,
+                                          char *tmp_dir);
 #endif

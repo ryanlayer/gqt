@@ -44,15 +44,32 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                                           uint32_t num_records,
                                           char *wah_out,
                                           char *bim_out,
-                                          char *vid_out)
+                                          char *vid_out,
+                                          char *tmp_dir)
 {
     uint32_t num_inds = num_fields;
     uint32_t num_vars = num_records;
+
+    /*
     char *gt_of_name = ".gt.tmp.packed";
     char *s_gt_of_name = ".s.gt.tmp.packed";
     char *r_s_gt_of_name = ".r.s.gt.tmp.packed";
     char *md_of_name = ".md.tmp.packed";
     char *bim_of_name = ".md.tmp.packed.bim";
+    */
+
+    char *gt_of_name,
+         *s_gt_of_name,
+         *r_s_gt_of_name,
+         *md_of_name,
+         *bim_of_name;
+
+    asprintf(&gt_of_name, "%s/.gt.tmp.packed", tmp_dir);
+    asprintf(&s_gt_of_name, "%s/.s.gt.tmp.packed", tmp_dir);
+    asprintf(&r_s_gt_of_name, "%s/.r.s.gt.tmp.packed", tmp_dir);
+    asprintf(&md_of_name, "%s/.md.tmp.packed", tmp_dir);
+    asprintf(&bim_of_name, "%s/.md.tmp.packed.bim", tmp_dir);
+
 
     struct bcf_file bcf_f = init_bcf_file(in);
     pri_queue q = priq_new(0);
@@ -87,10 +104,13 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
     close_bcf_file(&bcf_f);
 
     int r = convert_file_by_name_ubin_to_wahbm(r_s_gt_of_name, wah_out);
+
     remove(gt_of_name);
     remove(s_gt_of_name);
     remove(r_s_gt_of_name);
     remove(md_of_name);
+    remove(bim_of_name);
+
     free(md_index);
     return r;
 }

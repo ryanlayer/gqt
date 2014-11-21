@@ -10,6 +10,7 @@ int bcf_wahbm(char *in,
               char *wah_out,
               char *bim_out,
               char *vid_out,
+              char *tmp_dir,
               unsigned int num_fields,
               unsigned int num_records);
 int ped_db(char *in, char *out);
@@ -19,17 +20,22 @@ int convert(int argc, char **argv)
     if (argc < 2) return convert_help();
 
     int c;
-    char *in, *out, *bim, *vid;
+    char *in, *out, *bim, *vid, *tmp_dir;
     unsigned int num_fields, num_records;
     int i_is_set = 0, 
         o_is_set = 0, 
         f_is_set = 0, 
         b_is_set = 0, 
         v_is_set = 0, 
+        t_is_set = 0, 
         r_is_set = 0; 
 
-    while((c = getopt (argc, argv, "hi:o:f:r:b:v:")) != -1) {
+    while((c = getopt (argc, argv, "hi:o:f:r:b:v:t:")) != -1) {
         switch (c) {
+            case 't':
+                t_is_set = 1;
+                tmp_dir = optarg;
+                break;
             case 'v':
                 v_is_set = 1;
                 vid = optarg;
@@ -61,6 +67,7 @@ int convert(int argc, char **argv)
                 if ( (optopt == 'i') || 
                      (optopt == 'f') ||
                      (optopt == 'r') ||
+                     (optopt == 't') ||
                      (optopt == 'o') )
                     fprintf (stderr, "Option -%c requires an argument.\n",
                             optopt);
@@ -95,7 +102,7 @@ int convert(int argc, char **argv)
         if (o_is_set == 0) {
             out  = (char*)malloc(strlen(in) + 5); // 5 for ext and \0
             strcpy(out,in);
-            strcat(out, ".wah");
+            strcat(out, ".gqt");
         }
         if (b_is_set == 0) {
             bim  = (char*)malloc(strlen(in) + 5); // 5 for ext and \0
@@ -107,7 +114,11 @@ int convert(int argc, char **argv)
             strcpy(vid,in);
             strcat(vid, ".vid");
         }
-        return bcf_wahbm(in, out, bim, vid, num_fields, num_records);
+        if (t_is_set == 0) {
+            tmp_dir  = (char*)malloc(2*sizeof(char));
+            strcpy(tmp_dir,"./");
+        }
+        return bcf_wahbm(in, out, bim, vid, tmp_dir, num_fields, num_records);
     } 
 
     if (strcmp(type, "ped") == 0)  {
@@ -134,6 +145,7 @@ int convert_help()
            "         -b           BIM output file name (opt.)\n"
            "         -r           Number of variants (req. for bcf)\n"
            "         -f           Number of samples (req. for bcf)\n"
+           "         -t           Tmp working directory(./ by defualt)\n"
            );
 
     return 0;
@@ -149,6 +161,7 @@ int bcf_wahbm(char *in,
               char *wah_out,
               char *bim_out,
               char *vid_out,
+              char *tmp_dir,
               unsigned int num_fields,
               unsigned int num_records)
 {
@@ -157,5 +170,6 @@ int bcf_wahbm(char *in,
                                                  num_records,
                                                  wah_out,
                                                  bim_out,
-                                                 vid_out);
+                                                 vid_out,
+                                                 tmp_dir);
 }

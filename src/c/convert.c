@@ -115,7 +115,7 @@ int convert(int argc, char **argv)
             strcat(vid, ".vid");
         }
         if (t_is_set == 0) {
-            tmp_dir  = (char*)malloc(2*sizeof(char));
+            tmp_dir  = (char*)malloc(3*sizeof(char)); // "./\0"
             strcpy(tmp_dir,"./");
         }
         return bcf_wahbm(in, out, bim, vid, tmp_dir, num_fields, num_records);

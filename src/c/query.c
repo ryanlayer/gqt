@@ -156,47 +156,51 @@ int query(int argc, char **argv)
         }
     }
 
+    // Try to auto-detect file names based on GQT
+    if ( (i_is_set == 1) && (b_is_set == 0)) {
+
+        int auto_bim_file_name_size = asprintf(&bim_file_name,
+                                               "%s",
+                                               wahbm_file_name);
+        strcpy(bim_file_name + strlen(bim_file_name) - 3, "bim");
+
+        if ( access( bim_file_name, F_OK) != -1 ) {
+            b_is_set = 1;
+        } else {
+            printf("Auto detect failure: BIM file %s not found\n",
+                   bim_file_name);
+            return query_help();
+        }
+    }
+
+
     // Try to auto-detect file names based on BCF
     if ( (i_is_set == 0) &&
          (v_is_set == 0) &&
          (b_is_set == 0) &&
          (s_is_set == 1)) {
 
-        /*
-        int auto_db_file_name_size = asprintf(&db_file_name, "%s.db", src_bcf_file_name);
-
-        if ( access( db_file_name, F_OK) != -1 ) {
-            d_is_set = 1;
-        } else {
-            printf("Auto detect failure: PED database file %s not found\n", db_file_name);
-            return query_help();
-        }
-
-        int auto_bim_file_name_size = asprintf(&bim_file_name, "%s.bim", src_bcf_file_name);
-
-        if ( access( bim_file_name, F_OK) != -1 ) {
-            b_is_set = 1;
-        } else {
-            printf("Auto detect failure: BIM file %s not found\n", bim_file_name);
-            return query_help();
-        }
-        */
-
-        int auto_vid_file_name_size = asprintf(&vid_file_name, "%s.vid", src_bcf_file_name);
+        int auto_vid_file_name_size = asprintf(&vid_file_name,
+                                               "%s.vid",
+                                               src_bcf_file_name);
 
         if ( access( vid_file_name, F_OK) != -1 ) {
             v_is_set = 1;
         } else {
-            printf("Auto detect failure: VID file %s not found\n", vid_file_name);
+            printf("Auto detect failure: VID file %s not found\n",
+                    vid_file_name);
             return query_help();
         }
 
-        int auto_wahbm_file_name_size = asprintf(&wahbm_file_name, "%s.wah", src_bcf_file_name);
+        int auto_wahbm_file_name_size = asprintf(&wahbm_file_name,
+                                                 "%s.gqt",
+                                                 src_bcf_file_name);
 
         if ( access( wahbm_file_name, F_OK) != -1 ) {
             i_is_set = 1;
         } else {
-            printf("Auto detect failure: WAH file %s not found\n", wahbm_file_name);
+            printf("Auto detect failure: WAH file %s not found\n",
+                   wahbm_file_name);
             return query_help();
         }
     }

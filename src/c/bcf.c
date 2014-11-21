@@ -75,10 +75,10 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                bim_out,
                vid_out);
 
-    rotate_encode_wahbm(num_inds,
-                        num_vars,
-                        s_gt_of_name,
-                        r_s_gt_of_name);
+    rotate_gt(num_inds,
+              num_vars,
+              s_gt_of_name,
+              r_s_gt_of_name);
 
     close_bcf_file(&bcf_f);
 
@@ -121,7 +121,15 @@ void push_bcf_gt_md(pri_queue *q,
 
     priority p;
 
+    uint32_t tenth_num_var = num_vars / 10;
+    fprintf(stderr,"Extracting genotyes and metadata");
+
     for (i = 0; i < num_vars; ++i) {
+        if ((tenth_num_var ==0) || (i % tenth_num_var == 0))
+            fprintf(stderr,".");
+
+
+
         sum = 0;
         int_i = 0;
         two_bit_i = 0;
@@ -235,6 +243,8 @@ void push_bcf_gt_md(pri_queue *q,
 
     }
 
+    fprintf(stderr,"Done\n");
+
     if (md.s != 0)
         free(md.s);
 
@@ -268,8 +278,16 @@ void sort_gt_md(pri_queue *q,
 
     priority p;
 
+    uint32_t tenth_num_var = num_vars / 10;
+    uint32_t var_i = 0;
+    fprintf(stderr,"Sorting genotypes and metadata");
+
     // Get variants in order and rewrite a variant-major sorted matrix
     while ( priq_top(*q, &p) != NULL ) {
+        if ((tenth_num_var == 0) || (var_i % tenth_num_var == 0))
+            fprintf(stderr,".");
+        var_i += 1;
+
         int *d = priq_pop(*q, &p);
 
         uint32_t start = 0;
@@ -293,6 +311,8 @@ void sort_gt_md(pri_queue *q,
         fwrite(d, sizeof(uint32_t), 1, v_out);
     }
 
+    fprintf(stderr, "Done\n");
+
     free(packed_ints);
 
     fclose(md_out);
@@ -303,11 +323,11 @@ void sort_gt_md(pri_queue *q,
 }
 //}}}
 
-//{{{void rotate_encode_wahbm(uint32_t num_inds,
-void rotate_encode_wahbm(uint32_t num_inds,
-                         uint32_t num_vars,
-                         char *s_gt_of_name,
-                         char *r_s_gt_of_name)
+//{{{void rotate_gt(uint32_t num_inds,
+void rotate_gt(uint32_t num_inds,
+               uint32_t num_vars,
+               char *s_gt_of_name,
+               char *r_s_gt_of_name)
 {
     uint32_t num_var_ints = 1 + ((num_vars - 1) / 16);
     uint32_t num_ind_ints = 1 + ((num_inds - 1) / 16);
@@ -328,8 +348,15 @@ void rotate_encode_wahbm(uint32_t num_inds,
     fwrite(&num_vars, sizeof(uint32_t), 1, rs_gt_of);
     fwrite(&num_inds, sizeof(uint32_t), 1, rs_gt_of);
      
+    uint32_t tenth_num_ind_ints = num_ind_ints / 10;
+    fprintf(stderr, "Rotating genotypes");
+
+
     uint32_t num_inds_to_write = num_inds;
     for (i = 0; i < num_ind_ints; ++i) { // loop over each int col
+        if ((tenth_num_ind_ints == 0) || (i % tenth_num_ind_ints == 0))
+            fprintf(stderr,".");
+
         for (j = 0; j < num_vars; ++j) { // loop over head row in that col
             // skip to the value at the row/col
             fseek(s_gt_of, 
@@ -371,6 +398,7 @@ void rotate_encode_wahbm(uint32_t num_inds,
         I_int_i = 0;
         I_i = 0;
     }
+    fprintf(stderr,"Done\n");
 
     free(I_data);
     free(I);

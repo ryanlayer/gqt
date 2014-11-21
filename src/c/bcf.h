@@ -53,10 +53,10 @@ void sort_gt_md(pri_queue *q,
                 char *bim_out,
                 char *vid_out);
 
-void rotate_encode_wahbm(uint32_t num_inds,
-                         uint32_t num_vars,
-                         char *s_gt_of_name,
-                         char *r_s_gt_of_name);
+void rotate_gt(uint32_t num_inds,
+               uint32_t num_vars,
+               char *s_gt_of_name,
+               char *r_s_gt_of_name);
 
 int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                                           uint32_t num_fields,

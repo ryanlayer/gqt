@@ -70,7 +70,13 @@ unsigned int convert_file_by_name_ubin_to_wahbm16(char *ubin_in,
     // skip to the target record and read in the full record
     fseek(uf.file, uf.header_offset, SEEK_SET);
 
+    uint32_t tenth_num_records = uf.num_records / 10;
+    fprintf(stderr,"Compressing genotypes");
+    
     for (i = 0; i < uf.num_records; ++i) {
+        if ( (tenth_num_records == 0) || (i % tenth_num_records == 0))
+            fprintf(stderr, ".");
+
         int r =fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
          
         uint16_t *wah;
@@ -96,6 +102,8 @@ unsigned int convert_file_by_name_ubin_to_wahbm16(char *ubin_in,
         free(wah);
         free(wah_sizes);
     }
+
+    fprintf(stderr, "Done");
 
     free(c);
 
@@ -136,7 +144,13 @@ unsigned int convert_file_by_name_ubin_to_wahbm(char *ubin_in, char *wah_out)
     // skip to the target record and read in the full record
     fseek(uf.file, uf.header_offset, SEEK_SET);
 
+    uint32_t tenth_num_records = uf.num_records / 10;
+    fprintf(stderr,"Compressing genotypes");
+
     for (i = 0; i < uf.num_records; ++i) {
+        if ( (tenth_num_records == 0) || (i % tenth_num_records == 0))
+            fprintf(stderr, ".");
+
         int r = fread(c,sizeof(unsigned int),num_ints_per_record,uf.file);
          
         unsigned int *wah;
@@ -163,6 +177,8 @@ unsigned int convert_file_by_name_ubin_to_wahbm(char *ubin_in, char *wah_out)
         free(wah);
         free(wah_sizes);
     }
+
+    fprintf(stderr, "Done\n");
 
     free(c);
 

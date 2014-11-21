@@ -94,7 +94,9 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                bim_of_name,
                vid_out);
 
-    compress_md(bim_of_name, bim_out);
+    compress_md(&bcf_f,
+                bim_of_name,
+                bim_out);
 
     rotate_gt(num_inds,
               num_vars,
@@ -347,10 +349,38 @@ void sort_gt_md(pri_queue *q,
 }
 //}}}
 
-//{{{void compress_md(char *md_of_name)
-void compress_md(char *md_of_name, char *bim_out)
+//{{{ void compress_md(struct bcf_file *bcf_f,
+void compress_md(struct bcf_file *bcf_f,
+                 char *md_of_name,
+                 char *bim_out)
 {
     fprintf(stderr, "Compressing metadata.");
+
+    // Get the BCF header
+    int h_len;
+    char *h_buf = bcf_hdr_fmt_text(bcf_f->hdr, 0, &h_len);
+
+    /* 
+     * This header will inclue all of the sample names, which we don't want
+     * so we need to scan back to the start of the last line of the header,
+     * then clip off the FORMAT and subsequent sample IDs
+     */
+    //scan back to the start of the header line
+    while (h_len && h_buf[h_len-1] != '\n')
+        --h_len;
+    --h_len;
+    while (h_len && h_buf[h_len-1] != '\n') --h_len;
+    h_buf[h_len] = '\0';
+    --h_len;
+
+    // Search for the last field we want to keep, and clip off the rest 
+    //char *p = strstr(h_buf + h_len, "INFO");
+    //p[4] = '\n';
+    //p[5] = '\0';
+    h_len = strlen(h_buf);
+
+
+    // Read the sorted meta data fields into the buffer
     struct stat infile_stat;
     FILE *fp = NULL;
 
@@ -364,9 +394,15 @@ void compress_md(char *md_of_name, char *bim_out)
     stat(md_of_name, &infile_stat);
     size_t u_len = infile_stat.st_size;
 
-    char *u_buf = (char *)malloc(u_len+1);
+    size_t h_len_size_t = (size_t)h_len;
 
-    if (fread(u_buf, 1, u_len, fp) < u_len) {
+    char *u_buf = (char *)malloc(h_len_size_t + u_len + 1);
+
+    strncpy(u_buf, h_buf, h_len);
+
+    free(h_buf);
+
+    if (fread(u_buf + h_len_size_t, 1, u_len, fp) < u_len) {
         fprintf(stderr,
                 "Error: Unable to read in all of file %s. Exiting.\n ",
                 md_of_name);
@@ -374,12 +410,14 @@ void compress_md(char *md_of_name, char *bim_out)
     }
     fclose(fp);
 
-    size_t c_len = compressBound(u_len);
+    //fprintf(stderr, "%s", u_buf);
+
+    size_t c_len = compressBound(u_len + h_len_size_t);
 
     Bytef *c_buf = (Bytef *)malloc(c_len);
 
     //Deflate
-    int r = compress(c_buf, &c_len, (Bytef *)u_buf, u_len);
+    int r = compress(c_buf, &c_len, (Bytef *)u_buf, (u_len + h_len_size_t));
     if (r == Z_MEM_ERROR)
         fprintf(stderr, "Not enough memory\n");
     else if (r == Z_BUF_ERROR)
@@ -395,11 +433,18 @@ void compress_md(char *md_of_name, char *bim_out)
     }
 
     /* 
-     * The file will have the uncompressed size, compressed size, then
-     * compressed data
+     * The file is :
+     * uncompressed size  ( sizeof(size_t))
+     * compressed size    ( sizeof(size_t))
+     * header size        ( sizeof(size_t))
+     * compressed data 
      */
-    fwrite(&u_len, sizeof(size_t), 1, fp);
+
+    size_t h_u_len = u_len + h_len_size_t;
+
+    fwrite(&h_u_len, sizeof(size_t), 1, fp);
     fwrite(&c_len, sizeof(size_t), 1, fp);
+    fwrite(&h_len_size_t, sizeof(size_t), 1, fp);
     fwrite(c_buf, c_len, 1, fp);
     fclose(fp);
 

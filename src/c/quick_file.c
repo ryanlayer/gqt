@@ -17,7 +17,6 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
     FILE *fp = NULL;
     size_t i = 0;
     size_t pos = 0;
-    size_t prevPos = 0;
 
     /* Open the file */
     if ((fp = fopen(filename, "r")) == NULL) {
@@ -48,9 +47,19 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
     fclose(fp);
 #endif
 
-    size_t u_len, c_len;
+    /* 
+     * The file is :
+     * uncompressed size  ( sizeof(size_t))
+     * compressed size    ( sizeof(size_t))
+     * header size        ( sizeof(size_t))
+     * compressed data 
+     */
+    size_t u_len, c_len, h_len;
     size_t s = fread(&u_len, sizeof(size_t), 1, fp);
     s = fread(&c_len, sizeof(size_t), 1, fp);
+    s = fread(&h_len, sizeof(size_t), 1, fp);
+
+
 
     Bytef *c_buf = (Bytef *)malloc(c_len);
     s = fread(c_buf, c_len, 1, fp);
@@ -76,16 +85,19 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
     }
 
     qfile->file_len = u_len;
+    qfile->header_len = h_len;
 
     free(c_buf);
 
-
-    /* Count how many lines you have. There may be a better way
-     * to do this, but I don't know what it is.  */
+    /* 
+     * Count how many lines you have.  Starting after the header
+     * 
+     */
     qfile->num_lines = 0;
-    for(i = 0; i < qfile->file_len; i++) {
+    for(i = qfile->header_len; i < qfile->file_len; i++) {
         if (qfile->main_buf[i] == '\n') qfile->num_lines++;
     }
+
     /* Special: if the last char in the file is not a newLine,
      * then there was one more line we missed. */
     if (qfile->main_buf[i-1] != '\n') {
@@ -112,8 +124,11 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
      * null chars. Put a pointer to the next char on the lines array.
      * Store the calculated length of the line as well. */
     i = 0;
-    qfile->lines[0] = qfile->main_buf;
-    for (pos = 0; pos < qfile->file_len; pos++) {
+    qfile->lines[0] = qfile->main_buf + qfile->header_len;
+
+    size_t prevPos = qfile->header_len;
+
+    for (pos = qfile->header_len; pos < qfile->file_len; pos++) {
         if (qfile->main_buf[pos] == '\n') {
             i++;
             qfile->line_lens[i-1] = pos - prevPos;
@@ -150,6 +165,7 @@ void quick_file_delete(struct quick_file_info *qfile) {
                 qfile->main_buf[pos] = '\n';
         }
     }
+
 
     /* now we can free the main_buf. */
     free(qfile->main_buf);

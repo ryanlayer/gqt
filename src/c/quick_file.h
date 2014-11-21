@@ -19,6 +19,7 @@ struct quick_file_info {
 	size_t *line_lens; /* store length of each line, because strlen is actually quite slow. */
 	size_t num_lines;
 	size_t file_len;
+	size_t header_len;
 };
 
 /* Just pass a file name and a pointer to the above struct into this method */

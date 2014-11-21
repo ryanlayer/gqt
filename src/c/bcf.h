@@ -58,7 +58,9 @@ void rotate_gt(uint32_t num_inds,
                char *s_gt_of_name,
                char *r_s_gt_of_name);
 
-void compress_md(char *md_of_name, char *bim_out);
+void compress_md(struct bcf_file *bcf_f,
+                 char *md_of_name,
+                 char *bim_out);
 
 int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                                           uint32_t num_fields,

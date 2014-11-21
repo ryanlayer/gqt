@@ -599,6 +599,33 @@ void print_query_result(unsigned int *mask,
     init_out_buf(&outbuf, NULL);
     quick_file_init(bim, &qfile);
 
+
+    append_out_buf(&outbuf,
+                   qfile.main_buf,
+                   qfile.header_len);
+
+    char *info_s;
+    for (k=0; k < num_qs; k++) {
+        if ( q[k].variant_op == p_count ) {
+            asprintf(&info_s, "##INFO=<ID=GTQ_%u,Number=1,Type=Integer,"
+                              "Description=\"GQT count result from query %u\">\n",
+                              k, k);
+            append_out_buf(&outbuf, info_s, strlen(info_s));
+        }
+        else if ( q[k].variant_op == p_pct ) {
+            asprintf(&info_s, "##INFO=<ID=GTQ_%u,Number=1,Type=Float,"
+                              "Description=\"GQT percent result from query %u\">\n",
+                              k, k);
+            append_out_buf(&outbuf, info_s, strlen(info_s));
+        }
+    }
+
+    char last_header_line[]="#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n";
+
+    append_out_buf(&outbuf, last_header_line, strlen(last_header_line));
+
+
+
     for (i=0; i < mask_len; ++i) {
         bytes = mask[i];
 	if (bytes == 0)
@@ -610,18 +637,16 @@ void print_query_result(unsigned int *mask,
                                qfile.lines[line_idx],
                                qfile.line_lens[line_idx]);
                 for (k=0; k < num_qs; k++) {
-	            append_out_buf(&outbuf,"\t",1);
-                    if ( q[k].variant_op == p_count ) 
-                        append_integer_to_out_buf(&outbuf,
-                                                  counts[k][line_idx]);
-                    else if ( q[k].variant_op == p_pct ) {
-                        sprintf(pct, "%f", 
+                    if ( q[k].variant_op == p_count ) {
+                        asprintf(&info_s, ";GTQ_%u=%u", k,counts[k][line_idx]);
+                        append_out_buf(&outbuf, info_s, strlen(info_s));
+
+                    } else if ( q[k].variant_op == p_pct ) {
+                        asprintf(&info_s, ";GTQ_%u=%f", k,
                                 ((float)counts[k][line_idx])/
                                 ((float) id_lens[k]));
-	                append_out_buf(&outbuf,pct,strlen(pct));
+                        append_out_buf(&outbuf, info_s, strlen(info_s));
                     }
-                    else
-	                append_out_buf(&outbuf,"-",1);
                 }
                 
 	        append_out_buf(&outbuf,"\n",1);

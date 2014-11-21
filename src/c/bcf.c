@@ -2,6 +2,7 @@
 #include <htslib/vcf.h>
 #include <htslib/kstring.h>
 #include <assert.h>
+#include <zlib.h>
 #include "genotq.h"
 #include "timer.h"
 
@@ -51,6 +52,7 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
     char *s_gt_of_name = ".s.gt.tmp.packed";
     char *r_s_gt_of_name = ".r.s.gt.tmp.packed";
     char *md_of_name = ".md.tmp.packed";
+    char *bim_of_name = ".md.tmp.packed.bim";
 
     struct bcf_file bcf_f = init_bcf_file(in);
     pri_queue q = priq_new(0);
@@ -72,8 +74,10 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                gt_of_name,
                s_gt_of_name,
                md_of_name,
-               bim_out,
+               bim_of_name,
                vid_out);
+
+    compress_md(bim_of_name, bim_out);
 
     rotate_gt(num_inds,
               num_vars,
@@ -262,11 +266,11 @@ void sort_gt_md(pri_queue *q,
                 char *gt_of_name,
                 char *s_gt_of_name,
                 char *md_of_name,
-                char *bim_out,
+                char *bim_of_name,
                 char *vid_out)
 {
     FILE *md_of = fopen(md_of_name,"r");
-    FILE *md_out = fopen(bim_out,"w");
+    FILE *md_out = fopen(bim_of_name,"w");
     FILE *v_out = fopen(vid_out,"wb");
     FILE *gt_of = fopen(gt_of_name,"rb");
     FILE *s_gt_of = fopen(s_gt_of_name,"wb");
@@ -320,6 +324,68 @@ void sort_gt_md(pri_queue *q,
     fclose(md_of);
     fclose(gt_of);
     fclose(s_gt_of);
+}
+//}}}
+
+//{{{void compress_md(char *md_of_name)
+void compress_md(char *md_of_name, char *bim_out)
+{
+    fprintf(stderr, "Compressing metadata.");
+    struct stat infile_stat;
+    FILE *fp = NULL;
+
+    if ((fp = fopen(md_of_name, "r")) == NULL) {
+        fprintf(stderr,
+                "Error: Unable to open file %s.\n",
+                md_of_name);
+        exit(1);
+    }
+
+    stat(md_of_name, &infile_stat);
+    size_t u_len = infile_stat.st_size;
+
+    char *u_buf = (char *)malloc(u_len+1);
+
+    if (fread(u_buf, 1, u_len, fp) < u_len) {
+        fprintf(stderr,
+                "Error: Unable to read in all of file %s. Exiting.\n ",
+                md_of_name);
+        exit(1);
+    }
+    fclose(fp);
+
+    size_t c_len = compressBound(u_len);
+
+    Bytef *c_buf = (Bytef *)malloc(c_len);
+
+    //Deflate
+    int r = compress(c_buf, &c_len, (Bytef *)u_buf, u_len);
+    if (r == Z_MEM_ERROR)
+        fprintf(stderr, "Not enough memory\n");
+    else if (r == Z_BUF_ERROR)
+        fprintf(stderr, "Not enough room in the output buffer.\n");
+    assert(r == Z_OK);
+
+    fp = NULL;
+    if ((fp = fopen(bim_out, "wb")) == NULL) {
+        fprintf(stderr,
+                "Error: Unable to open file %s.\n",
+                bim_out);
+        exit(1);
+    }
+
+    /* 
+     * The file will have the uncompressed size, compressed size, then
+     * compressed data
+     */
+    fwrite(&u_len, sizeof(size_t), 1, fp);
+    fwrite(&c_len, sizeof(size_t), 1, fp);
+    fwrite(c_buf, c_len, 1, fp);
+    fclose(fp);
+
+    free(u_buf);
+    free(c_buf);
+    fprintf(stderr, "Done\n");
 }
 //}}}
 

@@ -8,43 +8,74 @@ large-scale genotype data sets like those produced by 1000 Genomes. Genotypes
 are represented by compressed bitmap indices, which reduce the storage and
 compute burden by orders of magnitude. This index can significantly expand the
 capabilities of population-scale analyses by providing interactive-speed
-queries to data sets with millions of individuals. An example workflow:
+queries to data sets with millions of individuals. An example work flow:
 
-Use GQT to create a sample-based index of a BCF file containing 1092 individuals and 494328 variants.
+Use GQT to create a sample-based index of a BCF file containing 1092
+individuals and 494328 variants.
 
-    gqt convert bcf -r 494328 -f 1092 -i 1kg.chr22.bcf 
+    gqt convert bcf \
+        -r 494328 \
+        -f 1092 \
+        -i 1kg.chr22.bcf 
 
-Create a database of the PED file describing the phenotypes and relationships of the 1092 samples.
+The same command works for VCF and compressed VCF
 
-    gqt convert ped -i 1kg.ped 
+    gqt convert bcf \
+        -r 494328 \
+        -f 1092 \
+        -i 1kg.chr22.vcf 
+
+    gqt convert bcf \
+        -r 494328 \
+        -f 1092 \
+        -i 1kg.chr22.vcf.gz
+
+Create a database of the PED file describing the phenotypes and relationships
+of the 1092 samples.
+
+    gqt convert ped \
+        -i 1kg.ped 
 
 Find all variants where at least 10 GBR individuals are heterozygous.
 
-    gqt query -i 1kg.chr22.gqt -d 1kg.ped.db -p "Population = 'GBR'" -g "count(HET) >= 10"
+    gqt query \
+        -i 1kg.chr22.bcf.gqt \
+        -d 1kg.ped.db \
+        -p "Population = 'GBR'" \
+        -g "count(HET) >= 10"
 
 Find all variants where all affected individuals are homozygous.
 
-    gqt query -i 1kg.chr22.gqt -d 1kg.ped.db -p "Phenotype = 2" -g "HOMO_REF”
+    gqt query \
+        -i 1kg.chr22.bcf.gqt \
+        -d 1kg.ped.db \
+        -p "Phenotype = 2" \
+        -g "HOMO_REF”
 
 Further filter variants by total depth with bcftools.
 
-    gqt query -i 1kg.chr22.gqt -d 1kg.ped.db -p "Population = 'GBR'" -g "count(HET) >= 10" \
-      | bcftools view - -i 'DP>50000'
+    gqt query \
+        -i 1kg.chr22.bcf.gqt \
+        -d 1kg.ped.db \
+        -p "Population = 'GBR'" \
+        -g "count(HET) >= 10" \
+    | bcftools view - -i 'DP>50000'
 
 
 GQT takes a BCF as input and produces three files, a (very small) compressed
-index (.gqt), a compressed summary of the variant metadata (.bim), and a variant ID file (.vid). This process
-rotates the data, sorts it by alternate allele frequency, converts it to a
-bitmap index, then finally compresses the data using the Word Aligned Hybrid
-(WAH) encoding (http://dl.acm.org/citation.cfm?id=1132864).  Rotating the
-typical variant-row/individual-column form of a BCF such that individuals
-become rows allows for more efficient memory access patterns for individual
-based queries (e.g., find the alternate allele frequency count for some set of
-individuals within the cohort).  Sorting columns (variants) improves
-compression.  Converting to a bitmap index allows queries to be resolved using
-bit-wise logical operations, which can compare 32 genotypes in a single fast
-operation.  WAH encoding gives near-optimal compression while allowing bit-wise
-logical operations without inflation.
+index (.gqt), a compressed summary of the variant metadata (.bim), and a
+variant ID file (.vid). This process rotates the data, sorts it by alternate
+allele frequency, converts it to a bitmap index, then finally compresses the
+data using the Word Aligned Hybrid (WAH) encoding
+(http://dl.acm.org/citation.cfm?id=1132864).  Rotating the typical
+variant-row/individual-column form of a BCF such that individuals become rows
+allows for more efficient memory access patterns for individual based queries
+(e.g., find the alternate allele frequency count for some set of individuals
+within the cohort).  Sorting columns (variants) improves compression.
+Converting to a bitmap index allows queries to be resolved using bit-wise
+logical operations, which can compare 32 genotypes in a single fast operation.
+WAH encoding gives near-optimal compression while allowing bit-wise logical
+operations without inflation.
 
 The combined result of these steps creates an index that is only a fraction of
 the source BCF size, and queries against that index complete in seconds.  In
@@ -119,22 +150,29 @@ variable in `src/c/Makfile` to reflect their locations.
 Example usage
 =============
 
-In the example below, we demonstrate how to create a word-aligned hybrid index
-of a VCF file from the 1000 Genomes Project. We then demonstrate how to use
-this index to quickly query variants based on sample genotypes (the query
-interface is very limited, but we are actively working on it.). Please note
-that the conversion of BCF to a WAH index will take only 4 or 5 minutes.  However, if
-you are impatient, we have posted all of the converted files described above on
-our lab [website](http://quinlanlab.cs.virginia.edu/gqt-example/).
+In the example below, we demonstrate how to create a GQT index of a compressed
+VCF file from the 1000 Genomes Project. We then demonstrate how to use this
+index to quickly query variants based on sample genotypes. Please note that the
+conversion of compressed VCF to a GQT index will take only 4 or 5 minutes.
+However, if you are impatient, we have posted all of the converted files
+described above on our lab
+[website](http://quinlanlab.cs.virginia.edu/gqt-example/).
 
-*Step 1*. Download the Phase 1 1000 genomes chr22 file.
+*Step 1*. Download the Phase 1 1000 genomes chr22 file, and move the giant file
+name to something more manageable.
 
 	$ wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20110521/ALL.chr22.phase1_release_v3.20101123.snps_indels_svs.genotypes.vcf.gz
+        $ mv ALL.chr22.phase1_release_v3.20101123.snps_indels_svs.genotypes.vcf.gz 1kg.chr22.vcf.gz
 
-*Step 2*. Use GQT to make an index of the genotypes in the compressed VCF file using the `gqt covert bcf` command.  While this command is labled `bcf`, it can also accept `vcf` and `vcf.gz`.  Currently, one must tell GQT how many variants (`-r`) and how many samples (`-f`) are in the file. Future versions will detect this automatically.  To extract this info, one can use the [bcftools](http://samtools.github.io/bcftools/) `stats` command. 
+*Step 2*. Use GQT to make an index of the genotypes in the compressed VCF file
+using the `gqt covert bcf` command.  While this command is labeled `bcf`, it can
+also accept `vcf` and `vcf.gz`.  Currently, one must tell GQT how many variants
+(`-r`) and how many samples (`-f`) are in the file. Future versions will detect
+this automatically.  To extract this info, one can use the
+[bcftools](http://samtools.github.io/bcftools/) `stats` command. 
 
 	# use bcftools stats to get the number of variants and individuals in the file.
-	$ bcftools stats ALL.chr22.phase1_release_v3.20101123.snps_indels_svs.genotypes.vcf.gz | \
+	$ bcftools stats 1kg.chr22.vcf.gz | \
 	    grep SN | \
 	    head -4
 	# SN, Summary numbers:
@@ -143,65 +181,60 @@ our lab [website](http://quinlanlab.cs.virginia.edu/gqt-example/).
 	SN	0	number of records:	494328
 
 As you can see, there are 494328 variants (records) and 1092 samples. We
-provide this information to the GQT `convert` tool and ask it to make an
-index of the compressed VCF file. In adddition, the tool will create a `.bim` 
-file that stores information about the variants in the original file, and a 
-`.vid` file that stores the record number of the variants. GQT can very qucily 
-report results in valid VCF information from the `.bim`, that will not included 
-any of the sample columns.  GQT can retrieved that extra data be reaching back 
-into the source BCF (or VCF) file using the `.vid` file.  We will show examples
-of both cases below.
+provide this information to the GQT `convert` tool and ask it to make an index
+of the compressed VCF file. In addition, the tool will create a `.bim` file
+that stores information about the variants in the original file, and a `.vid`
+file that stores the record number of the variants. GQT can very quickly report
+results in valid VCF information from the `.bim`.  These results will not
+included the sample columns.  GQT can retrieved that extra data be reaching
+back into the source BCF (or VCF) file using the `.vid` file.  We will show
+examples of both cases below.
 
-	$ gqt convert bcf        \
+        $ gqt convert bcf        \
 	    -r 494328             \
 	    -f 1092               \
-	    -i 1kg.chr22.bcf      \
+	    -i 1kg.chr22.vcf.gz
 
-*Step 3*.  Query the BCF file using the GQT index.  In this case
-we are going to simply find the alternate allele frequency count for some
-subset of the samples.  The first command simply makes a list of 100
-comma-separated-values between 0 and 99.  In a real query you would clearly
-choose the ids associated with your set of interest.  We will soon move most of
-these options to a config file that can be specified on the command line, which
-will make selecting large groups much less error prone.
+*Step 3*.  Query the GQT index.  In this case we are going to simply find the
+alternate allele frequency count for some subset of the samples.  The first
+command simply makes a list of 100 comma-separated-values between 0 and 99.  In
+a real query you would clearly choose the IDs associated with your set of
+interest.  We will soon move most of these options to a config file that can be
+specified on the command line, which will make selecting large groups much less
+error prone.
  
     $ Q=`seq 0 99|tr '\n' ',' | sed -e "s/,$//"`
-    $ gqt sum ipwahbm \
-         -b 1kg.chr22.bcf.bim \
-         -i 1kg.chr22.bcf.wahbm \
+    $ gqt query \
+         -i 1kg.chr22.vcf.gz.gqt \
          -n 100 \
          -r $Q
 
-If you have compiled in AVX2 support (uncomment line 7 of the Makefile in gqt/src/c) you can get much better performance by using the "-a" option.
+If you have compiled in AVX2 support, then GQT will automatically use those functions to give you much better performance.
 
-    $ gqt sum ipwahbm \
-         -a \
-         -b 1kg.chr22.bcf.bim \
-         -i 1kg.chr22.bcf.gqt \
-         -n 100 \
-         -r $Q
-
-*Step 4*. Download the Phase 1 1000 genomes PED file. NOTE: this is from Phase 3, so it does not match exactly but is useful for the example.
+*Step 4*. Download the Phase 1 1000 genomes PED file. NOTE: this is from Phase
+3, so it does not match exactly but is useful for the example.  Again, shorten the file name.
 
     $ wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp//release/20130502/integrated_call_samples.20130502.ALL.ped
+    $ mv integrated_call_samples.20130502.ALL.ped 1kg.ped
 
-*Step 5* Covert the PED file to a PED db.  This command will create a file called `integrated_call_samples.20130502.ALL.db`.  You can specify the output file name by using the `-o` option.
+*Step 5* Covert the PED file to a PED db.  This command will create a file called `1kg.ped.db`.  You can specify the output file name by using the `-o` option.
 
     $ gqt convert ped-db \
-        -i integrated_call_samples.20130502.ALL.ped 
+        -i 1kg.ped
 
 *Step 6* Submit the same query as above, but this time using a query based on the PED file.
 
     $ gqt query \
-         -i 1kg.chr22.bcf.gqt \
-         -d integrated_call_samples.20130502.ALL.db \
+         -i 1kg.chr22.vcf.gz.gqt \
+         -d 1kg.ped.db \
          -p "Ind_ID < 100"
          -g "count(HET)"
 
-Or, construct a more interesting query based on the PED file. In this case, count the non-ref alleles observed for each variant among CEU females.
+Or, construct a more interesting query based on the PED file. In this case,
+count the non-ref alleles observed for each variant among CEU females.
 
     $ gqt query \
-         -i 1kg.chr22.bcf.gqt \
-         -d integrated_call_samples.20130502.ALL.db \
+         -i 1kg.chr22.vcf.gz.gqt \
+         -d 1kg.ped.db \
          -p "Population=='CEU' and Gender==2"
          -q "count(HET HOMO_ALT)"

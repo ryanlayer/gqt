@@ -20,20 +20,20 @@ Create a database of the PED file describing the phenotypes and relationships of
 
 Find all variants where at least 10 GBR individuals are heterozygous.
 
-    gqt query -i 1kg.bcf -p "Population = 'GBR'" -g "count(HET) >= 10”
+    gqt query -i 1kg.chr22.gqt -d 1kg.ped.db -p "Population = 'GBR'" -g "count(HET) >= 10"
 
 Find all variants where all affected individuals are homozygous.
 
-    gqt query -i 1kg.bcf -p "Phenotype = 2" -g "all(HOMO_REF) >= 10”
+    gqt query -i 1kg.chr22.gqt -d 1kg.ped.db -p "Phenotype = 2" -g "HOMO_REF”
 
 Further filter variants by total depth with bcftools.
 
-    gqt query -i 1kg.bcf -p "Phenotype = 2" -g "all(HOMO_REF) >= 10” \
+    gqt query -i 1kg.chr22.gqt -d 1kg.ped.db -p "Population = 'GBR'" -g "count(HET) >= 10" \
       | bcftools view - -i 'DP>50000'
 
 
-GQT takes a BCF as input and produces two files, a (very small) compressed
-index (.wahbm) and a summary of the variant metadata (.bim). This process
+GQT takes a BCF as input and produces three files, a (very small) compressed
+index (.gqt), a compressed summary of the variant metadata (.bim), and a variant ID file (.vid). This process
 rotates the data, sorts it by alternate allele frequency, converts it to a
 bitmap index, then finally compresses the data using the Word Aligned Hybrid
 (WAH) encoding (http://dl.acm.org/citation.cfm?id=1132864).  Rotating the
@@ -63,7 +63,7 @@ be done manually by selecting the individual’s zero-based ID through the
 command line argument "-r", or by querying an associated PED file
 (http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml#ped).  To query a PED
 file, you must first convert the PED file to an sqlite3
-(http://www.sqlite.org/) database by running the `gqt convert ped-db` commad
+(http://www.sqlite.org/) database by running the `gqt convert ped` commad
 (see below).  Once this database has been created, simply pass the conditions
 that define your target population population (e.g., `Population = 'GBR' AND
 Paternal ID ='NA19679'`).  NOTE:  all white space characters in the PED file
@@ -131,15 +131,10 @@ our lab [website](http://quinlanlab.cs.virginia.edu/gqt-example/).
 
 	$ wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20110521/ALL.chr22.phase1_release_v3.20101123.snps_indels_svs.genotypes.vcf.gz
 
-*Step 2*. Use the new (and very nice) version of [bcftools](http://samtools.github.io/bcftools/) to convert the file VCF to BCF.
+*Step 2*. Use GQT to make an index of the genotypes in the compressed VCF file using the `gqt covert bcf` command.  While this command is labled `bcf`, it can also accept `vcf` and `vcf.gz`.  Currently, one must tell GQT how many variants (`-r`) and how many samples (`-f`) are in the file. Future versions will detect this automatically.  To extract this info, one can use the [bcftools](http://samtools.github.io/bcftools/) `stats` command. 
 
-
-	$ bcftools view ALL.chr22.phase1_release_v3.20101123.snps_indels_svs.genotypes.vcf.gz > 1kg.chr22.bcf
-
-*Step 3*. Use GQT to make a word-aligned hybrid index of the genotypes in the BCF file. Currently, one must tell GQT how many variants (`-r`) and how many samples (`-f`) are in the file. Future versions will detect this automatically.  To extract this info, one can use the [bcftools](http://samtools.github.io/bcftools/) `stats` command. 
-
-	# use bcftools stats to get the number of variants and individuals in the BCF file.
-	$ bcftools stats 1kg.chr22.bcf | \
+	# use bcftools stats to get the number of variants and individuals in the file.
+	$ bcftools stats ALL.chr22.phase1_release_v3.20101123.snps_indels_svs.genotypes.vcf.gz | \
 	    grep SN | \
 	    head -4
 	# SN, Summary numbers:
@@ -148,20 +143,21 @@ our lab [website](http://quinlanlab.cs.virginia.edu/gqt-example/).
 	SN	0	number of records:	494328
 
 As you can see, there are 494328 variants (records) and 1092 samples. We
-provide this information to the GQT `convert` tool and ask it to make a
-word-aligned hybrid index (`bcf-wahbm`) of the BCF file. In adddition, the tool
-will create a `.bim` file that stores very basic information about the variants
-in the original BCF. The current implementation of GQT reports information from
-this smaller `.bim` file for speed and simplicity, but future versions will
-reach back into the BCF file and report the full BCF record for each variant
-that meets the genotype query criteria given to GQT by the user.
+provide this information to the GQT `convert` tool and ask it to make an
+index of the compressed VCF file. In adddition, the tool will create a `.bim` 
+file that stores information about the variants in the original file, and a 
+`.vid` file that stores the record number of the variants. GQT can very qucily 
+report results in valid VCF information from the `.bim`, that will not included 
+any of the sample columns.  GQT can retrieved that extra data be reaching back 
+into the source BCF (or VCF) file using the `.vid` file.  We will show examples
+of both cases below.
 
 	$ gqt convert bcf        \
 	    -r 494328             \
 	    -f 1092               \
 	    -i 1kg.chr22.bcf      \
 
-*Step 4*.  Query the BCF file using the WAH index created by GQT.  In this case
+*Step 3*.  Query the BCF file using the GQT index.  In this case
 we are going to simply find the alternate allele frequency count for some
 subset of the samples.  The first command simply makes a list of 100
 comma-separated-values between 0 and 99.  In a real query you would clearly
@@ -181,35 +177,31 @@ If you have compiled in AVX2 support (uncomment line 7 of the Makefile in gqt/sr
     $ gqt sum ipwahbm \
          -a \
          -b 1kg.chr22.bcf.bim \
-         -i 1kg.chr22.bcf.wahbm \
+         -i 1kg.chr22.bcf.gqt \
          -n 100 \
          -r $Q
 
-
-*Step 5*. Download the Phase 1 1000 genomes PED file. NOTE: this is from Phase 3, so it does not match exactly but is useful for the example.
+*Step 4*. Download the Phase 1 1000 genomes PED file. NOTE: this is from Phase 3, so it does not match exactly but is useful for the example.
 
     $ wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp//release/20130502/integrated_call_samples.20130502.ALL.ped
 
-*Step 6* Covert the PED file to a PED db
+*Step 5* Covert the PED file to a PED db.  This command will create a file called `integrated_call_samples.20130502.ALL.db`.  You can specify the output file name by using the `-o` option.
 
     $ gqt convert ped-db \
-        -i integrated_call_samples.20130502.ALL.ped \
-        -o integrated_call_samples.20130502.ALL.db
+        -i integrated_call_samples.20130502.ALL.ped 
 
-*Step 7* Submit the same query as above, but this time using a query based on the PED file.
+*Step 6* Submit the same query as above, but this time using a query based on the PED file.
 
-    $ gqt sum ipwahbm \
-         -a \
-         -b 1kg.chr22.bcf.bim \
-         -i 1kg.chr22.bcf.wahbm \
+    $ gqt query \
+         -i 1kg.chr22.bcf.gqt \
          -d integrated_call_samples.20130502.ALL.db \
-         -q "Ind_ID < 100"
+         -p "Ind_ID < 100"
+         -g "count(HET)"
 
 Or, construct a more interesting query based on the PED file. In this case, count the non-ref alleles observed for each variant among CEU females.
 
-    $ gqt sum ipwahbm \
-         -a \
-         -b 1kg.chr22.bcf.bim \
-         -i 1kg.chr22.bcf.wahbm \
+    $ gqt query \
+         -i 1kg.chr22.bcf.gqt \
          -d integrated_call_samples.20130502.ALL.db \
-         -q "Population=='CEU' and Gender==2"
+         -p "Population=='CEU' and Gender==2"
+         -q "count(HET HOMO_ALT)"

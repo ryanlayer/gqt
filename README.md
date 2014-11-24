@@ -318,6 +318,7 @@ example, to get just the variants that :
 - at least 10 GRB individuals have a non-ref allele
 - more than 10% of the FIN population have a non-ref allele
 
+
     $ gqt query \
          -i 1kg.chr22.vcf.gz.gqt \
          -d phase1.panel.db \

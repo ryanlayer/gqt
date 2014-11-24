@@ -3,11 +3,12 @@ Overview
 
 NOTE: GQT is in an alpha state. 
 
-Genome Query Tools (GQT) is a tool and C API for storing and querying
-large-scale genotype data sets like those produced by 1000 Genomes. Genotypes
-are represented by compressed bitmap indices, which reduce the storage and
-compute burden by orders of magnitude. This index can significantly expand the
-capabilities of population-scale analyses by providing interactive-speed
+Genome Query Tools (GQT) is command line software and a C API for storing 
+and querying large-scale genotype data sets like those produced by 1000 Genomes,
+the Uk100K, and forthcoming datasets involving millions of genomes. GQT 
+represents genotypes as compressed bitmap indices, which reduce the storage and
+compututational burden by orders of magnitude. This index can significantly expand 
+the capabilities of population-scale analyses by providing interactive-speed
 queries to data sets with millions of individuals. An example work flow:
 
 Use GQT to create a sample-based index of a BCF file containing 1092
@@ -18,7 +19,7 @@ individuals and 494328 variants.
         -f 1092 \
         -i 1kg.chr22.bcf 
 
-The same command works for VCF and compressed VCF
+BCF is preferred for speed, but the same command works for VCF & compressed VCF:
 
     gqt convert bcf \
         -r 494328 \
@@ -30,13 +31,20 @@ The same command works for VCF and compressed VCF
         -f 1092 \
         -i 1kg.chr22.vcf.gz
 
-Create a database of the PED file describing the phenotypes and relationships
-of the 1092 samples.
+Now, create a database of the PED file describing the phenotypes and relationships
+of the 1092 samples. This enables powerful queries based on sample phenotype status,
+ancestry, relationships, or any attribute you want, so long as it is the PED file.
+NOTES: 1) The file doesn't strictly need to be PED, but that is a rational format 
+to use. 2) The number and order of the individuals in the "PED" must exactly match
+the number and order of the individuals in the VCF/VFC.GZ/BCF file.
 
     gqt convert ped \
         -i 1kg.ped 
 
-Find all variants where at least 10 GBR individuals are heterozygous.
+Now that we have a GQT index and a sample database, we can query the index
+for variants that meet query criteria based on both sample genotype and 
+phenotype. For example, the following command will find all variants where 
+at least 10 GBR individuals are heterozygous:
 
     gqt query \
         -i 1kg.chr22.bcf.gqt \
@@ -44,7 +52,16 @@ Find all variants where at least 10 GBR individuals are heterozygous.
         -p "Population = 'GBR'" \
         -g "count(HET) >= 10"
 
-Find all variants where all affected individuals are homozygous.
+Or, find all variants where the alternate allele frequency >= 10% affected 
+in GBR individuals.
+
+    gqt query \
+        -i 1kg.chr22.bcf.gqt \
+        -d 1kg.ped.db \
+        -p "Population = 'GBR'" \
+        -g "freq(HET) >= 0.10"
+
+Or, find all variants where _all_ affected individuals are homozygous.
 
     gqt query \
         -i 1kg.chr22.bcf.gqt \
@@ -52,7 +69,8 @@ Find all variants where all affected individuals are homozygous.
         -p "Phenotype = 2" \
         -g "HOMO_REF”
 
-Further filter variants by total depth with bcftools.
+The default output of GQT queries is VCF with genotypes. As such, we can 
+further filter variants by total depth with bcftools:
 
     gqt query \
         -i 1kg.chr22.bcf.gqt \
@@ -61,10 +79,11 @@ Further filter variants by total depth with bcftools.
         -g "count(HET) >= 10" \
     | bcftools view - -i 'DP>50000'
 
-
+A bit more detail.
+=====================
 GQT takes a BCF as input and produces three files, a (very small) compressed
 index (.gqt), a compressed summary of the variant metadata (.bim), and a
-variant ID file (.vid). This process rotates the data, sorts it by alternate
+variant ID file (.vid). The `convert` process rotates the data, sorts it by alternate
 allele frequency, converts it to a bitmap index, then finally compresses the
 data using the Word Aligned Hybrid (WAH) encoding
 (http://dl.acm.org/citation.cfm?id=1132864).  Rotating the typical
@@ -91,7 +110,7 @@ GQT queries are individual-focused.  That is, results such as alternate allele
 frequency count or the set of non-reference alleles are based on a subset of
 individuals from the population.  Identifying the target individuals can either
 be done manually by selecting the individual’s zero-based ID through the
-command line argument "-r", or by querying an associated PED file
+command line argument `-r`, or by querying an associated PED file
 (http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml#ped).  To query a PED
 file, you must first convert the PED file to an sqlite3
 (http://www.sqlite.org/) database by running the `gqt convert ped` commad
@@ -147,8 +166,8 @@ variable in `src/c/Makfile` to reflect their locations.
     $ bash functional_tests.sh
 
 
-Example usage
-=============
+Example usage with 1000 Genomes data.
+======================================
 
 In the example below, we demonstrate how to create a GQT index of a compressed
 VCF file from the 1000 Genomes Project. We then demonstrate how to use this
@@ -318,7 +337,6 @@ example, to get just the variants that :
 - at least 10 GRB individuals have a non-ref allele
 - more than 10% of the FIN population have a non-ref allele
 
-
     $ gqt query \
          -i 1kg.chr22.vcf.gz.gqt \
          -d phase1.panel.db \
@@ -326,4 +344,4 @@ example, to get just the variants that :
          -g "count(HET HOMO_ALT)" \
          -p "Population=='FIN'" \
          -g "pct(HET HOMO_ALT)" \
-     | bcftools view -i 'AVGPOST>0.99 && GTQ_0>10 && GTQ_1>0.1'
+    | bcftools view -i 'AVGPOST>0.99 && GTQ_0>10 && GTQ_1>0.1'

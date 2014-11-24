@@ -325,4 +325,4 @@ example, to get just the variants that :
          -g "count(HET HOMO_ALT)" \
          -p "Population=='FIN'" \
          -g "pct(HET HOMO_ALT)" \
-    | bcftools view -i 'AVGPOST>0.99 && GTQ_0>10 && GTQ_1>0.1'
+     | bcftools view -i 'AVGPOST>0.99 && GTQ_0>10 && GTQ_1>0.1'

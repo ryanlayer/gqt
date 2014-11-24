@@ -196,45 +196,133 @@ examples of both cases below.
 	    -i 1kg.chr22.vcf.gz
 
 *Step 3*.  Query the GQT index.  In this case we are going to simply find the
-alternate allele frequency count for some subset of the samples.  The first
-command simply makes a list of 100 comma-separated-values between 0 and 99.  In
-a real query you would clearly choose the IDs associated with your set of
-interest.  We will soon move most of these options to a config file that can be
-specified on the command line, which will make selecting large groups much less
-error prone.
- 
-    $ Q=`seq 0 99|tr '\n' ',' | sed -e "s/,$//"`
+alternate allele frequency count for some subset of the samples.  GQT allows
+users to identify the target set through a query interface.  This assumes that
+the user has a tab-separated file that describes the samples in their BCF/VCF
+file, where the each column is a different field, the first row names
+the fields, and the remaining rows correspond to the samples in the
+BCF/VCF file.  These rows must follow the same order as the samples in the
+BCF/VCF file, and there must be the same number of individuals in this file as
+there are samples in the BCF/VCF.  This format matches that of the popular PED
+format, but GQT does not require any specific fields.  If this file does not already exist, a simple one can be easily generated with the following command:
+
+    # create a header row
+    $ echo "Sample Name" > simple.ped
+    # extract sample name from the VCF, one per line
+    $ bcftools view -h 1kg.chr22.vcf.gz \
+        | grep "^#CHROM" \
+        | cut -f 10- \
+        | tr '\t' '\n' \
+        >> simple.ped
+    $ head simple.ped
+    Sample Name
+    HG00096
+    HG00097
+    HG00099
+    HG00100
+    HG00101
+    HG00102
+    HG00103
+    HG00104
+    HG00106
+    $ ~/src/gqt/bin/gqt convert ped -i simple.ped
+
+This convert command will created a database named `simple.ped.db`.  With this
+database, which consists of only the sample name (NOTE: spaces in the field
+name are converted to underscores("\_")), we can run queries that included
+specific individuals
+
+    $ gqt query \
+        -i 1kg.chr22.vcf.gz.gqt \
+        -d simple.ped.db \
+        -p "Sample_Name = 'HG00096' OR Sample_Name = 'HG00097'" \
+        -g "count(HET)" \
+        > HG00096_7.count_het.vcf
+
+*Step 4*. More sophisticated queries are possible when a more extensive data
+base is available.  1000 genomes has a panel file that can be used with some
+slight modifications.
+
+    # download the file
+    $ wget ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20110521/phase1_integrated_calls.20101123.ALL.panel
+    # add header line, and collapse extra column
+    $ (echo -e "Sample ID\tPopulation\tSuper Population\tPlatform"; cat phase1_integrated_calls.20101123.ALL.panel | sed -e "s/,\t/,/") \
+        > phase1.panel
+    $ head phase1.panel
+    Sample ID   Population  Super Population    Platform
+    HG00096 GBR EUR ILLUMINA
+    HG00097 GBR EUR ABI_SOLID
+    HG00099 GBR EUR ABI_SOLID
+    HG00100 GBR EUR ILLUMINA
+    HG00101 GBR EUR ABI_SOLID,ILLUMINA
+    HG00102 GBR EUR ABI_SOLID,ILLUMINA
+    HG00103 GBR EUR ILLUMINA
+    HG00104 GBR EUR ABI_SOLID
+    HG00106 GBR EUR ABI_SOLID,ILLUMINA
+
+*Step 5* Covert the panel file to a db.  This command will create a file called
+`phase1.panel.db`.  You can specify the output file name by using the `-o`
+option.
+
+    $ gqt convert ped \
+        -i phase1.panel
+
+*Step 6* Construct a more interesting query based on the panel file. In this
+case, get the count of the non-ref alleles observed for each in the GBR
+population and the percent of non-ref alleles in the FIN population.
+
     $ gqt query \
          -i 1kg.chr22.vcf.gz.gqt \
-         -n 100 \
-         -r $Q
+         -d phase1.panel.db \
+         -p "Population=='GBR'" \
+         -g "count(HET HOMO_ALT)" \
+         -p "Population=='FIN'" \
+         -g "pct(HET HOMO_ALT)" \
+      > nonref_count_GBR_pct_FIN.vcf
 
-If you have compiled in AVX2 support, then GQT will automatically use those functions to give you much better performance.
 
-*Step 4*. Download the Phase 1 1000 genomes PED file. NOTE: this is from Phase
-3, so it does not match exactly but is useful for the example.  Again, shorten the file name.
+Output
+=============
 
-    $ wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp//release/20130502/integrated_call_samples.20130502.ALL.ped
-    $ mv integrated_call_samples.20130502.ALL.ped 1kg.ped
-
-*Step 5* Covert the PED file to a PED db.  This command will create a file called `1kg.ped.db`.  You can specify the output file name by using the `-o` option.
-
-    $ gqt convert ped-db \
-        -i 1kg.ped
-
-*Step 6* Submit the same query as above, but this time using a query based on the PED file.
+By default, GQT returns valid VCF with results appended to the INFO field.  For
+the query:
 
     $ gqt query \
          -i 1kg.chr22.vcf.gz.gqt \
-         -d 1kg.ped.db \
-         -p "Ind_ID < 100"
-         -g "count(HET)"
+         -d phase1.panel.db \
+         -p "Population=='GBR'" \
+         -g "count(HET HOMO_ALT)" \
+         -p "Population=='FIN'" \
+         -g "pct(HET HOMO_ALT)" \
+      > nonref_count_GBR_pct_FIN.vcf
 
-Or, construct a more interesting query based on the PED file. In this case,
-count the non-ref alleles observed for each variant among CEU females.
+Two lines are added to header:
+
+    ##INFO=<ID=GTQ_0,Number=1,Type=Integer,Description="GQT count result from query 0">
+    ##INFO=<ID=GTQ_1,Number=1,Type=Float,Description="GQT percent result from query 1">
+
+Where query 0 is: `-p "Population=='GBR'" -g "count(HET HOMO_ALT)"` and query 1
+is `-p "Population=='FIN'" -g "pct(HET HOMO_ALT)"`.
+
+Each variant in `nonref_count_GBR_pct_FIN.vcf` contains two extra values in the
+`INFO` field that correspond to the queries.  For example,
+`GTQ_0=2;GTQ_1=0.010753` indication that 2 individuals from the GBR population
+and 0.01075 percent of the FIN population had a non-ref allele for that variant.
+
+Filtering with `bcftools`
+=============
+
+GQT returns valid VCF, which allows for further filtering using `bcftools`.  For
+example, to get just the variants that :
+- have an average posterior probability of at least 0.99, 
+- at least 10 GRB individuals have a non-ref allele
+- more than 10% of the FIN population have a non-ref allele
 
     $ gqt query \
          -i 1kg.chr22.vcf.gz.gqt \
-         -d 1kg.ped.db \
-         -p "Population=='CEU' and Gender==2"
-         -q "count(HET HOMO_ALT)"
+         -d phase1.panel.db \
+         -p "Population=='GBR'" \
+         -g "count(HET HOMO_ALT)" \
+         -p "Population=='FIN'" \
+         -g "pct(HET HOMO_ALT)" \
+    | bcftools view -i 'AVGPOST>0.99 && GTQ_0>10 && GTQ_1>0.1'

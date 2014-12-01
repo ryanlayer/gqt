@@ -6,6 +6,11 @@
 #include "genotq.h"
 #include "timer.h"
 
+#define CHUNK 16384
+
+#define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
+#define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
+
 // From http://www.hackersdelight.org/hdcodetxt/nlz.c.txt
 //{{{int nlz1(unsigned x)
 int nlz1(unsigned x)
@@ -377,7 +382,224 @@ void compress_md(struct bcf_file *bcf_f,
     //char *p = strstr(h_buf + h_len, "INFO");
     //p[4] = '\n';
     //p[5] = '\0';
-    h_len = strlen(h_buf);
+
+    uint32_t c_size = 0, u_size = 0;
+    uint32_t h_size = strlen(h_buf);
+    uint32_t h_i = 0;
+
+    FILE *fp_o = fopen(bim_out, "wb");
+
+     /* 
+     * The file is :
+     * uncompressed size  ( sizeof(size_t))
+     * compressed size    ( sizeof(size_t))
+     * header size        ( sizeof(size_t))
+     * compressed data 
+     */
+    fwrite(&u_size, sizeof(uint32_t), 1, fp_o);
+    fwrite(&c_size, sizeof(uint32_t), 1, fp_o);
+    fwrite(&h_size, sizeof(uint32_t), 1, fp_o);
+
+    // in_buf will hold the uncompressed data and out_buf the compressed
+    unsigned char *in_buf = (unsigned char *)
+            malloc(sizeof(unsigned char) * CHUNK);
+    // The output buffer needs to be slightly larger than the in_buff
+    unsigned char *out_buf = (unsigned char *)
+            malloc(sizeof(unsigned char) * (CHUNK * 2));
+
+    uint32_t in_buf_len = CHUNK;
+    uint32_t in_buf_i = 0;
+    uint32_t out_buf_len = CHUNK * 2;
+
+    z_stream strm;
+    strm.zalloc = Z_NULL;
+    strm.zfree = Z_NULL;
+    strm.opaque = Z_NULL;
+
+    int ret = deflateInit(&strm, 6);
+    if (ret != Z_OK) {
+        fprintf(stderr, "error: Cannot init stream\n");
+        exit(1);
+    }
+
+    // have is used to store the size of the compressed data
+    uint32_t have;
+
+    while (h_i < h_size) {
+        /* 
+         * Move either the size of the buffer, or the remaining amout of the
+         * header  to the buffer
+         */
+        uint32_t mv_len = MIN(h_size - h_i, in_buf_len - in_buf_i);
+        memcpy(in_buf + in_buf_i, h_buf + h_i, mv_len);
+
+        // Move the head pointer of both the buffer and f1
+        in_buf_i += mv_len;
+        h_i += mv_len;
+
+        /* 
+         * When the buffer is full, compress it to out_buf and write it to a
+         * file
+         */
+        if (in_buf_i == in_buf_len) {
+            strm.avail_in = in_buf_len;
+            strm.next_in = in_buf;
+
+            strm.avail_out = out_buf_len;
+            strm.next_out = out_buf;
+
+            ret = deflate(&strm, Z_FULL_FLUSH);
+
+            if (ret == Z_BUF_ERROR) {
+                fprintf(stderr,
+                        "No progress is possible; either avail_in or "
+                        "avail_out was zero %u\t%u.\n", 
+                        strm.avail_in, strm.avail_out);
+                exit(1);
+            } else if (ret == Z_MEM_ERROR) {
+                fprintf(stderr, "Insufficient memory.\n");
+                exit(1);
+            } else if (ret == Z_STREAM_ERROR) {
+                fprintf(stderr,
+                        "The state (as represented in stream) is inconsistent,"
+                        " or stream was NULL.");
+                exit(1);
+            }
+
+            // The amount compressed is the amount of the buffer used
+            have = out_buf_len - strm.avail_out;
+
+            // Track the size of the compressed data
+            c_size += have;
+            if (fwrite(out_buf, 1, have, fp_o) != have) {
+                fprintf(stderr, "Error writing compressed value 0.\n");
+                exit(1);
+            }
+            //fwrite(in_buf, 1, CHUNK, fp_o);
+            in_buf_i = 0;
+        }
+    }
+
+    // Read and compress the sorted meta data fields into the buffer
+    FILE *fp = NULL;
+
+    if ((fp = fopen(md_of_name, "r")) == NULL) {
+        fprintf(stderr,
+                "error: unable to open file %s.\n",
+                md_of_name);
+        exit(1);
+    }
+
+    /* 
+     * It is likely that there is still data on the buffer to be compressed.
+     * to_read is the amount left, start by reading and compressing that
+     * then move on the whole chunks
+     */
+    uint32_t read = 0, to_read = in_buf_len - in_buf_i;
+
+
+    while ((read = fread(in_buf + in_buf_i, sizeof(char), to_read, fp)) ==
+            to_read ) {
+
+        strm.next_in = in_buf;
+        strm.avail_in = in_buf_len;
+        strm.next_out = out_buf;
+        strm.avail_out = out_buf_len;
+
+        ret = deflate(&strm, Z_FULL_FLUSH);
+
+        if (ret == Z_BUF_ERROR) {
+            fprintf(stderr,
+                    "No progress is possible; either avail_in or "
+                    "avail_out was zero %u\t%u.\n", 
+                    strm.avail_in, strm.avail_out);
+            exit(1);
+        } else if (ret == Z_MEM_ERROR) {
+            fprintf(stderr, "Insufficient memory.\n");
+            exit(1);
+        } else if (ret == Z_STREAM_ERROR) {
+            fprintf(stderr,
+                    "The state (as represented in stream) is inconsistent,"
+                    " or stream was NULL.");
+            exit(1);
+        }
+
+        have = out_buf_len - strm.avail_out;
+
+        // Track the size of the compressed data
+        c_size += have;
+        if (fwrite(out_buf, 1, have, fp_o) != have) {
+            fprintf(stderr, "Error writing compressed value 1.\n");
+            exit(1);
+        }
+
+        u_size += in_buf_len;
+        in_buf_i = 0;
+        to_read = in_buf_len;
+    }
+
+    // It is likely that there is still data on the buffer to be compressed.
+
+    if (read > 0) {
+        u_size += read;
+
+        //fwrite(in_buf, 1, in_buf_i + read, fp_o);
+        strm.next_in = in_buf;
+        strm.avail_in = in_buf_i + read;
+        strm.next_out = out_buf;
+        strm.avail_out = out_buf_len;
+        ret = deflate(&strm, Z_FULL_FLUSH);
+
+        if (ret == Z_BUF_ERROR) {
+            fprintf(stderr,
+                    "No progress is possible; either avail_in or "
+                    "avail_out was zero %u\t%u.\n", 
+                    strm.avail_in, strm.avail_out);
+            exit(1);
+        } else if (ret == Z_MEM_ERROR) {
+            fprintf(stderr, "Insufficient memory.\n");
+            exit(1);
+        } else if (ret == Z_STREAM_ERROR) {
+            fprintf(stderr,
+                    "The state (as represented in stream) is inconsistent,"
+                    " or stream was NULL.");
+            exit(1);
+        }
+
+        have = out_buf_len - strm.avail_out;
+
+        // Track the size of the compressed data
+        c_size += have;
+        if (fwrite(out_buf, 1, have, fp_o) != have) {
+            fprintf(stderr, "Error writing compressed value 1.\n");
+            exit(1);
+        }
+    }
+
+
+    // update the header values
+    fseek(fp_o, 0, SEEK_SET);
+    fwrite(&u_size, sizeof(uint32_t), 1, fp_o);
+    fwrite(&c_size, sizeof(uint32_t), 1, fp_o);
+
+    fclose(fp_o);
+    fclose(fp);
+    free(in_buf);
+    free(out_buf);
+    free(h_buf);
+
+#if 0
+    /* 
+     * First we need to compress the header, which will take up some amount of
+     * the in buffer
+     */
+    int h_left = h_len, in_left = CHUNK;
+
+    while (h_left > 0) {
+        // Put up to buf_left into the buffer
+        int to_put = min(buf_left, h_left);
+        memcpy(in_buf + (CHUNK - in_left), h_buf + (h_len - h_left), to_put);
+    }
 
 
     // Read the sorted meta data fields into the buffer
@@ -386,7 +608,7 @@ void compress_md(struct bcf_file *bcf_f,
 
     if ((fp = fopen(md_of_name, "r")) == NULL) {
         fprintf(stderr,
-                "Error: Unable to open file %s.\n",
+                "error: unable to open file %s.\n",
                 md_of_name);
         exit(1);
     }
@@ -451,6 +673,7 @@ void compress_md(struct bcf_file *bcf_f,
     free(u_buf);
     free(c_buf);
     fprintf(stderr, "Done\n");
+#endif
 }
 //}}}
 

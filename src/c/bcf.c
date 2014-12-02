@@ -482,6 +482,12 @@ void compress_md(struct bcf_file *bcf_f,
     // Read and compress the sorted meta data fields into the buffer
     FILE *fp = NULL;
 
+    struct stat md_stat;
+    stat(md_of_name, &md_stat);
+    size_t md_size = md_stat.st_size;
+    uint32_t md_size_tenth = md_size/10;
+    uint32_t md_size_status = md_size_tenth;
+
     if ((fp = fopen(md_of_name, "r")) == NULL) {
         fprintf(stderr,
                 "error: unable to open file %s.\n",
@@ -535,6 +541,11 @@ void compress_md(struct bcf_file *bcf_f,
         u_size += in_buf_len;
         in_buf_i = 0;
         to_read = in_buf_len;
+
+        if ( u_size > md_size_status) {
+            md_size_status += md_size_tenth;
+            fprintf(stderr, ".");
+        }
     }
 
     // It is likely that there is still data on the buffer to be compressed.
@@ -671,8 +682,8 @@ void compress_md(struct bcf_file *bcf_f,
 
     free(u_buf);
     free(c_buf);
-    fprintf(stderr, "Done\n");
 #endif
+    fprintf(stderr, "Done\n");
 }
 //}}}
 

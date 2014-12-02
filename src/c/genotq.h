@@ -2,6 +2,7 @@
 #define __GENOTQ_H__
 
 #include <stdint.h>
+#include <limits.h>
 #include "parse_q.h"
 #include "pq.h"
 #include "ped.h"
@@ -12,6 +13,8 @@
 #include "wahbm.h"
 #include "wahbm_in_place.h"
 #include "wahbm_compressed_in_place.h"
+
+#define CHUNK 16384
 
 struct uint_ll {
         unsigned int value;

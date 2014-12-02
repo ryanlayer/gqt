@@ -8,44 +8,24 @@
 #include "quick_file.h"
 #include <stdlib.h>
 #include <stdio.h>
-#include "sys/stat.h"
 #include <string.h>
 #include <zlib.h>
+#include <assert.h>
+#include "genotq.h"
+
 
 void quick_file_init(char *filename, struct quick_file_info *qfile) {
-    struct stat infile_stat;
     FILE *fp = NULL;
     size_t i = 0;
     size_t pos = 0;
 
     /* Open the file */
-    if ((fp = fopen(filename, "r")) == NULL) {
+    if ((fp = fopen(filename, "rb")) == NULL) {
         fprintf(stderr,
                 "Error: Unable to open file %s. Exiting....\n",
                 filename);
         exit(1);
     }
-
-#if 0
-    /*figure out what size the file is */
-    stat(filename, &infile_stat);
-    qfile->file_len = infile_stat.st_size;
-
-
-    /* allocate the main buffer to hold the entire file in one
-     * contiguous block. */
-    qfile->main_buf = (char *)malloc(qfile->file_len +1);
-    memset(qfile->main_buf, 0, qfile->file_len +1);
-
-    /* read the file into that buffer in one gulp, then close the file */
-    if (fread(qfile->main_buf, 1, qfile->file_len, fp) < qfile->file_len) {
-        fprintf(stderr,
-                "Error: Unable to read in all of file %s. Exiting...\n ",
-                filename);
-        exit(1);
-    }
-    fclose(fp);
-#endif
 
     /* 
      * The file is :
@@ -54,20 +34,75 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
      * header size        ( sizeof(size_t))
      * compressed data 
      */
-    size_t u_len, c_len, h_len;
-    size_t s = fread(&u_len, sizeof(size_t), 1, fp);
-    s = fread(&c_len, sizeof(size_t), 1, fp);
-    s = fread(&h_len, sizeof(size_t), 1, fp);
+    uint32_t u_size, c_size, h_size;
+    size_t s = fread(&u_size, sizeof(uint32_t), 1, fp);
+    s = fread(&c_size, sizeof(uint32_t), 1, fp);
+    s = fread(&h_size, sizeof(uint32_t), 1, fp);
+
+    //fprintf(stderr, "u_size:%u\tc_size:%u\th_size:%u\n",
+            //u_size, c_size, h_size);
 
 
+    /* allocate inflate state */
+    z_stream strm;
+    strm.zalloc = Z_NULL;
+    strm.zfree = Z_NULL;
+    strm.opaque = Z_NULL;
+    strm.avail_in = 0;
+    strm.next_in = Z_NULL;
+    int ret = inflateInit(&strm);
+    if (ret != Z_OK) {
+        fprintf(stderr, "error: Cannot init stream\n");
+        exit(1);
+    }
 
+    // in_buf will hold compressed data and qfile->main_buf uncompressed
+    //unsigned char *in_buf = (unsigned char *)
+            //malloc(sizeof(unsigned char) * CHUNK);
+    unsigned char in_buf[CHUNK];
+            
+
+    char *final_out_buf = (char *) malloc(u_size);
+    qfile->main_buf = final_out_buf;
+
+    strm.avail_out = u_size;
+    strm.next_out = (Bytef *)final_out_buf;
+
+    /* decompress until deflate stream ends or end of file */
+    do {
+        strm.avail_in = fread(in_buf, 1, CHUNK, fp);
+        if (ferror(fp)) {
+            fprintf(stderr, "error: Cannot read compressed file.\n");
+            (void)inflateEnd(&strm);
+            exit(1);
+        }
+        if (strm.avail_in == 0)
+            break;
+        strm.next_in = in_buf;
+
+        ret = inflate(&strm, Z_NO_FLUSH);
+        assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
+        switch (ret) {
+            case Z_NEED_DICT:
+                ret = Z_DATA_ERROR;     /* and fall through */
+            case Z_DATA_ERROR:
+            case Z_MEM_ERROR:
+                (void)inflateEnd(&strm);
+                exit(1);
+        }
+
+    } while (ret != Z_STREAM_END);
+
+    /* clean up and return */
+    (void)inflateEnd(&strm);
+
+#if 0
     Bytef *c_buf = (Bytef *)malloc(c_len);
     s = fread(c_buf, c_len, 1, fp);
     fclose(fp);
 
     /* allocate the main buffer to hold the entire file in one
      * contiguous block. */
-    qfile->main_buf = (char *)malloc(u_len +1);
 
     int r = uncompress((Bytef *)(qfile->main_buf), &u_len, c_buf, c_len);
     if (r == Z_BUF_ERROR) {
@@ -84,10 +119,12 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
         exit(1);
     }
 
-    qfile->file_len = u_len;
-    qfile->header_len = h_len;
 
     free(c_buf);
+#endif
+
+    qfile->file_len = u_size;
+    qfile->header_len = h_size;
 
     /* 
      * Count how many lines you have.  Starting after the header

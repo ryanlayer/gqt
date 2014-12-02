@@ -6,7 +6,6 @@
 #include "genotq.h"
 #include "timer.h"
 
-#define CHUNK 16384
 
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))

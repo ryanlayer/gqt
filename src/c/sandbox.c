@@ -6,6 +6,7 @@
  */
 
 #include <unistd.h>
+#include "genotq.h"
 #include "output_buffer.h"
 #include "quick_file.h"
 #include "timer.h"

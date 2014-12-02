@@ -13,6 +13,20 @@
 
 int sandbox(int argc, char **argv)
 {
+    struct quick_file_info qfile;
+    quick_file_init(argv[0], &qfile);
+
+    fprintf(stderr, "%lu\n", qfile.num_lines);
+
+    uint32_t i;
+    for (i = 0; i < qfile.num_lines; ++i) {
+        printf("%s\n", qfile.lines[i]);
+    }
+    quick_file_delete(&qfile);
+
+
+   /* 
+    printf("%s", argv[0]);
 
 	struct output_buffer outbuf;
 	init_out_buf(&outbuf, NULL);
@@ -21,6 +35,7 @@ int sandbox(int argc, char **argv)
 	append_out_buf(&outbuf, " points.\n", 9);
 	append_out_buf(&outbuf, "beer.\n", 6);
 	free_out_buf(&outbuf);
+    */
 
         return 0;
 }

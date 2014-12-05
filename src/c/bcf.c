@@ -78,7 +78,7 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
     struct bcf_file bcf_f = init_bcf_file(in);
     pri_queue q = priq_new(0);
 
-    uint32_t *md_index = (uint32_t *) malloc(num_vars * sizeof(uint32_t));
+    size_t *md_index = (size_t *) malloc(num_vars * sizeof(size_t));
 
     push_bcf_gt_md(&q,
                    &bcf_f,
@@ -87,6 +87,12 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                    num_vars,
                    gt_of_name,
                    md_of_name);
+
+    FILE *fp = fopen("md_index.txt","w");
+    uint32_t i;
+    for (i = 0; i < num_vars; ++i) {
+        fprintf(fp, "%lu\n", md_index[i]);
+    }
 
     sort_gt_md(&q,
                md_index,
@@ -125,7 +131,7 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 //{{{ void push_bcf_gt_md(pri_queue *q,
 void push_bcf_gt_md(pri_queue *q,
                     struct bcf_file *bcf_f,
-                    uint32_t *md_index,
+                    size_t *md_index,
                     uint32_t num_inds,
                     uint32_t num_vars,
                     char *gt_of_name,
@@ -140,7 +146,7 @@ void push_bcf_gt_md(pri_queue *q,
     uint32_t *packed_ints = (uint32_t *) calloc(num_ind_ints,
                                                 sizeof(uint32_t));
 
-    uint32_t md_i = 0;
+    size_t md_i = 0;
 
     uint32_t i, j, k, sum, int_i, two_bit_i = 0;
     int ntmp = 0;
@@ -244,6 +250,7 @@ void push_bcf_gt_md(pri_queue *q,
         bcf_f->line->n_sample = 0;
         vcf_format1(bcf_f->hdr, bcf_f->line, &md);
         md_i += md.l;
+        assert(md.l == strlen(md.s));
         md_index[i] = md_i;
         fprintf(md_of, "%s", md.s);
         md.l = 0;
@@ -286,7 +293,7 @@ void push_bcf_gt_md(pri_queue *q,
 
 //{{{void sort_gt_md(pri_queue *q,
 void sort_gt_md(pri_queue *q,
-                uint32_t *md_index,
+                size_t *md_index,
                 uint32_t num_inds,
                 uint32_t num_vars,
                 char *gt_of_name,
@@ -320,11 +327,11 @@ void sort_gt_md(pri_queue *q,
 
         int *d = priq_pop(*q, &p);
 
-        uint32_t start = 0;
+        size_t start = 0;
         if (*d != 0)
             start = md_index[*d - 1];
 
-        uint32_t len = md_index[*d] - start;
+        size_t len = md_index[*d] - start;
 
         fseek(md_of, start*sizeof(char), SEEK_SET);
         char buf[len+1];

@@ -20,7 +20,7 @@ int convert(int argc, char **argv)
     if (argc < 2) return convert_help();
 
     int c;
-    char *in, *out, *bim, *vid, *tmp_dir;
+    char *in=NULL, *out=NULL, *bim=NULL, *vid=NULL, *tmp_dir=NULL;
     unsigned int num_fields, num_records;
     int i_is_set = 0, 
         o_is_set = 0, 
@@ -118,7 +118,20 @@ int convert(int argc, char **argv)
             tmp_dir  = (char*)malloc(3*sizeof(char)); // "./\0"
             strcpy(tmp_dir,"./");
         }
-        return bcf_wahbm(in, out, bim, vid, tmp_dir, num_fields, num_records);
+
+        int r = bcf_wahbm(in, out, bim, vid, tmp_dir, num_fields, num_records);
+
+        if (vid != NULL)
+            free(vid);
+        if (bim != NULL)
+            free(bim);
+        if (out != NULL)
+            free(out);
+        if ((t_is_set ==1) && (tmp_dir != NULL))
+            free(tmp_dir);
+
+
+        return r;
     } 
 
     if (strcmp(type, "ped") == 0)  {
@@ -131,6 +144,7 @@ int convert(int argc, char **argv)
     
     }
     return convert_help();
+
 }
 
 int convert_help()

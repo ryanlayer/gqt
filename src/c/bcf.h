@@ -36,7 +36,7 @@ uint32_t md_bcf_line(struct bcf_file bcf_f,
 
 void push_bcf_gt_md(pri_queue *q,
                     struct bcf_file *bcf_f,
-                    uint32_t *md_index,
+                    size_t *md_index,
                     uint32_t num_inds,
                     uint32_t num_vars,
                     char *gt_of_name,
@@ -44,7 +44,7 @@ void push_bcf_gt_md(pri_queue *q,
 
 
 void sort_gt_md(pri_queue *q,
-                uint32_t *md_index,
+                size_t *md_index,
                 uint32_t num_inds,
                 uint32_t num_vars,
                 char *gt_of_name,

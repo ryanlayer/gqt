@@ -16,8 +16,8 @@
 
 void quick_file_init(char *filename, struct quick_file_info *qfile) {
     FILE *fp = NULL;
-    size_t i = 0;
-    size_t pos = 0;
+    uint64_t i = 0;
+    uint64_t pos = 0;
 
     /* Open the file */
     if ((fp = fopen(filename, "rb")) == NULL) {
@@ -163,7 +163,7 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
     i = 0;
     qfile->lines[0] = qfile->main_buf + qfile->header_len;
 
-    size_t prevPos = qfile->header_len;
+    uint64_t prevPos = qfile->header_len;
 
     for (pos = qfile->header_len; pos < qfile->file_len; pos++) {
         if (qfile->main_buf[pos] == '\n') {

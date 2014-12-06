@@ -78,7 +78,7 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
     struct bcf_file bcf_f = init_bcf_file(in);
     pri_queue q = priq_new(0);
 
-    size_t *md_index = (size_t *) malloc(num_vars * sizeof(size_t));
+    uint64_t *md_index = (uint64_t *) malloc(num_vars * sizeof(uint64_t));
 
     push_bcf_gt_md(&q,
                    &bcf_f,
@@ -91,8 +91,9 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
     FILE *fp = fopen("md_index.txt","w");
     uint32_t i;
     for (i = 0; i < num_vars; ++i) {
-        fprintf(fp, "%lu\n", md_index[i]);
+        fprintf(fp, "%llu\n", md_index[i]);
     }
+    fclose(fp);
 
     sort_gt_md(&q,
                md_index,
@@ -131,7 +132,7 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 //{{{ void push_bcf_gt_md(pri_queue *q,
 void push_bcf_gt_md(pri_queue *q,
                     struct bcf_file *bcf_f,
-                    size_t *md_index,
+                    uint64_t *md_index,
                     uint32_t num_inds,
                     uint32_t num_vars,
                     char *gt_of_name,
@@ -146,7 +147,7 @@ void push_bcf_gt_md(pri_queue *q,
     uint32_t *packed_ints = (uint32_t *) calloc(num_ind_ints,
                                                 sizeof(uint32_t));
 
-    size_t md_i = 0;
+    uint64_t md_i = 0;
 
     uint32_t i, j, k, sum, int_i, two_bit_i = 0;
     int ntmp = 0;
@@ -250,34 +251,10 @@ void push_bcf_gt_md(pri_queue *q,
         bcf_f->line->n_sample = 0;
         vcf_format1(bcf_f->hdr, bcf_f->line, &md);
         md_i += md.l;
-        assert(md.l == strlen(md.s));
         md_index[i] = md_i;
         fprintf(md_of, "%s", md.s);
         md.l = 0;
-
-#if 0
-        size_t len = strlen(bcf_hdr_id2name(bcf_f->hdr, bcf_f->line->rid)) +
-                     10 + // max length of pos
-                     strlen(bcf_f->line->d.id) +
-                     strlen(bcf_f->line->d.allele[0]) +
-                     strlen(bcf_f->line->d.allele[1]) +
-                     4; //tabs
-        char *md = (char *) malloc(len * sizeof(char));
-
-        sprintf(md, "%s\t%d\t%s\t%s\t%s",
-                     bcf_hdr_id2name(bcf_f->hdr, bcf_f->line->rid),
-                     bcf_f->line->pos + 1,
-                     bcf_f->line->d.id,
-                     bcf_f->line->d.allele[0],
-                     bcf_f->line->d.allele[1]); 
-
-        // Write metadata
-        md_i += strlen(md);
-        md_index[i] = md_i;
-        fprintf(md_of, "%s", md);
-#endif
         memset(packed_ints, 0, num_ind_ints*sizeof(uint32_t));
-
     }
 
     fprintf(stderr,"Done\n");
@@ -293,7 +270,7 @@ void push_bcf_gt_md(pri_queue *q,
 
 //{{{void sort_gt_md(pri_queue *q,
 void sort_gt_md(pri_queue *q,
-                size_t *md_index,
+                uint64_t *md_index,
                 uint32_t num_inds,
                 uint32_t num_vars,
                 char *gt_of_name,
@@ -302,10 +279,15 @@ void sort_gt_md(pri_queue *q,
                 char *bim_of_name,
                 char *vid_out)
 {
+    // unsorted metadata
     FILE *md_of = fopen(md_of_name,"r");
-    FILE *md_out = fopen(bim_of_name,"w");
-    FILE *v_out = fopen(vid_out,"wb");
+    // unsorted genotypes
     FILE *gt_of = fopen(gt_of_name,"rb");
+    // sorted genotypes
+    FILE *md_out = fopen(bim_of_name,"w");
+    // sorted variant row #s
+    FILE *v_out = fopen(vid_out,"wb");
+    // sorted genotypes
     FILE *s_gt_of = fopen(s_gt_of_name,"wb");
 
     uint32_t num_ind_ints = 1 + ((num_inds - 1) / 16);
@@ -321,28 +303,34 @@ void sort_gt_md(pri_queue *q,
 
     // Get variants in order and rewrite a variant-major sorted matrix
     while ( priq_top(*q, &p) != NULL ) {
+        //status
         if ((tenth_num_var == 0) || (var_i % tenth_num_var == 0))
             fprintf(stderr,".");
         var_i += 1;
 
+        // get the data (line num) from the top element
         int *d = priq_pop(*q, &p);
 
-        size_t start = 0;
+        // get start offset of metadata
+        uint64_t start = 0;
         if (*d != 0)
             start = md_index[*d - 1];
 
-        size_t len = md_index[*d] - start;
+        // get the length of meta data
+        uint64_t len = md_index[*d] - start;
 
+        // jump to the sport the metadata and read
         fseek(md_of, start*sizeof(char), SEEK_SET);
         char buf[len+1];
         int r = fread(buf, sizeof(char), len, md_of);
         buf[len] = '\0';
 
+        // jump to the sport in the genotypes, read and write
         fseek(gt_of, (*d)*num_ind_ints*sizeof(uint32_t), SEEK_SET);
         r = fread(packed_ints, sizeof(uint32_t), num_ind_ints, gt_of);
         fwrite(packed_ints, sizeof(uint32_t), num_ind_ints,s_gt_of);
 
-        //fprintf(md_out, "%s\n", buf);
+        //write metadata to file
         fprintf(md_out, "%s", buf);
 
         fwrite(d, sizeof(uint32_t), 1, v_out);
@@ -384,13 +372,9 @@ void compress_md(struct bcf_file *bcf_f,
     h_buf[h_len] = '\0';
     --h_len;
 
-    // Search for the last field we want to keep, and clip off the rest 
-    //char *p = strstr(h_buf + h_len, "INFO");
-    //p[4] = '\n';
-    //p[5] = '\0';
-
-    uint64_t c_size = 0, u_size = 0;
+    uint64_t c_size = 0;
     uint64_t h_size = strlen(h_buf);
+    uint64_t u_size = h_size;
     uint64_t h_i = 0;
 
     FILE *fp_o = fopen(bim_out, "wb");
@@ -431,6 +415,7 @@ void compress_md(struct bcf_file *bcf_f,
     // have is used to store the size of the compressed data
     uint64_t have;
 
+    //{{{ Compress header
     while (h_i < h_size) {
         /* 
          * Move either the size of the buffer, or the remaining amout of the
@@ -485,6 +470,7 @@ void compress_md(struct bcf_file *bcf_f,
             in_buf_i = 0;
         }
     }
+    //}}}
 
     // Read and compress the sorted meta data fields into the buffer
     FILE *fp = NULL;
@@ -512,6 +498,7 @@ void compress_md(struct bcf_file *bcf_f,
 
     while ((read = fread(in_buf + in_buf_i, sizeof(char), to_read, fp)) ==
             to_read ) {
+        u_size += read;
 
         strm.next_in = in_buf;
         strm.avail_in = in_buf_len;
@@ -545,7 +532,6 @@ void compress_md(struct bcf_file *bcf_f,
             exit(1);
         }
 
-        u_size += in_buf_len;
         in_buf_i = 0;
         to_read = in_buf_len;
 
@@ -605,91 +591,6 @@ void compress_md(struct bcf_file *bcf_f,
     free(out_buf);
     free(h_buf);
 
-#if 0
-    /* 
-     * First we need to compress the header, which will take up some amount of
-     * the in buffer
-     */
-    int h_left = h_len, in_left = CHUNK;
-
-    while (h_left > 0) {
-        // Put up to buf_left into the buffer
-        int to_put = min(buf_left, h_left);
-        memcpy(in_buf + (CHUNK - in_left), h_buf + (h_len - h_left), to_put);
-    }
-
-
-    // Read the sorted meta data fields into the buffer
-    struct stat infile_stat;
-    FILE *fp = NULL;
-
-    if ((fp = fopen(md_of_name, "r")) == NULL) {
-        fprintf(stderr,
-                "error: unable to open file %s.\n",
-                md_of_name);
-        exit(1);
-    }
-
-    stat(md_of_name, &infile_stat);
-    size_t u_len = infile_stat.st_size;
-
-    size_t h_len_size_t = (size_t)h_len;
-
-    char *u_buf = (char *)malloc(h_len_size_t + u_len + 1);
-
-    strncpy(u_buf, h_buf, h_len);
-
-    free(h_buf);
-
-    if (fread(u_buf + h_len_size_t, 1, u_len, fp) < u_len) {
-        fprintf(stderr,
-                "Error: Unable to read in all of file %s. Exiting.\n ",
-                md_of_name);
-        exit(1);
-    }
-    fclose(fp);
-
-    //fprintf(stderr, "%s", u_buf);
-
-    size_t c_len = compressBound(u_len + h_len_size_t);
-
-    Bytef *c_buf = (Bytef *)malloc(c_len);
-
-    //Deflate
-    int r = compress(c_buf, &c_len, (Bytef *)u_buf, (u_len + h_len_size_t));
-    if (r == Z_MEM_ERROR)
-        fprintf(stderr, "Not enough memory\n");
-    else if (r == Z_BUF_ERROR)
-        fprintf(stderr, "Not enough room in the output buffer.\n");
-    assert(r == Z_OK);
-
-    fp = NULL;
-    if ((fp = fopen(bim_out, "wb")) == NULL) {
-        fprintf(stderr,
-                "Error: Unable to open file %s.\n",
-                bim_out);
-        exit(1);
-    }
-
-    /* 
-     * The file is :
-     * uncompressed size  ( sizeof(size_t))
-     * compressed size    ( sizeof(size_t))
-     * header size        ( sizeof(size_t))
-     * compressed data 
-     */
-
-    size_t h_u_len = u_len + h_len_size_t;
-
-    fwrite(&h_u_len, sizeof(size_t), 1, fp);
-    fwrite(&c_len, sizeof(size_t), 1, fp);
-    fwrite(&h_len_size_t, sizeof(size_t), 1, fp);
-    fwrite(c_buf, c_len, 1, fp);
-    fclose(fp);
-
-    free(u_buf);
-    free(c_buf);
-#endif
     fprintf(stderr, "Done\n");
 }
 //}}}

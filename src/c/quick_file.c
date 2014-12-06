@@ -96,33 +96,6 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
     /* clean up and return */
     (void)inflateEnd(&strm);
 
-#if 0
-    Bytef *c_buf = (Bytef *)malloc(c_len);
-    s = fread(c_buf, c_len, 1, fp);
-    fclose(fp);
-
-    /* allocate the main buffer to hold the entire file in one
-     * contiguous block. */
-
-    int r = uncompress((Bytef *)(qfile->main_buf), &u_len, c_buf, c_len);
-    if (r == Z_BUF_ERROR) {
-        fprintf(stderr,
-                "The buffer dest was not large enough to hold the "
-                "uncompressed data.");
-        exit(1);
-    } else if (r == Z_MEM_ERROR) {
-        fprintf(stderr, "Insufficient memory");
-        exit(1);
-    } else if (r == Z_DATA_ERROR) {
-        fprintf(stderr,
-                "The compressed data (referenced by source) was corrupted.");
-        exit(1);
-    }
-
-
-    free(c_buf);
-#endif
-
     qfile->file_len = u_size;
     qfile->header_len = h_size;
 

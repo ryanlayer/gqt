@@ -17,7 +17,7 @@ int sandbox(int argc, char **argv)
     struct quick_file_info qfile;
     quick_file_init(argv[0], &qfile);
 
-    fprintf(stderr, "%lu\n", qfile.num_lines);
+    fprintf(stderr, "%llu\n", qfile.num_lines);
 
     uint32_t i;
     for (i = 0; i < qfile.num_lines; ++i) {

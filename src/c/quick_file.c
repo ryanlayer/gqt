@@ -34,10 +34,10 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
      * header size        ( sizeof(size_t))
      * compressed data 
      */
-    uint32_t u_size, c_size, h_size;
-    size_t s = fread(&u_size, sizeof(uint32_t), 1, fp);
-    s = fread(&c_size, sizeof(uint32_t), 1, fp);
-    s = fread(&h_size, sizeof(uint32_t), 1, fp);
+    uint64_t u_size, c_size, h_size;
+    size_t s = fread(&u_size, sizeof(uint64_t), 1, fp);
+    s = fread(&c_size, sizeof(uint64_t), 1, fp);
+    s = fread(&h_size, sizeof(uint64_t), 1, fp);
 
     //fprintf(stderr, "u_size:%u\tc_size:%u\th_size:%u\n",
             //u_size, c_size, h_size);
@@ -155,7 +155,7 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
     memset(qfile->lines, 0, qfile->num_lines * sizeof(char *));
 
     /* also allocate the array of line lengths. */
-    qfile->line_lens = (size_t *)malloc(qfile->num_lines * sizeof(size_t));
+    qfile->line_lens = (uint64_t *)malloc(qfile->num_lines * sizeof(uint64_t));
 
     /* Loop through the mainbuf again, turning all newlines into
      * null chars. Put a pointer to the next char on the lines array.

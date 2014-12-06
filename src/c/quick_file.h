@@ -9,6 +9,7 @@
 #define QUICKFILE_H_
 
 #include <stddef.h>
+#include <stdint.h>
 
 /* This will read and store a newline delimited file as an array of char *'s,
  * with a corresponding array of line lengths. */
@@ -16,10 +17,10 @@
 struct quick_file_info {
 	char *main_buf;
 	char ** lines;
-	size_t *line_lens; /* store length of each line, because strlen is actually quite slow. */
-	size_t num_lines;
-	size_t file_len;
-	size_t header_len;
+	uint64_t *line_lens; /* store length of each line, because strlen is actually quite slow. */
+	uint64_t num_lines;
+	uint64_t file_len;
+	uint64_t header_len;
 };
 
 /* Just pass a file name and a pointer to the above struct into this method */

@@ -389,22 +389,22 @@ void compress_md(struct bcf_file *bcf_f,
     //p[4] = '\n';
     //p[5] = '\0';
 
-    uint32_t c_size = 0, u_size = 0;
-    uint32_t h_size = strlen(h_buf);
-    uint32_t h_i = 0;
+    uint64_t c_size = 0, u_size = 0;
+    uint64_t h_size = strlen(h_buf);
+    uint64_t h_i = 0;
 
     FILE *fp_o = fopen(bim_out, "wb");
 
      /* 
      * The file is :
-     * uncompressed size  ( sizeof(size_t))
+     * uncompressed size  ( sizeof(uint64_t))
      * compressed size    ( sizeof(size_t))
      * header size        ( sizeof(size_t))
      * compressed data 
      */
-    fwrite(&u_size, sizeof(uint32_t), 1, fp_o);
-    fwrite(&c_size, sizeof(uint32_t), 1, fp_o);
-    fwrite(&h_size, sizeof(uint32_t), 1, fp_o);
+    fwrite(&u_size, sizeof(uint64_t), 1, fp_o);
+    fwrite(&c_size, sizeof(uint64_t), 1, fp_o);
+    fwrite(&h_size, sizeof(uint64_t), 1, fp_o);
 
     // in_buf will hold the uncompressed data and out_buf the compressed
     unsigned char *in_buf = (unsigned char *)
@@ -429,7 +429,7 @@ void compress_md(struct bcf_file *bcf_f,
     }
 
     // have is used to store the size of the compressed data
-    uint32_t have;
+    uint64_t have;
 
     while (h_i < h_size) {
         /* 
@@ -492,8 +492,8 @@ void compress_md(struct bcf_file *bcf_f,
     struct stat md_stat;
     stat(md_of_name, &md_stat);
     size_t md_size = md_stat.st_size;
-    uint32_t md_size_tenth = md_size/10;
-    uint32_t md_size_status = md_size_tenth;
+    uint64_t md_size_tenth = md_size/10;
+    uint64_t md_size_status = md_size_tenth;
 
     if ((fp = fopen(md_of_name, "r")) == NULL) {
         fprintf(stderr,
@@ -596,8 +596,8 @@ void compress_md(struct bcf_file *bcf_f,
 
     // update the header values
     fseek(fp_o, 0, SEEK_SET);
-    fwrite(&u_size, sizeof(uint32_t), 1, fp_o);
-    fwrite(&c_size, sizeof(uint32_t), 1, fp_o);
+    fwrite(&u_size, sizeof(uint64_t), 1, fp_o);
+    fwrite(&c_size, sizeof(uint64_t), 1, fp_o);
 
     fclose(fp_o);
     fclose(fp);

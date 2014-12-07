@@ -127,8 +127,6 @@ int convert(int argc, char **argv)
             free(bim);
         if (out != NULL)
             free(out);
-        if ((t_is_set ==1) && (tmp_dir != NULL))
-            free(tmp_dir);
 
 
         return r;

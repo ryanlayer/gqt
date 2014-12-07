@@ -88,13 +88,6 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                    gt_of_name,
                    md_of_name);
 
-    FILE *fp = fopen("md_index.txt","w");
-    uint32_t i;
-    for (i = 0; i < num_vars; ++i) {
-        fprintf(fp, "%llu\n", md_index[i]);
-    }
-    fclose(fp);
-
     sort_gt_md(&q,
                md_index,
                num_inds,
@@ -116,13 +109,13 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 
     close_bcf_file(&bcf_f);
 
-    int r = convert_file_by_name_ubin_to_wahbm(r_s_gt_of_name, wah_out);
-
     remove(gt_of_name);
     remove(s_gt_of_name);
     remove(r_s_gt_of_name);
     remove(md_of_name);
     remove(bim_of_name);
+
+    int r = convert_file_by_name_ubin_to_wahbm(r_s_gt_of_name, wah_out);
 
     free(md_index);
     return r;

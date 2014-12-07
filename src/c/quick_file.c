@@ -6,9 +6,11 @@
  */
 
 #include "quick_file.h"
+#include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 #include <zlib.h>
 #include <assert.h>
 #include "genotq.h"
@@ -39,8 +41,12 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
     s = fread(&c_size, sizeof(uint64_t), 1, fp);
     s = fread(&h_size, sizeof(uint64_t), 1, fp);
 
-    //fprintf(stderr, "u_size:%u\tc_size:%u\th_size:%u\n",
-            //u_size, c_size, h_size);
+    /*
+    fprintf(stderr, "u_size:%" PRIu64 "\t"
+                    "c_size:%" PRIu64 "\t"
+                    "h_size:%" PRIu64 "\n",
+            u_size, c_size, h_size);
+    */
 
 
     /* allocate inflate state */
@@ -65,7 +71,13 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
     char *final_out_buf = (char *) malloc(u_size);
     qfile->main_buf = final_out_buf;
 
-    strm.avail_out = u_size;
+    /* 
+     * This is a hack.  avail_out is is a uInt, but we need way more space.
+     * We reset avail_out to -1 after every inflate to make sure we inflate the 
+     * full file.  This should be pretty safe since we know exactly how big 
+     * the output buffer is.
+     */
+    strm.avail_out = -1;
     strm.next_out = (Bytef *)final_out_buf;
 
     /* decompress until deflate stream ends or end of file */
@@ -91,10 +103,12 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
                 exit(1);
         }
 
+        strm.avail_out = -1;
     } while (ret != Z_STREAM_END);
 
     /* clean up and return */
     (void)inflateEnd(&strm);
+
 
     qfile->file_len = u_size;
     qfile->header_len = h_size;
@@ -104,8 +118,10 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
      * 
      */
     qfile->num_lines = 0;
+
     for(i = qfile->header_len; i < qfile->file_len; i++) {
-        if (qfile->main_buf[i] == '\n') qfile->num_lines++;
+        if (qfile->main_buf[i] == '\n')
+            qfile->num_lines++;
     }
 
     /* Special: if the last char in the file is not a newLine,

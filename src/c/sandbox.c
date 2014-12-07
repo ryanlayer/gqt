@@ -6,6 +6,7 @@
  */
 
 #include <unistd.h>
+#include <inttypes.h>
 #include "genotq.h"
 #include "output_buffer.h"
 #include "quick_file.h"
@@ -14,10 +15,19 @@
 
 int sandbox(int argc, char **argv)
 {
+
+    /*
+    char *bcf_file_name = argv[0];
+    char *u_file_name = argv[1];
+    char *c_file_name = argv[2];
+    struct bcf_file bcf_f = init_bcf_file(bcf_file_name);
+    compress_md(&bcf_f, u_file_name, c_file_name);
+    */
+
     struct quick_file_info qfile;
     quick_file_init(argv[0], &qfile);
 
-    fprintf(stderr, "%llu\n", qfile.num_lines);
+    fprintf(stderr, "%" PRIu64 "\n", qfile.num_lines);
 
     uint32_t i;
     for (i = 0; i < qfile.num_lines; ++i) {

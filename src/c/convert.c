@@ -149,7 +149,7 @@ int convert_help()
 {
     printf("usage:   gqt convert <type> -i <input file>\n"
            "     types:\n"
-           "         bcf         create a WAH index of a BCF\n"
+           "         bcf         create a WAH index of a VCF/VCF.gz/BCF\n"
            "         ped         create SQLite3 database of a PED file\n\n"
            "     options:\n"
            "         -o           Output file name\n"

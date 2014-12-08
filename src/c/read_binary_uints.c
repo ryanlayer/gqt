@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <math.h>
+#include <inttypes.h>
 
 int main(int argc, char **argv)
 {
@@ -15,7 +16,7 @@ int main(int argc, char **argv)
 
     char *file_name = argv[1];
     FILE *ptr_myfile;
-    unsigned int my_record;
+    uint64_t my_record;
 
     ptr_myfile=fopen(file_name,"rb");
     if (!ptr_myfile) {
@@ -23,8 +24,8 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    while ( fread(&my_record,sizeof(unsigned int),1,ptr_myfile) == 1) {
-        printf("%u\n",my_record);
+    while ( fread(&my_record,sizeof(uint64_t),1,ptr_myfile) == 1) {
+        printf("%" PRIu64 "\n",my_record);
     }
 
     fclose(ptr_myfile);

@@ -2,6 +2,7 @@
 #include <htslib/vcf.h>
 #include <htslib/kstring.h>
 #include <assert.h>
+#include <inttypes.h>
 #include <zlib.h>
 #include "genotq.h"
 #include "timer.h"
@@ -80,6 +81,8 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 
     uint64_t *md_index = (uint64_t *) malloc(num_vars * sizeof(uint64_t));
 
+    uint64_t *md_lens = (uint64_t *) malloc(num_vars * sizeof(uint64_t));
+
     push_bcf_gt_md(&q,
                    &bcf_f,
                    md_index,
@@ -90,6 +93,7 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 
     sort_gt_md(&q,
                md_index,
+               md_lens,
                num_inds,
                num_vars,
                gt_of_name,
@@ -100,7 +104,9 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 
     compress_md(&bcf_f,
                 bim_of_name,
-                bim_out);
+                bim_out,
+                md_lens,
+                num_vars);
 
     rotate_gt(num_inds,
               num_vars,
@@ -109,15 +115,19 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 
     close_bcf_file(&bcf_f);
 
+    int r = convert_file_by_name_ubin_to_wahbm(r_s_gt_of_name, wah_out);
+
+    /*
     remove(gt_of_name);
     remove(s_gt_of_name);
     remove(r_s_gt_of_name);
     remove(md_of_name);
     remove(bim_of_name);
+    */
 
-    int r = convert_file_by_name_ubin_to_wahbm(r_s_gt_of_name, wah_out);
 
     free(md_index);
+    free(md_lens);
     return r;
 }
 //}}}
@@ -264,6 +274,7 @@ void push_bcf_gt_md(pri_queue *q,
 //{{{void sort_gt_md(pri_queue *q,
 void sort_gt_md(pri_queue *q,
                 uint64_t *md_index,
+                uint64_t *md_lens,
                 uint32_t num_inds,
                 uint32_t num_vars,
                 char *gt_of_name,
@@ -292,6 +303,7 @@ void sort_gt_md(pri_queue *q,
 
     uint32_t tenth_num_var = num_vars / 10;
     uint32_t var_i = 0;
+    uint64_t cumul_len = 0;
     fprintf(stderr,"Sorting genotypes and metadata");
 
     // Get variants in order and rewrite a variant-major sorted matrix
@@ -299,7 +311,6 @@ void sort_gt_md(pri_queue *q,
         //status
         if ((tenth_num_var == 0) || (var_i % tenth_num_var == 0))
             fprintf(stderr,".");
-        var_i += 1;
 
         // get the data (line num) from the top element
         int *d = priq_pop(*q, &p);
@@ -317,16 +328,22 @@ void sort_gt_md(pri_queue *q,
         char buf[len+1];
         int r = fread(buf, sizeof(char), len, md_of);
         buf[len] = '\0';
+        //write metadata to file
+        fprintf(md_out, "%s", buf);
+
+        cumul_len += strlen(buf);
+        md_lens[var_i] = cumul_len;
 
         // jump to the sport in the genotypes, read and write
         fseek(gt_of, (*d)*num_ind_ints*sizeof(uint32_t), SEEK_SET);
         r = fread(packed_ints, sizeof(uint32_t), num_ind_ints, gt_of);
         fwrite(packed_ints, sizeof(uint32_t), num_ind_ints,s_gt_of);
 
-        //write metadata to file
-        fprintf(md_out, "%s", buf);
 
+        //write out the variant ID
         fwrite(d, sizeof(uint32_t), 1, v_out);
+
+        var_i += 1;
     }
 
     fprintf(stderr, "Done\n");
@@ -344,7 +361,9 @@ void sort_gt_md(pri_queue *q,
 //{{{ void compress_md(struct bcf_file *bcf_f,
 void compress_md(struct bcf_file *bcf_f,
                  char *md_of_name,
-                 char *bim_out)
+                 char *bim_out,
+                 uint64_t *md_lens,
+                 uint32_t num_vars)
 {
     fprintf(stderr, "Compressing metadata.");
 
@@ -374,14 +393,19 @@ void compress_md(struct bcf_file *bcf_f,
 
      /* 
      * The file is :
-     * uncompressed size  ( sizeof(uint64_t))
-     * compressed size    ( sizeof(size_t))
-     * header size        ( sizeof(size_t))
+     * uncompressed size     ( sizeof(uint64_t))
+     * compressed size       ( sizeof(uint64_t))
+     * header size           ( sizeof(uint64_t))
+     * number of var/records ( bcf_f->num_records*sizeof(uint64_t))
+     * md line lengths       ( bcf_f->num_records*sizeof(uint64_t))
      * compressed data 
      */
     fwrite(&u_size, sizeof(uint64_t), 1, fp_o);
     fwrite(&c_size, sizeof(uint64_t), 1, fp_o);
     fwrite(&h_size, sizeof(uint64_t), 1, fp_o);
+    uint64_t numv_64 = num_vars;
+    fwrite(&numv_64, sizeof(uint64_t), 1, fp_o);
+    fwrite(md_lens, sizeof(uint64_t), num_vars, fp_o);
 
     // in_buf will hold the uncompressed data and out_buf the compressed
     unsigned char *in_buf = (unsigned char *)

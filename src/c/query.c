@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <inttypes.h>
 #include "genotq.h"
 #include "timer.h"
 #include "quick_file.h"
@@ -608,13 +609,15 @@ void print_query_result(unsigned int *mask,
     for (k=0; k < num_qs; k++) {
         if ( q[k].variant_op == p_count ) {
             asprintf(&info_s, "##INFO=<ID=GTQ_%u,Number=1,Type=Integer,"
-                              "Description=\"GQT count result from query %u\">\n",
+                              "Description=\"GQT count result from query "
+                              "%u\">\n",
                               k, k);
             append_out_buf(&outbuf, info_s, strlen(info_s));
         }
         else if ( q[k].variant_op == p_pct ) {
             asprintf(&info_s, "##INFO=<ID=GTQ_%u,Number=1,Type=Float,"
-                              "Description=\"GQT percent result from query %u\">\n",
+                              "Description=\"GQT percent result from query "
+                              "%u\">\n",
                               k, k);
             append_out_buf(&outbuf, info_s, strlen(info_s));
         }
@@ -635,7 +638,7 @@ void print_query_result(unsigned int *mask,
 	        line_idx = i*32+j;
 	        append_out_buf(&outbuf,
                                qfile.lines[line_idx],
-                               qfile.line_lens[line_idx]);
+                               qfile.line_lens[line_idx]-1);
                 for (k=0; k < num_qs; k++) {
                     if ( q[k].variant_op == p_count ) {
                         asprintf(&info_s, ";GTQ_%u=%u", k,counts[k][line_idx]);

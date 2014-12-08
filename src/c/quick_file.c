@@ -31,23 +31,21 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
 
     /* 
      * The file is :
-     * uncompressed size  ( sizeof(size_t))
-     * compressed size    ( sizeof(size_t))
-     * header size        ( sizeof(size_t))
+     * uncompressed size     ( sizeof(uint64_t))
+     * compressed size       ( sizeof(uint64_t))
+     * header size           ( sizeof(uint64_t))
+     * number of var/records ( bcf_f->num_records*sizeof(uint64_t))
+     * md line lengths       ( bcf_f->num_records*sizeof(uint64_t))
      * compressed data 
      */
-    uint64_t u_size, c_size, h_size;
+    uint64_t u_size, c_size, h_size, num_r;
     size_t s = fread(&u_size, sizeof(uint64_t), 1, fp);
     s = fread(&c_size, sizeof(uint64_t), 1, fp);
     s = fread(&h_size, sizeof(uint64_t), 1, fp);
+    s = fread(&num_r, sizeof(uint64_t), 1, fp);
 
-    /*
-    fprintf(stderr, "u_size:%" PRIu64 "\t"
-                    "c_size:%" PRIu64 "\t"
-                    "h_size:%" PRIu64 "\n",
-            u_size, c_size, h_size);
-    */
-
+    uint64_t *md_lens = (uint64_t *)malloc(num_r * sizeof(uint64_t));
+    s = fread(md_lens, sizeof(uint64_t), num_r, fp);
 
     /* allocate inflate state */
     z_stream strm;
@@ -117,8 +115,9 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
      * Count how many lines you have.  Starting after the header
      * 
      */
-    qfile->num_lines = 0;
+    qfile->num_lines = num_r;
 
+#if 0
     for(i = qfile->header_len; i < qfile->file_len; i++) {
         if (qfile->main_buf[i] == '\n')
             qfile->num_lines++;
@@ -129,6 +128,7 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
     if (qfile->main_buf[i-1] != '\n') {
         qfile->num_lines++;
     }
+#endif
 
     /* Side note: the reason we made a pass just to count newlines,
      * and then are passing through again below, is so that we know
@@ -151,7 +151,14 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
      * Store the calculated length of the line as well. */
     i = 0;
     qfile->lines[0] = qfile->main_buf + qfile->header_len;
+    qfile->line_lens[0] = md_lens[0];
 
+    for(i = 1; i < qfile->num_lines; i++) {
+        qfile->line_lens[i] = md_lens[i] - md_lens[i-1];
+        qfile->lines[i] = qfile->lines[i-1] + qfile->line_lens[i-1];
+    }
+
+#if 0
     uint64_t prevPos = qfile->header_len;
 
     for (pos = qfile->header_len; pos < qfile->file_len; pos++) {
@@ -175,6 +182,7 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
         qfile->line_lens[i] = qfile->file_len - prevPos;
     }
     /* And we're done! */
+#endif
 }
 
 void quick_file_delete(struct quick_file_info *qfile) {
@@ -186,12 +194,12 @@ void quick_file_delete(struct quick_file_info *qfile) {
 
     /* Turn all the null chars in the main_buf, except the last null char,
      * back into newlines, so that the main_buf can be freed all at once. */
-    for (pos = 0; pos < qfile->file_len -1; pos++) {
+/*    for (pos = 0; pos < qfile->file_len -1; pos++) {
         if (qfile->main_buf[pos] == '\0') {
                 qfile->main_buf[pos] = '\n';
         }
     }
-
+*/
 
     /* now we can free the main_buf. */
     free(qfile->main_buf);

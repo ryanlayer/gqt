@@ -45,6 +45,7 @@ void push_bcf_gt_md(pri_queue *q,
 
 void sort_gt_md(pri_queue *q,
                 uint64_t *md_index,
+                uint64_t *md_lens,
                 uint32_t num_inds,
                 uint32_t num_vars,
                 char *gt_of_name,
@@ -60,7 +61,9 @@ void rotate_gt(uint32_t num_inds,
 
 void compress_md(struct bcf_file *bcf_f,
                  char *md_of_name,
-                 char *bim_out);
+                 char *bim_out,
+                 uint64_t *md_lens,
+                 uint32_t num_vars);
 
 int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                                           uint32_t num_fields,

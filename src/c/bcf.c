@@ -117,14 +117,11 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 
     int r = convert_file_by_name_ubin_to_wahbm(r_s_gt_of_name, wah_out);
 
-    /*
     remove(gt_of_name);
     remove(s_gt_of_name);
     remove(r_s_gt_of_name);
     remove(md_of_name);
     remove(bim_of_name);
-    */
-
 
     free(md_index);
     free(md_lens);

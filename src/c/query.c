@@ -441,7 +441,10 @@ int query(int argc, char **argv)
         for (i = 0; i < num_ints; ++i) 
             masked_vid_count += popcount(final_mask[i]);
 
-        printf("%u\n", masked_vid_count);
+        if (masked_vid_count <= wf.num_fields)
+            printf("%u\n", masked_vid_count);
+        else
+            printf("%u\n", wf.num_fields);
 
     } else if ((v_is_set == 1) && (s_is_set == 1)) {
         get_bcf_query_result(final_mask,

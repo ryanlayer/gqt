@@ -96,6 +96,7 @@ int query(int argc, char **argv)
         id_q_count = 0,
         gt_q_count = 0,
         d_is_set = 0,
+        c_is_set = 0,
         v_is_set = 0,
         s_is_set = 0,
         b_is_set = 0,
@@ -105,8 +106,11 @@ int query(int argc, char **argv)
     char *gt_query_list[100];
 
     //{{{ parse cmd line opts
-    while ((c = getopt (argc, argv, "hi:p:g:d:b:v:s:B")) != -1) {
+    while ((c = getopt (argc, argv, "chi:p:g:d:b:v:s:B")) != -1) {
         switch (c) {
+        case 'c':
+            c_is_set = 1;
+            break;
         case 'i':
             i_is_set = 1;
             wahbm_file_name = optarg;
@@ -431,7 +435,15 @@ int query(int argc, char **argv)
     */
 
 
-    if ((v_is_set == 1) && (s_is_set == 1)) {
+    if (c_is_set == 1) {
+        uint32_t masked_vid_count = 0;
+
+        for (i = 0; i < num_ints; ++i) 
+            masked_vid_count += popcount(final_mask[i]);
+
+        printf("%u\n", masked_vid_count);
+
+    } else if ((v_is_set == 1) && (s_is_set == 1)) {
         get_bcf_query_result(final_mask,
                              num_ints, 
                              q,
@@ -673,7 +685,7 @@ int query_help()
     printf(
 "usage:   gqt query -i <wahbm file> \\\n"
 "                   [-b <bim file> || -s <bcf file> && -v <vid file>]  \\\n"                    
-"                   -B <produce BCF output. Def. VCF w/ -s and -v> \\\n"
+"                   -c only print number of resulting variants \\\n"
 "                   -d <ped database file> \\\n"
 "                   -p <population query 1> \\\n"
 "                   -g <genotype query 1> \\\n"

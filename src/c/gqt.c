@@ -15,6 +15,7 @@ int count(int argc, char **argv);
 int sum(int argc, char **argv);
 int query(int argc, char **argv);
 int sandbox(int argc, char **argv);
+int misc(int argc, char **argv);
 
 int main(int argc, char **argv)
 {
@@ -30,6 +31,7 @@ int main(int argc, char **argv)
     else if (strcmp(cmd,"sum") == 0) return sum(argc-2, argv+2);
     else if (strcmp(cmd,"query") == 0) return query(argc-1, argv+1);
     else if (strcmp(cmd,"sandbox") == 0) return sandbox(argc-2, argv+2);
+    else if (strcmp(cmd,"misc") == 0) return misc(argc-2, argv+2);
     else {
         printf("Unknown command\n");
         return gqt_help(argc, argv);

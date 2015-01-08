@@ -505,13 +505,6 @@ void get_bcf_query_result(unsigned int *mask,
 
     uint32_t i, j, masked_vid_count = 0;
 
-    /*
-    fprintf(stderr,"vids:");
-    for (i = 0; i < num_fields; ++i)
-        fprintf(stderr,"\t%u\t", vids[i]);
-    fprintf(stderr,"\n");
-    */
-
     for (i = 0; i < mask_len; ++i)
         masked_vid_count += popcount(mask[i]);
 
@@ -533,36 +526,9 @@ void get_bcf_query_result(unsigned int *mask,
             break;
     }
 
-    /*
-    fprintf(stderr,"masked_vids:");
-    for (i = 0; i < masked_vid_count; ++i)
-        fprintf(stderr,"\t%u\t", masked_vids[i]);
-    fprintf(stderr,"\n");
-    */
-
     free(vids);
 
     qsort(masked_vids, masked_vid_count, sizeof(uint32_t), compare_uint32_t);
-
-#if 0
-    char *full_query, *full_query_tmp;
-    uint32_t full_query_len;
-    for (i = 0; i < num_qs; ++i) {
-        printf("%s\n", id_query_list[i]);
-
-        full_query_len = asprintf(full_query_tmp, "%s", id_query_list[i])
-
-        //unsigned int len_count_R;
-        //unsigned int *R;
-        /* 
-         * Submit the population query to the PED database and get back both
-         * the list of of ids in R and the length of R in id_lens[i]
-         */
-        //id_lens[i] = resolve_ind_query(&R,
-                                      //id_query_list[i],
-                                      //db_file_name);
-    }
-#endif
 
     htsFile *fp    = hts_open(src_bcf_file_name,"rb");
     bcf_hdr_t *hdr = bcf_hdr_read(fp);
@@ -591,7 +557,6 @@ void get_bcf_query_result(unsigned int *mask,
     }
     hts_close(out);
     hts_close(fp);
-
 }
 //}}}
  

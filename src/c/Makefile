@@ -5,7 +5,7 @@ HTS_ROOT=$(HOME)/src/htslib
 #CFLAGS=-g
 CFLAGS=-O3
 #CFLAGS=-Wall -O0 -g -fno-inline -fkeep-inline-functions -D_FILE_OFFSET_BITS=64 -fPIC -DDEBUG -D_DEBUG
-CFLAGS+=-mavx -mavx2
+#CFLAGS+=-mavx -mavx2
 #CFLAGS+=-Dtime_count_range_records_compressed_in_place_wahbm
 #CFLAGS+=-Dtime_count_range_records_in_place_wahbm
 #CFLAGS+=-Dtime_sum_range_records_in_place_wahbm

@@ -14,8 +14,8 @@ int ubin_wahbm16(char *in, char *out);
 int ubin_wah(char *in, char *out);
 int vcf_plt(char *in,
             char *out,
-            unsigned int num_fields,
-            unsigned int num_records);
+            uint32_t num_fields,
+            uint32_t num_records);
 int plt_invert(char *in, char *out);
 int plt_invert_ubin(char *in, char *out);
 
@@ -25,7 +25,7 @@ int misc(int argc, char **argv)
 
     int c;
     char *in, *out, *bim, *vid;
-    unsigned int num_fields, num_records;
+    uint32_t num_fields, num_records;
     int i_is_set = 0, 
         o_is_set = 0, 
         f_is_set = 0, 
@@ -185,8 +185,8 @@ int plt_invert_ubin(char *in, char *out)
 
 int vcf_plt(char *in,
             char *out,
-            unsigned int num_fields,
-            unsigned int num_records)
+            uint32_t num_fields,
+            uint32_t num_records)
 {
     return convert_file_by_name_vcf_to_plt(in, num_fields, num_records, out);
 }

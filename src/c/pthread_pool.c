@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-void * pool_start(void * (*thread_func)(void *), unsigned int threads) {
+void * pool_start(void * (*thread_func)(void *), uint32_t threads) {
 	struct pool *p = (struct pool *) malloc(sizeof(struct pool) + (threads-1) * sizeof(pthread_t));
 	int i;
 

@@ -10,7 +10,7 @@ struct bcf_file {
     htsFile *fp;
     bcf_hdr_t *hdr;
     bcf1_t *line;
-    unsigned int num_records;
+    uint32_t num_records;
     int32_t *gt;
 };
 

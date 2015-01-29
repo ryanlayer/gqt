@@ -17,6 +17,7 @@ int main(int argc, char **argv)
     char *file_name = argv[1];
     FILE *ptr_myfile;
     uint64_t my_record;
+    //uint32_t my_record;
 
     ptr_myfile=fopen(file_name,"rb");
     if (!ptr_myfile) {
@@ -27,6 +28,13 @@ int main(int argc, char **argv)
     while ( fread(&my_record,sizeof(uint64_t),1,ptr_myfile) == 1) {
         printf("%" PRIu64 "\n",my_record);
     }
+
+    /*
+    while ( fread(&my_record,sizeof(uint32_t),1,ptr_myfile) == 1) {
+        printf("%" PRIu32 "\n",my_record);
+    }
+    */
+
 
     fclose(ptr_myfile);
     return 0;

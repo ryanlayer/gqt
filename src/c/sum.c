@@ -11,52 +11,52 @@
 int sum_help();
 
 int sum_plt(char *in,
-              unsigned int *R,
-              unsigned int num_records,
-              unsigned int range_start,
-              unsigned int range_end,
-              unsigned int range_exclude,
+              uint32_t *R,
+              uint32_t num_records,
+              uint32_t range_start,
+              uint32_t range_end,
+              uint32_t range_exclude,
               int x_is_set,
               int time,
               int quiet,
               char *bim);
 int sum_ubin(char *in,
-               unsigned int *R,
-               unsigned int num_records,
-               unsigned int range_start,
-               unsigned int range_end,
-               unsigned int range_exclude,
+               uint32_t *R,
+               uint32_t num_records,
+               uint32_t range_start,
+               uint32_t range_end,
+               uint32_t range_exclude,
                int x_is_set,
                int time,
                int quiet,
                char *bim);
 int sum_wah(char *in,
-              unsigned int *R,
-              unsigned int num_records,
-              unsigned int range_start,
-              unsigned int range_end,
-              unsigned int range_exclude,
+              uint32_t *R,
+              uint32_t num_records,
+              uint32_t range_start,
+              uint32_t range_end,
+              uint32_t range_exclude,
               int x_is_set,
               int time,
               int quiet,
               char *bim);
 int sum_wahbm(char *in,
-                unsigned int *R,
-                unsigned int num_records,
-                unsigned int range_start,
-                unsigned int range_end,
-                unsigned int range_exclude,
+                uint32_t *R,
+                uint32_t num_records,
+                uint32_t range_start,
+                uint32_t range_end,
+                uint32_t range_exclude,
                 int x_is_set,
                 int time,
                 int quiet,
                 char *bim);
 
 int sum_in_place_wahbm(char *in,
-                         unsigned int *R,
-                         unsigned int num_records,
-                         unsigned int range_start,
-                         unsigned int range_end,
-                         unsigned int range_exclude,
+                         uint32_t *R,
+                         uint32_t num_records,
+                         uint32_t range_start,
+                         uint32_t range_end,
+                         uint32_t range_exclude,
                          int x_is_set,
                          int a_is_set,
                          int time,
@@ -64,19 +64,19 @@ int sum_in_place_wahbm(char *in,
                          char *bim);
 
 int sum_compressed_in_place_wahbm(char *in,
-                                    unsigned int *R,
-                                    unsigned int num_records,
-                                    unsigned int range_start,
-                                    unsigned int range_end,
-                                    unsigned int range_exclude,
+                                    uint32_t *R,
+                                    uint32_t num_records,
+                                    uint32_t range_start,
+                                    uint32_t range_end,
+                                    uint32_t range_exclude,
                                     int x_is_set,
                                     int time,
                                     int quiet,
                                     char *bim);
 
 
-void print_sum_result(unsigned int *R,
-                        unsigned int num_fields,
+void print_sum_result(uint32_t *R,
+                        uint32_t num_fields,
                         char *bim);
 
 
@@ -92,7 +92,7 @@ int sum(int argc, char **argv)
 
     int c;
     char *in, *out, *record_ids, *op, *bim, *query, *ped_db_file;
-    unsigned int num_records;
+    uint32_t num_records;
     int i_is_set = 0,
         a_is_set = 0,
         b_is_set = 0,
@@ -202,13 +202,13 @@ int sum(int argc, char **argv)
         }
     }
 
-    unsigned int *R;
+    uint32_t *R;
 
     if (q_is_set == 1) {
         num_records = resolve_ind_query(&R, query, ped_db_file);
         //fprintf(stderr, "num_records:%u\n", num_records);
     } else {
-        R = (unsigned int *) malloc(num_records * sizeof(unsigned int));
+        R = (uint32_t *) malloc(num_records * sizeof(uint32_t));
         parse_cmd_line_int_csv(R, num_records, record_ids);
     }
 
@@ -318,11 +318,11 @@ int sum_help()
 }
 
 int sum_plt(char *in,
-              unsigned int *R,
-              unsigned int num_records,
-              unsigned int range_start,
-              unsigned int range_end,
-              unsigned int range_exclude,
+              uint32_t *R,
+              uint32_t num_records,
+              uint32_t range_start,
+              uint32_t range_end,
+              uint32_t range_exclude,
               int x_is_set,
               int time,
               int quiet,
@@ -331,9 +331,9 @@ int sum_plt(char *in,
 #if 0
     start();
     struct plt_file pf = init_plt_file(in);
-    unsigned int *pf_R;
+    uint32_t *pf_R;
 
-    unsigned int len_pf_R;
+    uint32_t len_pf_R;
     
     if (strcmp(op,"gt") == 0)
         len_pf_R = gt_sum_records_plt(pf,
@@ -359,11 +359,11 @@ int sum_plt(char *in,
 }
 
 int sum_ubin(char *in,
-               unsigned int *R,
-               unsigned int num_records,
-               unsigned int range_start,
-               unsigned int range_end,
-               unsigned int range_exclude,
+               uint32_t *R,
+               uint32_t num_records,
+               uint32_t range_start,
+               uint32_t range_end,
+               uint32_t range_exclude,
                int x_is_set,
                int time,
                int quiet,
@@ -373,8 +373,8 @@ int sum_ubin(char *in,
 #if 0
     start();
     struct ubin_file uf = init_ubin_file(in);
-    unsigned int *uf_R;
-    unsigned int len_uf_R;
+    uint32_t *uf_R;
+    uint32_t len_uf_R;
 
     if (strcmp(op,"gt") == 0)
         len_uf_R = gt_sum_records_ubin(uf,
@@ -400,11 +400,11 @@ int sum_ubin(char *in,
 }
 
 int sum_wah(char *in,
-              unsigned int *R,
-              unsigned int num_records,
-              unsigned int range_start,
-              unsigned int range_end,
-              unsigned int range_exclude,
+              uint32_t *R,
+              uint32_t num_records,
+              uint32_t range_start,
+              uint32_t range_end,
+              uint32_t range_exclude,
               int x_is_set,
               int time,
               int quiet,
@@ -415,11 +415,11 @@ int sum_wah(char *in,
 }
 
 int sum_in_place_wahbm(char *in,
-                         unsigned int *R,
-                         unsigned int num_records,
-                         unsigned int range_start,
-                         unsigned int range_end,
-                         unsigned int range_exclude,
+                         uint32_t *R,
+                         uint32_t num_records,
+                         uint32_t range_start,
+                         uint32_t range_end,
+                         uint32_t range_exclude,
                          int x_is_set,
                          int a_is_set,
                          int time,
@@ -429,8 +429,8 @@ int sum_in_place_wahbm(char *in,
 {
     start();
     struct wah_file wf = init_wahbm_file(in);
-    unsigned int *wf_R;
-    unsigned int len_wf_R;
+    uint32_t *wf_R;
+    uint32_t len_wf_R;
 
     if (time != 0 )
         start();
@@ -469,11 +469,11 @@ int sum_in_place_wahbm(char *in,
 }
 
 int sum_compressed_in_place_wahbm(char *in,
-                                    unsigned int *R,
-                                    unsigned int num_records,
-                                    unsigned int range_start,
-                                    unsigned int range_end,
-                                    unsigned int range_exclude,
+                                    uint32_t *R,
+                                    uint32_t num_records,
+                                    uint32_t range_start,
+                                    uint32_t range_end,
+                                    uint32_t range_exclude,
                                     int x_is_set,
                                     int time,
                                     int quiet,
@@ -483,8 +483,8 @@ int sum_compressed_in_place_wahbm(char *in,
 #if 0
     start();
     struct wah_file wf = init_wahbm_file(in);
-    unsigned int *wf_R;
-    unsigned int len_wf_R;
+    uint32_t *wf_R;
+    uint32_t len_wf_R;
 
     if (strcmp(op,"gt") == 0)
         len_wf_R = gt_sum_records_compressed_in_place_wahbm(wf,
@@ -513,11 +513,11 @@ int sum_compressed_in_place_wahbm(char *in,
 }
 
 int sum_wahbm(char *in,
-                unsigned int *R,
-                unsigned int num_records,
-                unsigned int range_start,
-                unsigned int range_end,
-                unsigned int range_exclude,
+                uint32_t *R,
+                uint32_t num_records,
+                uint32_t range_start,
+                uint32_t range_end,
+                uint32_t range_exclude,
                 int x_is_set,
                 int time,
                 int quiet,
@@ -527,8 +527,8 @@ int sum_wahbm(char *in,
 #if 0
     start();
     struct wah_file wf = init_wahbm_file(in);
-    unsigned int *wf_R;
-    unsigned int len_wf_R;
+    uint32_t *wf_R;
+    uint32_t len_wf_R;
 
     if (strcmp(op,"gt") == 0)
         len_wf_R = gt_sum_records_wahbm(wf,
@@ -553,8 +553,8 @@ int sum_wahbm(char *in,
     return 0;
 }
 
-void print_sum_result(unsigned int *R,
-                        unsigned int num_fields,
+void print_sum_result(uint32_t *R,
+                        uint32_t num_fields,
                         char *bim)
 {
     struct quick_file_info qfile;

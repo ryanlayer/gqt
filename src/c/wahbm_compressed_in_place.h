@@ -25,7 +25,7 @@
  *
  * Example Usage:
  * @code
- *    unsigned int X[5] =
+ *    uint32_t X[5] =
  *        { bin_char_to_int("01000000000000000000000000000001"),
  *          bin_char_to_int("11111111111111111111111111111111"),
  *          bin_char_to_int("11111111111111111111111111111111"),
@@ -33,23 +33,23 @@
  *          bin_char_to_int("01000000000000000001010101000000")
  *        };
  *
- *    unsigned int Y[5] =
+ *    uint32_t Y[5] =
  *        { bin_char_to_int("01000000000000000000000000000001"),
  *          bin_char_to_int("11111111111111111111111111111111"),
  *          bin_char_to_int("11111111111111111111111111111000"),
  *          bin_char_to_int("00000000000000000000000000000000"),
  *          bin_char_to_int("00000000000000000000000000001011")
  *        };
- *    unsigned int R[6] = {0x80000006,0,0,0,0,0};
+ *    uint32_t R[6] = {0x80000006,0,0,0,0,0};
  *
- *    unsigned int r = wah_compressed_in_place_or(R, 6, w_Y, wah_size_Y);
+ *    uint32_t r = wah_compressed_in_place_or(R, 6, w_Y, wah_size_Y);
  *    r = wah_compressed_in_place_or(R, 6, w_X, wah_size_X);
  * @endcode
  */
-unsigned int  wah_compressed_in_place_or(unsigned int *r_wah,
-                                         unsigned int r_wah_size,
-                                         unsigned int *wah,
-                                         unsigned int wah_size);
+uint32_t  wah_compressed_in_place_or(uint32_t *r_wah,
+                                         uint32_t r_wah_size,
+                                         uint32_t *wah,
+                                         uint32_t wah_size);
 /**
  * @brief   compressed in-place AND two WAH runs
  *
@@ -71,7 +71,7 @@ unsigned int  wah_compressed_in_place_or(unsigned int *r_wah,
  *
  * Example Usage:
  * @code
- *    unsigned int X[5] =
+ *    uint32_t X[5] =
  *        { bin_char_to_int("01000000000000000000000000000001"),
  *          bin_char_to_int("11111111111111111111111111111111"),
  *          bin_char_to_int("11111111111111111111111111111111"),
@@ -79,23 +79,23 @@ unsigned int  wah_compressed_in_place_or(unsigned int *r_wah,
  *          bin_char_to_int("01000000000000000001010101000000")
  *        };
  *
- *    unsigned int Y[5] =
+ *    uint32_t Y[5] =
  *        { bin_char_to_int("01000000000000000000000000000001"),
  *          bin_char_to_int("11111111111111111111111111111111"),
  *          bin_char_to_int("11111111111111111111111111111000"),
  *          bin_char_to_int("00000000000000000000000000000000"),
  *          bin_char_to_int("00000000000000000000000000001011")
  *        };
- *    unsigned int R[6] = {0xc0000006,0,0,0,0,0};
+ *    uint32_t R[6] = {0xc0000006,0,0,0,0,0};
  *
- *    unsigned int r = wah_compressed_in_place_and(R, 6, w_Y, wah_size_Y);
+ *    uint32_t r = wah_compressed_in_place_and(R, 6, w_Y, wah_size_Y);
  *    r = wah_compressed_in_place_and(R, 6, w_X, wah_size_X);
  * @endcode
  */
-unsigned int  wah_compressed_in_place_and(unsigned int *r_wah,
-                                          unsigned int r_wah_size,
-                                          unsigned int *wah,
-                                          unsigned int wah_size);
+uint32_t  wah_compressed_in_place_and(uint32_t *r_wah,
+                                          uint32_t r_wah_size,
+                                          uint32_t *wah,
+                                          uint32_t wah_size);
 
 /**
  * @brief   AND two compressed in-place WAH runs
@@ -118,11 +118,11 @@ unsigned int  wah_compressed_in_place_and(unsigned int *r_wah,
  * @code
  * @endcode
  */
-unsigned int  wah_compressed_in_place_and_compressed_in_place(
-                                          unsigned int *r_wah,
-                                          unsigned int r_wah_size,
-                                          unsigned int *wah,
-                                          unsigned int wah_size);
+uint32_t  wah_compressed_in_place_and_compressed_in_place(
+                                          uint32_t *r_wah,
+                                          uint32_t r_wah_size,
+                                          uint32_t *wah,
+                                          uint32_t wah_size);
 
 
 /**
@@ -140,17 +140,17 @@ unsigned int  wah_compressed_in_place_and_compressed_in_place(
  *
  * Example Usage:
  * @code
- *     unsigned int I[5] = {2147483648,0,0,3,1};
- *     unsigned int *WAH;
- *     unsigned int wah_size = ints_to_wah(I,5,160,&WAH);
- *     unsigned int *INTS;
- *     unsigned int ints_size = wah_to_ints(WAH,wah_size,&INTS);
+ *     uint32_t I[5] = {2147483648,0,0,3,1};
+ *     uint32_t *WAH;
+ *     uint32_t wah_size = ints_to_wah(I,5,160,&WAH);
+ *     uint32_t *INTS;
+ *     uint32_t ints_size = wah_to_ints(WAH,wah_size,&INTS);
  * @endcode
  */
 
-unsigned int compressed_in_place_wah_to_ints(unsigned int *W,
-                                             unsigned int W_len,
-                                             unsigned int **O);
+uint32_t compressed_in_place_wah_to_ints(uint32_t *W,
+                                             uint32_t W_len,
+                                             uint32_t **O);
 /**
  * @brief Return records whose values are >= start_test_value and <
  * end_test_value using compressed in place functions
@@ -167,13 +167,13 @@ unsigned int compressed_in_place_wah_to_ints(unsigned int *W,
  * @code
  * @endcode
  */
-unsigned int range_records_compressed_in_place_wahbm(
+uint32_t range_records_compressed_in_place_wahbm(
             struct wah_file wf,
-            unsigned int *record_ids,
-            unsigned int num_r,
-            unsigned int start_test_value,
-            unsigned int end_test_value,
-            unsigned int **R);
+            uint32_t *record_ids,
+            uint32_t num_r,
+            uint32_t start_test_value,
+            uint32_t end_test_value,
+            uint32_t **R);
 
 
 /**
@@ -195,13 +195,13 @@ unsigned int range_records_compressed_in_place_wahbm(
  * @code
  * @endcode
  */
-unsigned int count_range_records_compressed_in_place_wahbm(
+uint32_t count_range_records_compressed_in_place_wahbm(
             struct wah_file wf,
-            unsigned int *record_ids,
-            unsigned int num_r,
-            unsigned int start_test_value,
-            unsigned int end_test_value,
-            unsigned int **R);
+            uint32_t *record_ids,
+            uint32_t num_r,
+            uint32_t start_test_value,
+            uint32_t end_test_value,
+            uint32_t **R);
 
 
 /**
@@ -216,10 +216,10 @@ unsigned int count_range_records_compressed_in_place_wahbm(
  * @return the size of R
  *
  */
-unsigned int add_compressed_in_place_wahbm(unsigned int *R,
-                                           unsigned int r_size,
-                                           unsigned int *wah,
-                                           unsigned int wah_size);
+uint32_t add_compressed_in_place_wahbm(uint32_t *R,
+                                           uint32_t r_size,
+                                           uint32_t *wah,
+                                           uint32_t wah_size);
 
 /**
  * @brief For each field, count the number of records that meet the criterea
@@ -237,12 +237,12 @@ unsigned int add_compressed_in_place_wahbm(unsigned int *R,
  * @code
  * @endcode
  */
-unsigned int gt_count_records_compressed_in_place_wahbm(
+uint32_t gt_count_records_compressed_in_place_wahbm(
                     struct wah_file wf,
-                    unsigned int *record_ids,
-                    unsigned int num_r,
-                    unsigned int test_value,
-                    unsigned int **R);
+                    uint32_t *record_ids,
+                    uint32_t num_r,
+                    uint32_t test_value,
+                    uint32_t **R);
 
 /**
  * @brief Return records whose value are greater than the test value using 
@@ -260,18 +260,18 @@ unsigned int gt_count_records_compressed_in_place_wahbm(
  * @code
  * @endcode
  */
-unsigned int gt_records_compressed_in_place_wahbm(struct wah_file wf,
-                                       unsigned int *record_ids,
-                                       unsigned int num_r,
-                                       unsigned int test_value,
-                                       unsigned int **R);
+uint32_t gt_records_compressed_in_place_wahbm(struct wah_file wf,
+                                       uint32_t *record_ids,
+                                       uint32_t num_r,
+                                       uint32_t test_value,
+                                       uint32_t **R);
 
-unsigned int avx_sum_range_records_in_place_wahbm(
+uint32_t avx_sum_range_records_in_place_wahbm(
             struct wah_file wf,
-            unsigned int *record_ids,
-            unsigned int num_r,
-            unsigned int start_test_value,
-            unsigned int end_test_value,
-            unsigned int **R);
+            uint32_t *record_ids,
+            uint32_t num_r,
+            uint32_t start_test_value,
+            uint32_t end_test_value,
+            uint32_t **R);
 
 #endif

@@ -18,15 +18,15 @@
 
 
 // wahbm in place
-//{{{ unsigned int wah_in_place_or(unsigned int *r_wah,
-unsigned int wah_in_place_or(unsigned int *r_wah,
-                              unsigned int r_wah_size,
-                              unsigned int *wah,
-                              unsigned int wah_size)
+//{{{ uint32_t wah_in_place_or(uint32_t *r_wah,
+uint32_t wah_in_place_or(uint32_t *r_wah,
+                              uint32_t r_wah_size,
+                              uint32_t *wah,
+                              uint32_t wah_size)
 {
 
-    unsigned int r_wah_i = 0, wah_c = 0;
-    unsigned int wah_i, fill_size, wah_v, end;
+    uint32_t r_wah_i = 0, wah_c = 0;
+    uint32_t wah_i, fill_size, wah_v, end;
     for (wah_i = 0; wah_i < wah_size; ++wah_i)
     {
         wah_v = wah[wah_i];
@@ -54,15 +54,15 @@ unsigned int wah_in_place_or(unsigned int *r_wah,
 }
 //}}}
 
-//{{{ unsigned int wah_in_place_and(unsigned int *r_wah,
-unsigned int wah_in_place_and(unsigned int *r_wah,
-                               unsigned int r_wah_size,
-                               unsigned int *wah,
-                               unsigned int wah_size)
+//{{{ uint32_t wah_in_place_and(uint32_t *r_wah,
+uint32_t wah_in_place_and(uint32_t *r_wah,
+                               uint32_t r_wah_size,
+                               uint32_t *wah,
+                               uint32_t wah_size)
 {
 
-    unsigned int r_wah_i = 0;
-    unsigned int wah_i, fill_size, wah_v, end;
+    uint32_t r_wah_i = 0;
+    uint32_t wah_i, fill_size, wah_v, end;
     for (wah_i = 0; wah_i < wah_size; ++wah_i)
     {
         wah_v = wah[wah_i];
@@ -88,14 +88,15 @@ unsigned int wah_in_place_and(unsigned int *r_wah,
 }
 //}}}
 
-//{{{ unsigned int get_wah_bitmap_in_place(struct wah_file wf,
-unsigned int get_wah_bitmap_in_place(struct wah_file wf,
-                                     unsigned int wah_record,
-                                     unsigned int bitmap,
-                                     unsigned int **wah_bitmap)
+//{{{ uint32_t get_wah_bitmap_in_place(struct wah_file wf,
+uint32_t get_wah_bitmap_in_place(struct wah_file wf,
+                                     uint32_t wah_record,
+                                     uint32_t bitmap,
+                                     uint32_t **wah_bitmap)
 {
     // get the size of the WAH-encoded bitmap
-    unsigned int wah_size = 0, wah_offset = 0;
+    uint64_t wah_size = 0;
+    uint64_t wah_offset = 0;
     if ((wah_record == 0) && (bitmap == 0)) {
         wah_size = wf.record_offsets[wah_record + bitmap];
         wah_offset = wf.header_offset;
@@ -104,25 +105,25 @@ unsigned int get_wah_bitmap_in_place(struct wah_file wf,
                    wf.record_offsets[wah_record*4 + bitmap - 1];
 
         wah_offset = wf.header_offset +
-                     sizeof(unsigned int) * 
+                     sizeof(uint32_t) * 
                         (wf.record_offsets[wah_record*4 + bitmap] - wah_size);
     }
 
     fseek(wf.file, wah_offset, SEEK_SET);
-    int r = fread(*wah_bitmap,sizeof(unsigned int),wah_size,wf.file);
+    int r = fread(*wah_bitmap,sizeof(uint32_t),wah_size,wf.file);
 
-    return wah_size;
+    return (uint32_t)wah_size;
 }
 //}}}
 
-//{{{ unsigned int get_wah_bitmaps_in_place(struct wah_file wf,
-unsigned int get_wah_bitmaps_in_place(struct wah_file wf,
-                                      unsigned int wah_record,
-                                      unsigned int **wah_bitmap,
-                                      unsigned int *wah_sizes)
+//{{{ uint32_t get_wah_bitmaps_in_place(struct wah_file wf,
+uint32_t get_wah_bitmaps_in_place(struct wah_file wf,
+                                      uint32_t wah_record,
+                                      uint32_t **wah_bitmap,
+                                      uint32_t *wah_sizes)
 {
     // get the size of the WAH-encoded bitmap
-    unsigned int wah_size = 0, wah_offset = 0;
+    uint64_t wah_size = 0, wah_offset = 0;
     if (wah_record == 0) {
         wah_size = wf.record_offsets[wah_record + 3];
         wah_offset = wf.header_offset;
@@ -132,11 +133,11 @@ unsigned int get_wah_bitmaps_in_place(struct wah_file wf,
                    wf.record_offsets[wah_record*4 - 1];
 
         wah_offset = wf.header_offset +
-                     sizeof(unsigned int) * 
+                     sizeof(uint32_t) * 
                         (wf.record_offsets[wah_record*4 - 1]);
     }
 
-    unsigned int i;
+    uint32_t i;
     for (i = 0; i < 4; ++i) {
         if ((wah_record == 0) && (i == 0)) 
             wah_sizes[i] = wf.record_offsets[wah_record];
@@ -147,38 +148,38 @@ unsigned int get_wah_bitmaps_in_place(struct wah_file wf,
 
 
     fseek(wf.file, wah_offset, SEEK_SET);
-    int r = fread(*wah_bitmap,sizeof(unsigned int),wah_size,wf.file);
+    int r = fread(*wah_bitmap,sizeof(uint32_t),wah_size,wf.file);
 
-    return wah_size;
+    return (uint32_t)wah_size;
 }
 //}}}
 
-//{{{ unsigned int range_records_in_place_wahbm(struct wah_file wf,
-unsigned int range_records_in_place_wahbm(struct wah_file wf,
-                                          unsigned int *record_ids,
-                                          unsigned int num_r,
-                                          unsigned int start_test_value,
-                                          unsigned int end_test_value,
-                                          unsigned int **R) 
+//{{{ uint32_t range_records_in_place_wahbm(struct wah_file wf,
+uint32_t range_records_in_place_wahbm(struct wah_file wf,
+                                          uint32_t *record_ids,
+                                          uint32_t num_r,
+                                          uint32_t start_test_value,
+                                          uint32_t end_test_value,
+                                          uint32_t **R) 
 
 {
 
-    unsigned int max_wah_size = (wf.num_fields + 31 - 1)/ 31;
-    unsigned int *record_new_bm = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size);
+    uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    uint32_t *record_new_bm = (uint32_t *)
+                        malloc(sizeof(uint32_t)*max_wah_size);
 
-    unsigned int *or_result_bm = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size);
-    unsigned int *and_result_bm = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size);
-    unsigned int and_result_bm_size, record_new_bm_size, or_result_bm_size;
-    unsigned int i,j;
+    uint32_t *or_result_bm = (uint32_t *)
+                        malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *and_result_bm = (uint32_t *)
+                        malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t and_result_bm_size, record_new_bm_size, or_result_bm_size;
+    uint32_t i,j;
     for (i = 0; i < max_wah_size; ++i)
         and_result_bm[i] = 0x7fffffff;
 
     for (i = 0; i < num_r; ++i) {
         // or the appropriate bitmaps
-        memset(or_result_bm, 0, sizeof(unsigned int)*max_wah_size);
+        memset(or_result_bm, 0, sizeof(uint32_t)*max_wah_size);
 
         for (j = start_test_value; j < end_test_value; ++j) {
 
@@ -210,26 +211,26 @@ unsigned int range_records_in_place_wahbm(struct wah_file wf,
 //}}}
 
 #if 1
-//{{{ unsigned int count_range_records_in_place_wahbm(struct wah_file wf,
-unsigned int count_range_records_in_place_wahbm(struct wah_file wf,
-                                                unsigned int *record_ids,
-                                                unsigned int num_r,
-                                                unsigned int start_test_value,
-                                                unsigned int end_test_value,
-                                                unsigned int **R) 
+//{{{ uint32_t count_range_records_in_place_wahbm(struct wah_file wf,
+uint32_t count_range_records_in_place_wahbm(struct wah_file wf,
+                                                uint32_t *record_ids,
+                                                uint32_t num_r,
+                                                uint32_t start_test_value,
+                                                uint32_t end_test_value,
+                                                uint32_t **R) 
 
 {
-    *R = (unsigned int *) calloc(wf.num_fields,sizeof(unsigned int));
+    *R = (uint32_t *) calloc(wf.num_fields,sizeof(uint32_t));
 
-    unsigned int max_wah_size = (wf.num_fields + 31 - 1)/ 31;
-    unsigned int *record_new_bm = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size);
+    uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    uint32_t *record_new_bm = (uint32_t *)
+                        malloc(sizeof(uint32_t)*max_wah_size);
 
-    unsigned int *or_result_bm = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size);
+    uint32_t *or_result_bm = (uint32_t *)
+                        malloc(sizeof(uint32_t)*max_wah_size);
 
-    unsigned int and_result_bm_size, record_new_bm_size, or_result_bm_size;
-    unsigned int i,j,r_size;
+    uint32_t and_result_bm_size, record_new_bm_size, or_result_bm_size;
+    uint32_t i,j,r_size;
 
 #ifdef time_count_range_records_in_place_wahbm
     unsigned long t1 = 0, t2 = 0, t3 = 0;
@@ -237,7 +238,7 @@ unsigned int count_range_records_in_place_wahbm(struct wah_file wf,
 
     for (i = 0; i < num_r; ++i) {
         // or the appropriate bitmaps
-        memset(or_result_bm, 0, sizeof(unsigned int)*max_wah_size);
+        memset(or_result_bm, 0, sizeof(uint32_t)*max_wah_size);
 
         for (j = start_test_value; j < end_test_value; ++j) {
 
@@ -301,29 +302,29 @@ unsigned int count_range_records_in_place_wahbm(struct wah_file wf,
 #endif
 
 #ifdef __AVX2__
-//{{{ unsigned int count_range_records_in_place_wahbm(struct wah_file wf,
-unsigned int avx_count_range_records_in_place_wahbm(
+//{{{ uint32_t avx_count_range_records_in_place_wahbm(
+uint32_t avx_count_range_records_in_place_wahbm(
             struct wah_file wf,
-            unsigned int *record_ids,
-            unsigned int num_r,
-            unsigned int start_test_value,
-            unsigned int end_test_value,
-            unsigned int **R) 
+            uint32_t *record_ids,
+            uint32_t num_r,
+            uint32_t start_test_value,
+            uint32_t end_test_value,
+            uint32_t **R) 
 
 {
-    //*R = (unsigned int *) calloc(wf.num_fields,sizeof(unsigned int));
-    int r = posix_memalign((void **)R, 32, wf.num_fields*sizeof(unsigned int));
-    memset(*R, 0, wf.num_fields*sizeof(unsigned int));
+    //*R = (uint32_t *) calloc(wf.num_fields,sizeof(uint32_t));
+    int r = posix_memalign((void **)R, 32, wf.num_fields*sizeof(uint32_t));
+    memset(*R, 0, wf.num_fields*sizeof(uint32_t));
 
-    unsigned int max_wah_size = (wf.num_fields + 31 - 1)/ 31;
-    unsigned int *record_new_bm = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size);
+    uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    uint32_t *record_new_bm = (uint32_t *)
+                        malloc(sizeof(uint32_t)*max_wah_size);
 
-    unsigned int *or_result_bm = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size);
+    uint32_t *or_result_bm = (uint32_t *)
+                        malloc(sizeof(uint32_t)*max_wah_size);
 
-    unsigned int and_result_bm_size, record_new_bm_size, or_result_bm_size;
-    unsigned int i,j,r_size;
+    uint32_t and_result_bm_size, record_new_bm_size, or_result_bm_size;
+    uint32_t i,j,r_size;
 
 #ifdef time_avx_count_range_records_in_place_wahbm
     unsigned long t1 = 0, t2 = 0, t3 = 0;
@@ -331,7 +332,7 @@ unsigned int avx_count_range_records_in_place_wahbm(
 
     for (i = 0; i < num_r; ++i) {
         // or the appropriate bitmaps
-        memset(or_result_bm, 0, sizeof(unsigned int)*max_wah_size);
+        memset(or_result_bm, 0, sizeof(uint32_t)*max_wah_size);
 
         for (j = start_test_value; j < end_test_value; ++j) {
 
@@ -402,25 +403,25 @@ unsigned int avx_count_range_records_in_place_wahbm(
 #endif
 
 #ifdef __AVX2__
-//{{{ unsigned int avx_sum_range_records_in_place_wahbm(struct wah_file wf,
-unsigned int avx_sum_range_records_in_place_wahbm(
+//{{{ uint32_t avx_sum_range_records_in_place_wahbm(struct wah_file wf,
+uint32_t avx_sum_range_records_in_place_wahbm(
             struct wah_file wf,
-            unsigned int *record_ids,
-            unsigned int num_r,
-            unsigned int start_test_value,
-            unsigned int end_test_value,
-            unsigned int **R) 
+            uint32_t *record_ids,
+            uint32_t num_r,
+            uint32_t start_test_value,
+            uint32_t end_test_value,
+            uint32_t **R) 
 
 {
-    int r = posix_memalign((void **)R, 32, wf.num_fields*sizeof(unsigned int));
-    memset(*R, 0, wf.num_fields*sizeof(unsigned int));
+    int r = posix_memalign((void **)R, 32, wf.num_fields*sizeof(uint32_t));
+    memset(*R, 0, wf.num_fields*sizeof(uint32_t));
 
-    unsigned int max_wah_size = (wf.num_fields + 31 - 1)/ 31;
-    unsigned int *record_new_bm = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size);
+    uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    uint32_t *record_new_bm = (uint32_t *)
+                        malloc(sizeof(uint32_t)*max_wah_size);
 
-    unsigned int record_new_bm_size;
-    unsigned int i,j,r_size;
+    uint32_t record_new_bm_size;
+    uint32_t i,j,r_size;
 #ifdef time_sum_range_records_in_place_wahbm
     unsigned long t1 = 0, t2 = 0, t3 = 0;
 #endif
@@ -478,23 +479,23 @@ unsigned int avx_sum_range_records_in_place_wahbm(
 //}}}
 #endif
 
-//{{{ unsigned int sum_range_records_in_place_wahbm(struct wah_file wf,
-unsigned int sum_range_records_in_place_wahbm(struct wah_file wf,
-                                              unsigned int *record_ids,
-                                              unsigned int num_r,
-                                              unsigned int start_test_value,
-                                              unsigned int end_test_value,
-                                              unsigned int **R) 
+//{{{ uint32_t sum_range_records_in_place_wahbm(struct wah_file wf,
+uint32_t sum_range_records_in_place_wahbm(struct wah_file wf,
+                                              uint32_t *record_ids,
+                                              uint32_t num_r,
+                                              uint32_t start_test_value,
+                                              uint32_t end_test_value,
+                                              uint32_t **R) 
 
 {
-    *R = (unsigned int *) calloc(wf.num_fields,sizeof(unsigned int));
+    *R = (uint32_t *) calloc(wf.num_fields,sizeof(uint32_t));
 
-    unsigned int max_wah_size = (wf.num_fields + 31 - 1)/ 31;
-    unsigned int *record_new_bm = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size);
+    uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    uint32_t *record_new_bm = (uint32_t *)
+                        malloc(sizeof(uint32_t)*max_wah_size);
 
-    unsigned int and_result_bm_size, record_new_bm_size, or_result_bm_size;
-    unsigned int i,j,r_size;
+    uint32_t and_result_bm_size, record_new_bm_size, or_result_bm_size;
+    uint32_t i,j,r_size;
 
     struct pool *t_pool = pool_start(t_add_n_wahbm_2, 2);
 
@@ -522,7 +523,7 @@ unsigned int sum_range_records_in_place_wahbm(struct wah_file wf,
 
 #if 1
             /*
-            unsigned int num_allels = 0;
+            uint32_t num_allels = 0;
             if (j == 0) //homo_ref
                 num_alleles = 2;
             else if (j == 1) //het
@@ -574,12 +575,12 @@ unsigned int sum_range_records_in_place_wahbm(struct wah_file wf,
 }
 //}}}
 
-//{{{ unsigned int gt_records_in_place_wahbm(struct wah_file wf,
-unsigned int gt_records_in_place_wahbm(struct wah_file wf,
-                                       unsigned int *record_ids,
-                                       unsigned int num_r,
-                                       unsigned int test_value,
-                                       unsigned int **R) 
+//{{{ uint32_t gt_records_in_place_wahbm(struct wah_file wf,
+uint32_t gt_records_in_place_wahbm(struct wah_file wf,
+                                       uint32_t *record_ids,
+                                       uint32_t num_r,
+                                       uint32_t test_value,
+                                       uint32_t **R) 
 
 {
     // TODO: need constants for upper bound.
@@ -592,12 +593,12 @@ unsigned int gt_records_in_place_wahbm(struct wah_file wf,
 }
 //}}}
 
-//{{{ unsigned int gt_count_records_in_place_wahbm(struct wah_file wf,
-unsigned int gt_count_records_in_place_wahbm(struct wah_file wf,
-                                             unsigned int *record_ids,
-                                             unsigned int num_r,
-                                             unsigned int test_value,
-                                             unsigned int **R) 
+//{{{ uint32_t gt_count_records_in_place_wahbm(struct wah_file wf,
+uint32_t gt_count_records_in_place_wahbm(struct wah_file wf,
+                                             uint32_t *record_ids,
+                                             uint32_t num_r,
+                                             uint32_t test_value,
+                                             uint32_t **R) 
 
 {
     // TODO: need constants for upper bound.
@@ -611,12 +612,12 @@ unsigned int gt_count_records_in_place_wahbm(struct wah_file wf,
 //}}}
 
 #ifdef __AVX2__
-//{{{ unsigned int avx_gt_count_records_in_place_wahbm(struct wah_file wf,
-unsigned int avx_gt_count_records_in_place_wahbm(struct wah_file wf,
-                                             unsigned int *record_ids,
-                                             unsigned int num_r,
-                                             unsigned int test_value,
-                                             unsigned int **R) 
+//{{{ uint32_t avx_gt_count_records_in_place_wahbm(struct wah_file wf,
+uint32_t avx_gt_count_records_in_place_wahbm(struct wah_file wf,
+                                             uint32_t *record_ids,
+                                             uint32_t num_r,
+                                             uint32_t test_value,
+                                             uint32_t **R) 
 
 {
     // TODO: need constants for upper bound.
@@ -630,12 +631,12 @@ unsigned int avx_gt_count_records_in_place_wahbm(struct wah_file wf,
 //}}}
 #endif
 
-//{{{ unsigned int gt_sum_records_in_place_wahbm(struct wah_file wf,
-unsigned int gt_sum_records_in_place_wahbm(struct wah_file wf,
-                                             unsigned int *record_ids,
-                                             unsigned int num_r,
-                                             unsigned int test_value,
-                                             unsigned int **R) 
+//{{{ uint32_t gt_sum_records_in_place_wahbm(struct wah_file wf,
+uint32_t gt_sum_records_in_place_wahbm(struct wah_file wf,
+                                             uint32_t *record_ids,
+                                             uint32_t num_r,
+                                             uint32_t test_value,
+                                             uint32_t **R) 
 
 {
     // TODO: need constants for upper bound.
@@ -649,37 +650,37 @@ unsigned int gt_sum_records_in_place_wahbm(struct wah_file wf,
 //}}}
 
 #if 0
-//{{{ unsigned int count_range_records_in_place_wahbm(struct wah_file wf,
-unsigned int count_range_records_in_place_wahbm(struct wah_file wf,
-                                                unsigned int *record_ids,
-                                                unsigned int num_r,
-                                                unsigned int start_test_value,
-                                                unsigned int end_test_value,
-                                                unsigned int **R) 
+//{{{ uint32_t count_range_records_in_place_wahbm(struct wah_file wf,
+uint32_t count_range_records_in_place_wahbm(struct wah_file wf,
+                                                uint32_t *record_ids,
+                                                uint32_t num_r,
+                                                uint32_t start_test_value,
+                                                uint32_t end_test_value,
+                                                uint32_t **R) 
 
 {
 
-    *R = (unsigned int *) calloc(wf.num_fields,sizeof(unsigned int));
+    *R = (uint32_t *) calloc(wf.num_fields,sizeof(uint32_t));
 
-    unsigned int max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
 
     /*
-    unsigned int *record_new_bm = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size);
+    uint32_t *record_new_bm = (uint32_t *)
+                        malloc(sizeof(uint32_t)*max_wah_size);
     */
-    unsigned int *record_new_bm;
+    uint32_t *record_new_bm;
 
-    unsigned int *or_result_bm = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size);
+    uint32_t *or_result_bm = (uint32_t *)
+                        malloc(sizeof(uint32_t)*max_wah_size);
 
-    unsigned int and_result_bm_size, record_new_bm_size, or_result_bm_size;
-    unsigned int i,j,k,r_size;
+    uint32_t and_result_bm_size, record_new_bm_size, or_result_bm_size;
+    uint32_t i,j,k,r_size;
 
 
-    unsigned int *record_new_bms = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size*4);
-    unsigned int record_new_bms_sizes[4];
-    unsigned int record_new_bms_size;
+    uint32_t *record_new_bms = (uint32_t *)
+                        malloc(sizeof(uint32_t)*max_wah_size*4);
+    uint32_t record_new_bms_sizes[4];
+    uint32_t record_new_bms_size;
 
 
 #ifdef time_count_range_records_in_place_wahbm
@@ -688,7 +689,7 @@ unsigned int count_range_records_in_place_wahbm(struct wah_file wf,
 
     for (i = 0; i < num_r; ++i) {
         // or the appropriate bitmaps
-        memset(or_result_bm, 0, sizeof(unsigned int)*max_wah_size);
+        memset(or_result_bm, 0, sizeof(uint32_t)*max_wah_size);
 
 #ifdef time_count_range_records_in_place_wahbm
             start();

@@ -22,7 +22,7 @@
  *
  * Example Usage:
  * @code
- *    unsigned int X[5] =
+ *    uint32_t X[5] =
  *        { bin_char_to_int("01000000000000000000000000000001"),
  *          bin_char_to_int("11111111111111111111111111111111"),
  *          bin_char_to_int("11111111111111111111111111111111"),
@@ -30,25 +30,25 @@
  *          bin_char_to_int("01000000000000000001010101000000")
  *        };
  *
- *    unsigned int Y[5] =
+ *    uint32_t Y[5] =
  *        { bin_char_to_int("01000000000000000000000000000001"),
  *          bin_char_to_int("11111111111111111111111111111111"),
  *          bin_char_to_int("11111111111111111111111111111000"),
  *          bin_char_to_int("00000000000000000000000000000000"),
  *          bin_char_to_int("00000000000000000000000000001011")
  *        };
- *    unsigned int R[6] = {0,0,0,0,0,0};
+ *    uint32_t R[6] = {0,0,0,0,0,0};
  *
- *    unsigned int r = wah_in_place_or(R, 6, w_Y, wah_size_Y);
+ *    uint32_t r = wah_in_place_or(R, 6, w_Y, wah_size_Y);
  *    r = wah_in_place_or(R, 6, w_X, wah_size_X);
- *    unsigned int *ints_ip;
- *    unsigned int ints_ip_len = wah_to_ints(R,r,&ints_ip);
+ *    uint32_t *ints_ip;
+ *    uint32_t ints_ip_len = wah_to_ints(R,r,&ints_ip);
  * @endcode
  */
-unsigned int  wah_in_place_or(unsigned int *r_wah,
-                              unsigned int r_wah_size,
-                              unsigned int *wah,
-                              unsigned int wah_size);
+uint32_t  wah_in_place_or(uint32_t *r_wah,
+                              uint32_t r_wah_size,
+                              uint32_t *wah,
+                              uint32_t wah_size);
 
 /**
  * @brief   in-place AND two WAH runs
@@ -68,7 +68,7 @@ unsigned int  wah_in_place_or(unsigned int *r_wah,
  *
  * Example Usage:
  * @code
- *    unsigned int X[5] =
+ *    uint32_t X[5] =
  *        { bin_char_to_int("01000000000000000000000000000001"),
  *          bin_char_to_int("11111111111111111111111111111111"),
  *          bin_char_to_int("11111111111111111111111111111111"),
@@ -76,30 +76,30 @@ unsigned int  wah_in_place_or(unsigned int *r_wah,
  *          bin_char_to_int("01000000000000000001010101000000")
  *        };
  *
- *    unsigned int Y[5] =
+ *    uint32_t Y[5] =
  *        { bin_char_to_int("01000000000000000000000000000001"),
  *          bin_char_to_int("11111111111111111111111111111111"),
  *          bin_char_to_int("11111111111111111111111111111000"),
  *          bin_char_to_int("00000000000000000000000000000000"),
  *          bin_char_to_int("00000000000000000000000000001011")
  *        };
- *    unsigned int R[6] = {0x7fffffff,
+ *    uint32_t R[6] = {0x7fffffff,
  *                         0x7fffffff,
  *                         0x7fffffff,
  *                         0x7fffffff,
  *                         0x7fffffff,
  *                         0x7fffffff};
  *
- *    unsigned int r = wah_in_place_and(R, 6, w_Y, wah_size_Y);
+ *    uint32_t r = wah_in_place_and(R, 6, w_Y, wah_size_Y);
  *    r = wah_in_place_and(R, 6, w_X, wah_size_X);
- *    unsigned int *ints_ip;
- *    unsigned int ints_ip_len = wah_to_ints(R,r,&ints_ip);
+ *    uint32_t *ints_ip;
+ *    uint32_t ints_ip_len = wah_to_ints(R,r,&ints_ip);
  * @endcode
  */
-unsigned int  wah_in_place_and(unsigned int *r_wah,
-                               unsigned int r_wah_size,
-                               unsigned int *wah,
-                               unsigned int wah_size);
+uint32_t  wah_in_place_and(uint32_t *r_wah,
+                               uint32_t r_wah_size,
+                               uint32_t *wah,
+                               uint32_t wah_size);
 
 /**
  * @brief Get a pointer to the bitmap of a particular WAH-encoded bitmap record.
@@ -119,21 +119,21 @@ unsigned int  wah_in_place_and(unsigned int *r_wah,
  * @code
  *      char *wah_file_name="data/10.1e4.ind.wahbm";
  *      struct wah_file wf = init_wah_file(wah_file_name);
- *      unsigned int *wah_bm;
- *      unsigned int test_record = 1;
- *      unsigned int test_bitmap = 2;
+ *      uint32_t *wah_bm;
+ *      uint32_t test_record = 1;
+ *      uint32_t test_bitmap = 2;
  *      unsinged int wah_size = get_wah_bitmap_in_place(wf,
  *                                                      test_record,
  *                                                      test_bitmap,
  *                                                      &wah_bm);
  *      unsinged int *ints;
- *      unsigned int num_ints = wah_to_ints(wah_bm, wah_size, &ints);
+ *      uint32_t num_ints = wah_to_ints(wah_bm, wah_size, &ints);
  * @endcode
  */
-unsigned int get_wah_bitmap_in_place(struct wah_file wf,
-                                     unsigned int wah_record,
-                                     unsigned int bitmap,
-                                     unsigned int **wah_bitmap);
+uint32_t get_wah_bitmap_in_place(struct wah_file wf,
+                                     uint32_t wah_record,
+                                     uint32_t bitmap,
+                                     uint32_t **wah_bitmap);
 
 
 /**
@@ -152,12 +152,12 @@ unsigned int get_wah_bitmap_in_place(struct wah_file wf,
  * @code
  * @endcode
  */
-unsigned int range_records_in_place_wahbm(struct wah_file wf,
-                                          unsigned int *record_ids,
-                                          unsigned int num_r,
-                                          unsigned int start_test_value,
-                                          unsigned int end_test_value,
-                                          unsigned int **R);
+uint32_t range_records_in_place_wahbm(struct wah_file wf,
+                                          uint32_t *record_ids,
+                                          uint32_t num_r,
+                                          uint32_t start_test_value,
+                                          uint32_t end_test_value,
+                                          uint32_t **R);
 /**
  * @brief For each field, count that number of records that meet a certian
  * critera using in-place functions
@@ -177,12 +177,12 @@ unsigned int range_records_in_place_wahbm(struct wah_file wf,
  * @code
  * @endcode
  */
-unsigned int count_range_records_in_place_wahbm(struct wah_file wf,
-                                                unsigned int *record_ids,
-                                                unsigned int num_r,
-                                                unsigned int start_test_value,
-                                                unsigned int end_test_value,
-                                                unsigned int **R);
+uint32_t count_range_records_in_place_wahbm(struct wah_file wf,
+                                                uint32_t *record_ids,
+                                                uint32_t num_r,
+                                                uint32_t start_test_value,
+                                                uint32_t end_test_value,
+                                                uint32_t **R);
 
 /**
  * @brief For each field, count the number of records that meet the criterea
@@ -200,11 +200,11 @@ unsigned int count_range_records_in_place_wahbm(struct wah_file wf,
  * @code
  * @endcode
  */
-unsigned int gt_count_records_in_place_wahbm(struct wah_file wf,
-                                             unsigned int *record_ids,
-                                             unsigned int num_r,
-                                             unsigned int test_value,
-                                             unsigned int **R) ;
+uint32_t gt_count_records_in_place_wahbm(struct wah_file wf,
+                                             uint32_t *record_ids,
+                                             uint32_t num_r,
+                                             uint32_t test_value,
+                                             uint32_t **R) ;
 
 /**
  * @brief Return records whose value are greater than the test value using 
@@ -222,11 +222,11 @@ unsigned int gt_count_records_in_place_wahbm(struct wah_file wf,
  * @code
  * @endcode
  */
-unsigned int gt_records_in_place_wahbm(struct wah_file wf,
-                                       unsigned int *record_ids,
-                                       unsigned int num_r,
-                                       unsigned int test_value,
-                                       unsigned int **R);
+uint32_t gt_records_in_place_wahbm(struct wah_file wf,
+                                       uint32_t *record_ids,
+                                       uint32_t num_r,
+                                       uint32_t test_value,
+                                       uint32_t **R);
 
 /**
  * @brief 
@@ -244,11 +244,11 @@ unsigned int gt_records_in_place_wahbm(struct wah_file wf,
  * @endcode
  */
 
-unsigned int gt_records_in_place_wahbm(struct wah_file wf,
-                                       unsigned int *record_ids,
-                                       unsigned int num_r,
-                                       unsigned int test_value,
-                                       unsigned int **R);
+uint32_t gt_records_in_place_wahbm(struct wah_file wf,
+                                       uint32_t *record_ids,
+                                       uint32_t num_r,
+                                       uint32_t test_value,
+                                       uint32_t **R);
 
 /**
  * @brief For each field, sum the number of that meet a certian
@@ -269,42 +269,42 @@ unsigned int gt_records_in_place_wahbm(struct wah_file wf,
  * @code
  * @endcode
  */
-unsigned int sum_range_records_in_place_wahbm(struct wah_file wf,
-                                              unsigned int *record_ids,
-                                              unsigned int num_r,
-                                              unsigned int start_test_value,
-                                              unsigned int end_test_value,
-                                              unsigned int **R);
+uint32_t sum_range_records_in_place_wahbm(struct wah_file wf,
+                                              uint32_t *record_ids,
+                                              uint32_t num_r,
+                                              uint32_t start_test_value,
+                                              uint32_t end_test_value,
+                                              uint32_t **R);
 
 
-unsigned int gt_sum_records_in_place_wahbm(struct wah_file wf,
-                                             unsigned int *record_ids,
-                                             unsigned int num_r,
-                                             unsigned int test_value,
-                                             unsigned int **R);
+uint32_t gt_sum_records_in_place_wahbm(struct wah_file wf,
+                                             uint32_t *record_ids,
+                                             uint32_t num_r,
+                                             uint32_t test_value,
+                                             uint32_t **R);
 /**
  * @breif Read in all 4 bitmaps at once
  */
-unsigned int get_wah_bitmaps_in_place(struct wah_file wf,
-                                      unsigned int wah_record,
-                                      unsigned int **wah_bitmap,
-                                      unsigned int *wah_sizes);
+uint32_t get_wah_bitmaps_in_place(struct wah_file wf,
+                                      uint32_t wah_record,
+                                      uint32_t **wah_bitmap,
+                                      uint32_t *wah_sizes);
 #ifdef __AVX2__
-unsigned int avx_gt_count_records_in_place_wahbm(struct wah_file wf,
-                                             unsigned int *record_ids,
-                                             unsigned int num_r,
-                                             unsigned int test_value,
-                                             unsigned int **R);
+uint32_t avx_gt_count_records_in_place_wahbm(struct wah_file wf,
+                                             uint32_t *record_ids,
+                                             uint32_t num_r,
+                                             uint32_t test_value,
+                                             uint32_t **R);
 #endif
 
 #ifdef __AVX2__
-unsigned int avx_count_range_records_in_place_wahbm(
+uint32_t avx_count_range_records_in_place_wahbm(
             struct wah_file wf,
-            unsigned int *record_ids,
-            unsigned int num_r,
-            unsigned int start_test_value,
-            unsigned int end_test_value,
-            unsigned int **R);
+            uint32_t *record_ids,
+            uint32_t num_r,
+            uint32_t start_test_value,
+            uint32_t end_test_value,
+            uint32_t **R);
 #endif
 
 

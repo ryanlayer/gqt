@@ -27,15 +27,15 @@ struct wah_file init_wah_file(char *file_name)
 
     // Jump to the begining of the file to grab the record size
     fseek(wf.file, 0, SEEK_SET);
-    int r = fread(&wf.num_fields,sizeof(unsigned int),1,wf.file);
-    r = fread(&wf.num_records,sizeof(unsigned int),1,wf.file);
+    int r = fread(&wf.num_fields,sizeof(uint32_t),1,wf.file);
+    r = fread(&wf.num_records,sizeof(uint32_t),1,wf.file);
 
-    wf.record_offsets = (unsigned int *) 
-            malloc(sizeof (unsigned int)*wf.num_records);
+    wf.record_offsets = (uint64_t *) 
+            malloc(sizeof (uint64_t)*wf.num_records);
 
-    unsigned int i;
+    uint32_t i;
     for (i = 0; i < wf.num_records; ++i)
-        r = fread(&(wf.record_offsets[i]),sizeof(unsigned int),1,wf.file);
+        r = fread(&(wf.record_offsets[i]),sizeof(uint64_t),1,wf.file);
 
 
     wf.header_offset = ftell(wf.file);
@@ -44,109 +44,14 @@ struct wah_file init_wah_file(char *file_name)
 }
 //}}}
 
-//{{{ unsigned int get_wah_record(struct wah_file wf,
-unsigned int get_wah_record(struct wah_file wf,
-                            unsigned int wah_record,
-                            unsigned int **wah)
-{
-    // get the size of the WAH-encoded bitmap
-    unsigned int wah_size = 0, wah_offset = 0;
-    if ( wah_record == 0) {
-        wah_size = wf.record_offsets[wah_record];
-        wah_offset = wf.header_offset;
-    } else {
-        wah_size = wf.record_offsets[wah_record] - 
-                   wf.record_offsets[wah_record - 1];
-
-        wah_offset = wf.header_offset +
-                     sizeof(unsigned int) * 
-                        (wf.record_offsets[wah_record] - wah_size);
-    }
-
-    *wah = (unsigned int *) malloc(sizeof(unsigned int)*wah_size);
-    fseek(wf.file, wah_offset, SEEK_SET);
-    int r = fread(*wah,sizeof(unsigned int),wah_size,wf.file);
-
-    return wah_size;
-}
-//}}}
-
-// print
-//{{{ unsigned int print_wah(struct wah_file wf,
-unsigned int print_wah(struct wah_file wf,
-                       unsigned int *record_ids,
-                       unsigned int num_r,
-                       unsigned int format)
-{
-    unsigned int i,j,k,wah_size,printed_bits,to_print = num_r;
-    unsigned int *wah = NULL;
-
-    if (num_r == 0)
-        to_print = wf.num_records;
-
-    for (i = 0; i < to_print; ++i) {
-
-        // get the compressed bitmap
-        if (num_r > 0)
-            wah_size = get_wah_record(wf,
-                                     record_ids[i],
-                                     &wah);
-        else
-            wah_size = get_wah_record(wf,
-                                     i,
-                                     &wah);
-
-        // decompress 
-        unsigned int *ints = NULL;
-        unsigned int ints_size = wah_to_ints(wah,wah_size,&ints);
-        printed_bits = 0;
-
-        for (j = 0; j < ints_size; ++j) {
-            if (j !=0)
-                printf(" ");
-            for (k = 0; k < 16; ++k) {
-                unsigned int val = (ints[j] >> (30 - 2*k)) & 3;
-                if (k !=0)
-                    printf(" ");
-                printf("%u", val);
-                printed_bits += 1;
-                if (printed_bits == wf.num_fields)
-                    break;
-            }
-            if (printed_bits == wf.num_fields)
-                break;
-        }
-        printf("\n");
-
-        free(ints);
-        ints = NULL;
-        free(wah);
-        wah = NULL;
-    }
-
-    return to_print;
-}
-//}}}
-
-//{{{ unsigned int print_by_name_wah(char *wahbm_file_name,
-unsigned int print_by_name_wah(char *wahbm_file_name,
-                               unsigned int *record_ids,
-                               unsigned int num_r,
-                               unsigned int format)
-{
-    struct wah_file wf = init_wah_file(wahbm_file_name);
-    return print_wah(wf, record_ids, num_r, format);
-}
-//}}} 
-
 // operate
 //{{{ void wah_or(struct wah_run *x,
-unsigned int  wah_or(struct wah_run *x,
+uint32_t  wah_or(struct wah_run *x,
                      struct wah_run *y,
-                     unsigned int **O)
+                     uint32_t **O)
 {
     struct wah_active_word a;
-    unsigned int num_words;
+    uint32_t num_words;
     struct wah_ll *Z_head = NULL,
                   *Z_tail = NULL;
     int Z_len = 0;
@@ -239,7 +144,7 @@ unsigned int  wah_or(struct wah_run *x,
         }
     }
 
-    *O = (unsigned int *) malloc(Z_len * sizeof(unsigned int));
+    *O = (uint32_t *) malloc(Z_len * sizeof(uint32_t));
 
     struct wah_ll *Z_tmp, *Z_curr = Z_head;
     int i = 0;
@@ -255,13 +160,13 @@ unsigned int  wah_or(struct wah_run *x,
 }
 //}}}
 
-//{{{ unsigned int wah_and(struct wah_run *x,
-unsigned int wah_and(struct wah_run *x,
+//{{{ uint32_t wah_and(struct wah_run *x,
+uint32_t wah_and(struct wah_run *x,
                      struct wah_run *y,
-                     unsigned int **O)
+                     uint32_t **O)
 {
     struct wah_active_word a;
-    unsigned int num_words;
+    uint32_t num_words;
     struct wah_ll *Z_head = NULL,
                   *Z_tail = NULL;
     int Z_len = 0;
@@ -354,7 +259,7 @@ unsigned int wah_and(struct wah_run *x,
         }
     }
 
-    *O = (unsigned int *) malloc(Z_len * sizeof(unsigned int));
+    *O = (uint32_t *) malloc(Z_len * sizeof(uint32_t));
 
     struct wah_ll *Z_tmp, *Z_curr = Z_head;
     int i = 0;
@@ -370,9 +275,9 @@ unsigned int wah_and(struct wah_run *x,
 }
 //}}}
 
-//{{{ struct wah_run init_wah_run(unsigned int *words,
-struct wah_run init_wah_run(unsigned int *words,
-                            unsigned int len){
+//{{{ struct wah_run init_wah_run(uint32_t *words,
+struct wah_run init_wah_run(uint32_t *words,
+                            uint32_t len){
     struct wah_run r;
     r.words = words;
     r.word_i = 0;
@@ -401,16 +306,16 @@ void wah_run_decode(struct wah_run *r)
 //}}}
 
 // compress
-//{{{ int ints_to_wah16(unsigned int *I,
-unsigned int ints_to_wah16(unsigned int *I,
+//{{{ int ints_to_wah16(uint32_t *I,
+uint32_t ints_to_wah16(uint32_t *I,
                            int I_len,
-                           unsigned int used_bits,
+                           uint32_t used_bits,
                            uint16_t **W)
 {
-    unsigned int W_len;
+    uint32_t W_len;
     uint16_t *O;
     // split the intput up int to 31-bit groups
-    unsigned int O_len = map_from_32_bits_to_15_bits(I, I_len, used_bits, &O);
+    uint32_t O_len = map_from_32_bits_to_15_bits(I, I_len, used_bits, &O);
 
     // build the WAH list
     struct wah16_ll *A_head = NULL,
@@ -445,16 +350,16 @@ unsigned int ints_to_wah16(unsigned int *I,
 }
 //}}}
 
-//{{{ int ints_to_wah(unsigned int *I,
-unsigned int ints_to_wah(unsigned int *I,
+//{{{ int ints_to_wah(uint32_t *I,
+uint32_t ints_to_wah(uint32_t *I,
                          int I_len,
-                         unsigned int used_bits,
-                         unsigned int **W)
+                         uint32_t used_bits,
+                         uint32_t **W)
 {
-    unsigned int W_len;
-    unsigned int *O;
+    uint32_t W_len;
+    uint32_t *O;
     // split the intput up int to 31-bit groups
-    unsigned int O_len = map_from_32_bits_to_31_bits(I, I_len, used_bits, &O);
+    uint32_t O_len = map_from_32_bits_to_31_bits(I, I_len, used_bits, &O);
 
     // build the WAH list
     struct wah_ll *A_head = NULL,
@@ -472,7 +377,7 @@ unsigned int ints_to_wah(unsigned int *I,
 
     // Move the linked list to an array
     W_len = c;
-    *W = (unsigned int *) malloc(W_len * sizeof(unsigned int));
+    *W = (uint32_t *) malloc(W_len * sizeof(uint32_t));
 
     A_curr = A_head;
     struct wah_ll *A_tmp;
@@ -489,15 +394,15 @@ unsigned int ints_to_wah(unsigned int *I,
 }
 //}}}
 
-//{{{unsinged int map_from_32_bits_to_15_bits(unsigned int *I,
-unsigned int map_from_32_bits_to_15_bits(unsigned int *I,
+//{{{unsinged int map_from_32_bits_to_15_bits(uint32_t *I,
+uint32_t map_from_32_bits_to_15_bits(uint32_t *I,
                                          int I_len,
-                                         unsigned int used_bits,
+                                         uint32_t used_bits,
                                          uint16_t **O)
 {
-    unsigned int int_i, bit_i, group_i, in_group_i;
-    unsigned int O_len =  (used_bits + 15 - 1)/ 15;
-    //unsigned int O_len =  (I_len*32 + 31 - 1)/ 31;
+    uint32_t int_i, bit_i, group_i, in_group_i;
+    uint32_t O_len =  (used_bits + 15 - 1)/ 15;
+    //uint32_t O_len =  (I_len*32 + 31 - 1)/ 31;
 
     *O = (uint16_t *) calloc(O_len, sizeof(uint16_t));
 
@@ -508,7 +413,7 @@ unsigned int map_from_32_bits_to_15_bits(unsigned int *I,
 
     for (int_i = 0; int_i < I_len; ++int_i) {
         for ( ;bit_i<=32*(int_i+1); ++bit_i) {
-            unsigned int bit = (I[int_i] >> (32 - (bit_i%32))) & 1;
+            uint32_t bit = (I[int_i] >> (32 - (bit_i%32))) & 1;
             (*O)[group_i] = (*O)[group_i] + (bit << (14 - in_group_i));
 
             in_group_i += 1;
@@ -527,22 +432,22 @@ unsigned int map_from_32_bits_to_15_bits(unsigned int *I,
 }
 //}}}
 
-//{{{unsinged int map_from_32_bits_to_31_bits(unsigned int *I,
+//{{{unsinged int map_from_32_bits_to_31_bits(uint32_t *I,
 /* 
  * Take a list of 32 bit number and gives the list of 31-bit groups
  * (represented by 32-bit with left padding) ints 
  * Returns the number of 31-bit groups in O
  */
-unsigned int map_from_32_bits_to_31_bits(unsigned int *I,
+uint32_t map_from_32_bits_to_31_bits(uint32_t *I,
                                          int I_len,
-                                         unsigned int used_bits,
-                                         unsigned int **O)
+                                         uint32_t used_bits,
+                                         uint32_t **O)
 {
-    unsigned int int_i, bit_i, group_i, in_group_i;
-    unsigned int O_len =  (used_bits + 31 - 1)/ 31;
-    //unsigned int O_len =  (I_len*32 + 31 - 1)/ 31;
+    uint32_t int_i, bit_i, group_i, in_group_i;
+    uint32_t O_len =  (used_bits + 31 - 1)/ 31;
+    //uint32_t O_len =  (I_len*32 + 31 - 1)/ 31;
 
-    *O = (unsigned int *) calloc(O_len, sizeof(unsigned int));
+    *O = (uint32_t *) calloc(O_len, sizeof(uint32_t));
 
 
     bit_i = 1;
@@ -551,7 +456,7 @@ unsigned int map_from_32_bits_to_31_bits(unsigned int *I,
 
     for (int_i = 0; int_i < I_len; ++int_i) {
         for ( ;bit_i<=32*(int_i+1); ++bit_i) {
-            unsigned int bit = (I[int_i] >> (32 - (bit_i%32))) & 1;
+            uint32_t bit = (I[int_i] >> (32 - (bit_i%32))) & 1;
             (*O)[group_i] = (*O)[group_i] + (bit << (30 - in_group_i));
 
             in_group_i += 1;
@@ -723,7 +628,7 @@ int append_active_word(struct wah_ll **A_head,
 int append_fill_word(struct wah_ll **A_head,
                      struct wah_ll **A_tail,
                      int fill_bit,
-                     unsigned int fill_size)
+                     uint32_t fill_size)
 {
 
     // if it is a fill, the bit matches, and there is room 
@@ -762,14 +667,14 @@ int append_fill_word(struct wah_ll **A_head,
 //}}}
 
 // inflate
-//{{{ unsigned int wah_to_ints(unsigned int *W,
-unsigned int wah_to_ints(unsigned int *W,
-                         unsigned int W_len,
-                         unsigned int **O)
+//{{{ uint32_t wah_to_ints(uint32_t *W,
+uint32_t wah_to_ints(uint32_t *W,
+                         uint32_t W_len,
+                         uint32_t **O)
 {
 
-    unsigned int wah_i;
-    unsigned int num_bits = 0;
+    uint32_t wah_i;
+    uint32_t num_bits = 0;
 
     for (wah_i = 0; wah_i < W_len; ++wah_i) {
         if (W[wah_i] >> 31 == 1) 
@@ -778,11 +683,11 @@ unsigned int wah_to_ints(unsigned int *W,
             num_bits += 31;
     }
 
-    unsigned int num_ints = (num_bits + 32 - 1) / 32;
-    *O = (unsigned int *) malloc (num_ints * sizeof(unsigned int));
+    uint32_t num_ints = (num_bits + 32 - 1) / 32;
+    *O = (uint32_t *) malloc (num_ints * sizeof(uint32_t));
 
 
-    unsigned int num_words,
+    uint32_t num_words,
                  word_i,
                  fill_bit,
                  bits,
@@ -827,3 +732,101 @@ unsigned int wah_to_ints(unsigned int *W,
     return num_ints;
 }
 //}}}
+
+
+//old
+#if 0
+//{{{ uint32_t get_wah_record(struct wah_file wf,
+uint32_t get_wah_record(struct wah_file wf,
+                        uint32_t wah_record,
+                        uint32_t **wah)
+{
+    // get the size of the WAH-encoded bitmap
+    uint32_t wah_size = 0, wah_offset = 0;
+    if ( wah_record == 0) {
+        wah_size = wf.record_offsets[wah_record];
+        wah_offset = wf.header_offset;
+    } else {
+        wah_size = wf.record_offsets[wah_record] - 
+                   wf.record_offsets[wah_record - 1];
+
+        wah_offset = wf.header_offset +
+                     sizeof(uint32_t) * 
+                        (wf.record_offsets[wah_record] - wah_size);
+    }
+
+    *wah = (uint32_t *) malloc(sizeof(uint32_t)*wah_size);
+    fseek(wf.file, wah_offset, SEEK_SET);
+    int r = fread(*wah,sizeof(uint32_t),wah_size,wf.file);
+
+    return wah_size;
+}
+//}}}
+
+//{{{ uint32_t print_wah(struct wah_file wf,
+uint32_t print_wah(struct wah_file wf,
+                       uint32_t *record_ids,
+                       uint32_t num_r,
+                       uint32_t format)
+{
+    uint32_t i,j,k,wah_size,printed_bits,to_print = num_r;
+    uint32_t *wah = NULL;
+
+    if (num_r == 0)
+        to_print = wf.num_records;
+
+    for (i = 0; i < to_print; ++i) {
+
+        // get the compressed bitmap
+        if (num_r > 0)
+            wah_size = get_wah_record(wf,
+                                     record_ids[i],
+                                     &wah);
+        else
+            wah_size = get_wah_record(wf,
+                                     i,
+                                     &wah);
+
+        // decompress 
+        uint32_t *ints = NULL;
+        uint32_t ints_size = wah_to_ints(wah,wah_size,&ints);
+        printed_bits = 0;
+
+        for (j = 0; j < ints_size; ++j) {
+            if (j !=0)
+                printf(" ");
+            for (k = 0; k < 16; ++k) {
+                uint32_t val = (ints[j] >> (30 - 2*k)) & 3;
+                if (k !=0)
+                    printf(" ");
+                printf("%u", val);
+                printed_bits += 1;
+                if (printed_bits == wf.num_fields)
+                    break;
+            }
+            if (printed_bits == wf.num_fields)
+                break;
+        }
+        printf("\n");
+
+        free(ints);
+        ints = NULL;
+        free(wah);
+        wah = NULL;
+    }
+
+    return to_print;
+}
+//}}}
+
+//{{{ uint32_t print_by_name_wah(char *wahbm_file_name,
+uint32_t print_by_name_wah(char *wahbm_file_name,
+                               uint32_t *record_ids,
+                               uint32_t num_r,
+                               uint32_t format)
+{
+    struct wah_file wf = init_wah_file(wahbm_file_name);
+    return print_wah(wf, record_ids, num_r, format);
+}
+//}}} 
+#endif

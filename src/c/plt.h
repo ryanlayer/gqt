@@ -5,7 +5,7 @@
 
 struct plt_file {
     FILE *file;
-    unsigned int num_fields, num_records;
+    uint32_t num_fields, num_records;
     long header_offset;
 };
 
@@ -27,8 +27,8 @@ struct plt_file init_plt_file(char *file_name);
  * @endcode
  */
 int convert_file_by_name_vcf_to_plt(char *in_file_name,
-                                    unsigned int num_fields,
-                                    unsigned int num_records,
+                                    uint32_t num_fields,
+                                    uint32_t num_records,
                                     char *out_file_name);
 
 /**
@@ -127,9 +127,9 @@ int convert_file_by_name_plt_to_ubin(char *in_file_name, char *out_file_name);
  */
 int convert_file_plt_to_ubin(struct plt_file pf, char *out_file_name);
 
-unsigned int plt_line_to_packed_ints(char *line,
-                                     unsigned int num_fields, 
-                                     unsigned int **packed_ints);
+uint32_t plt_line_to_packed_ints(char *line,
+                                     uint32_t num_fields, 
+                                     uint32_t **packed_ints);
 /**
  * @brief Convert an string of plain text values over the alphabet [0,1,2,3]
  *        to WAH encoding of the bitmap index representation of the two-bit
@@ -161,18 +161,18 @@ unsigned int plt_line_to_packed_ints(char *line,
  *                  "3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 "
  *                  "3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3";
  *
- *      unsigned int *wah;
- *      unsigned int *wah_sizes;
- *      unsigned int wah_len = plt_to_bitmap_wah(plt,
+ *      uint32_t *wah;
+ *      uint32_t *wah_sizes;
+ *      uint32_t wah_len = plt_to_bitmap_wah(plt,
  *                                               192,
  *                                               &wah,
  *                                               &wah_sizes);
  * @endcode
  */
-unsigned int plt_to_bitmap_wah(char *plt,
-                               unsigned int plt_len,
-                               unsigned int **W,
-                               unsigned int **wah_sizes);
+uint32_t plt_to_bitmap_wah(char *plt,
+                               uint32_t plt_len,
+                               uint32_t **W,
+                               uint32_t **wah_sizes);
 
 /**
  * @brief Get a pointer to the packed int representation of a particular plain
@@ -189,15 +189,15 @@ unsigned int plt_to_bitmap_wah(char *plt,
  * @code
  *      char *plt_file_name="data/10.1e4.ind.txt";
  *      struct plt_file pf = init_wah_file(plt_file_name);
- *      unsigned int *plt;
+ *      uint32_t *plt;
  *      unsinged int plt_size = get_plt_record(pf,
  *                                             test_record,
  *                                             &plt);
  * @endcode
  */
-unsigned int get_plt_record(struct plt_file pf,
-                            unsigned int plt_record,
-                            unsigned int **plt);
+uint32_t get_plt_record(struct plt_file pf,
+                            uint32_t plt_record,
+                            uint32_t **plt);
 
 /**
  * @brief Return a count of records whose values are >= start_test_value and <
@@ -215,12 +215,12 @@ unsigned int get_plt_record(struct plt_file pf,
  * @code
  * @endcode
  */
- unsigned int count_range_records_plt(struct plt_file pt,
-                                      unsigned int *record_ids,
-                                      unsigned int num_r,
-                                      unsigned int start_test_value,
-                                      unsigned int end_test_value,
-                                      unsigned int **R);
+ uint32_t count_range_records_plt(struct plt_file pt,
+                                      uint32_t *record_ids,
+                                      uint32_t num_r,
+                                      uint32_t start_test_value,
+                                      uint32_t end_test_value,
+                                      uint32_t **R);
 /**
  * @brief Return records whose values are >= start_test_value and <
  * end_test_value
@@ -237,12 +237,12 @@ unsigned int get_plt_record(struct plt_file pf,
  * @code
  * @endcode
  */
- unsigned int range_records_plt(struct plt_file pt,
-                              unsigned int *record_ids,
-                              unsigned int num_r,
-                              unsigned int start_test_value,
-                              unsigned int end_test_value,
-                              unsigned int **R);
+ uint32_t range_records_plt(struct plt_file pt,
+                              uint32_t *record_ids,
+                              uint32_t num_r,
+                              uint32_t start_test_value,
+                              uint32_t end_test_value,
+                              uint32_t **R);
 /**
  * @brief Return fields whose values are >= start_test_value and <
  * end_test_value
@@ -259,12 +259,12 @@ unsigned int get_plt_record(struct plt_file pf,
  * @code
  * @endcode
  */
- unsigned int range_fields_plt(struct plt_file pt,
-                               unsigned int *field_ids,
-                               unsigned int num_f,
-                               unsigned int start_test_value,
-                               unsigned int end_test_value,
-                               unsigned int **R);
+ uint32_t range_fields_plt(struct plt_file pt,
+                               uint32_t *field_ids,
+                               uint32_t num_f,
+                               uint32_t start_test_value,
+                               uint32_t end_test_value,
+                               uint32_t **R);
 
 /*
  * @brief Return records whose value is equal to the test value
@@ -281,11 +281,11 @@ unsigned int get_plt_record(struct plt_file pf,
  * @code
  * @endcode
  */
-unsigned int eq_records_plt(struct plt_file pf,
-                            unsigned int *record_ids,
-                            unsigned int num_r,
-                            unsigned int test_value,
-                            unsigned int **R);
+uint32_t eq_records_plt(struct plt_file pf,
+                            uint32_t *record_ids,
+                            uint32_t num_r,
+                            uint32_t test_value,
+                            uint32_t **R);
 
 /**
  * @brief Return records whose value is NOT equal to the test value
@@ -302,11 +302,11 @@ unsigned int eq_records_plt(struct plt_file pf,
  * @code
  * @endcode
  */
-unsigned int ne_records_plt(struct plt_file pf,
-                            unsigned int *record_ids,
-                            unsigned int num_r,
-                            unsigned int test_value,
-                            unsigned int **R);
+uint32_t ne_records_plt(struct plt_file pf,
+                            uint32_t *record_ids,
+                            uint32_t num_r,
+                            uint32_t test_value,
+                            uint32_t **R);
 
 /**
  * @brief Return records whose value are greater than the test value
@@ -323,11 +323,11 @@ unsigned int ne_records_plt(struct plt_file pf,
  * @code
  * @endcode
  */
-unsigned int gt_records_plt(struct plt_file pf,
-                            unsigned int *record_ids,
-                            unsigned int num_r,
-                            unsigned int test_value,
-                            unsigned int **R);
+uint32_t gt_records_plt(struct plt_file pf,
+                            uint32_t *record_ids,
+                            uint32_t num_r,
+                            uint32_t test_value,
+                            uint32_t **R);
 
 /**
  * @brief Return fields whose value are greater than the test value
@@ -344,11 +344,11 @@ unsigned int gt_records_plt(struct plt_file pf,
  * @code
  * @endcode
  */
-unsigned int gt_fields_plt(struct plt_file pf,
-                           unsigned int *field_ids,
-                           unsigned int num_f,
-                           unsigned int test_value,
-                           unsigned int **R);
+uint32_t gt_fields_plt(struct plt_file pf,
+                           uint32_t *field_ids,
+                           uint32_t num_f,
+                           uint32_t test_value,
+                           uint32_t **R);
 
 
 /**
@@ -366,11 +366,11 @@ unsigned int gt_fields_plt(struct plt_file pf,
  * @code
  * @endcode
  */
-unsigned int gt_records_plt(struct plt_file pf,
-                            unsigned int *field_ids,
-                            unsigned int num_f,
-                            unsigned int test_value,
-                            unsigned int **R);
+uint32_t gt_records_plt(struct plt_file pf,
+                            uint32_t *field_ids,
+                            uint32_t num_f,
+                            uint32_t test_value,
+                            uint32_t **R);
 
 
 /**
@@ -389,11 +389,11 @@ unsigned int gt_records_plt(struct plt_file pf,
  * @code
  * @endcode
  */
-unsigned int gt_records_plt(struct plt_file pf,
-                            unsigned int *record_ids,
-                            unsigned int num_r,
-                            unsigned int test_value,
-                            unsigned int **R);
+uint32_t gt_records_plt(struct plt_file pf,
+                            uint32_t *record_ids,
+                            uint32_t num_r,
+                            uint32_t test_value,
+                            uint32_t **R);
 
 
 
@@ -412,11 +412,11 @@ unsigned int gt_records_plt(struct plt_file pf,
  * @code
  * @endcode
  */
-unsigned int gte_records_plt(struct plt_file pf,
-                            unsigned int *record_ids,
-                            unsigned int num_r,
-                            unsigned int test_value,
-                            unsigned int **R);
+uint32_t gte_records_plt(struct plt_file pf,
+                            uint32_t *record_ids,
+                            uint32_t num_r,
+                            uint32_t test_value,
+                            uint32_t **R);
 
 
 /**
@@ -434,11 +434,11 @@ unsigned int gte_records_plt(struct plt_file pf,
  * @code
  * @endcode
  */
-unsigned int lt_records_plt(struct plt_file pf,
-                            unsigned int *record_ids,
-                            unsigned int num_r,
-                            unsigned int test_value,
-                            unsigned int **R);
+uint32_t lt_records_plt(struct plt_file pf,
+                            uint32_t *record_ids,
+                            uint32_t num_r,
+                            uint32_t test_value,
+                            uint32_t **R);
 
 /**
  * @brief Return records whose value are less or equal to the test value
@@ -455,11 +455,11 @@ unsigned int lt_records_plt(struct plt_file pf,
  * @code
  * @endcode
  */
-unsigned int lte_records_plt(struct plt_file pf,
-                            unsigned int *record_ids,
-                            unsigned int num_r,
-                            unsigned int test_value,
-                            unsigned int **R);
+uint32_t lte_records_plt(struct plt_file pf,
+                            uint32_t *record_ids,
+                            uint32_t num_r,
+                            uint32_t test_value,
+                            uint32_t **R);
 
 /**
  * @brief Return the number of records whose value are greater than the test
@@ -478,11 +478,11 @@ unsigned int lte_records_plt(struct plt_file pf,
  * @endcode
  */
 
-unsigned int gt_count_records_plt(struct plt_file pf,
-                                  unsigned int *record_ids,
-                                  unsigned int num_r,
-                                  unsigned int test_value,
-                                  unsigned int **R);
+uint32_t gt_count_records_plt(struct plt_file pf,
+                                  uint32_t *record_ids,
+                                  uint32_t num_r,
+                                  uint32_t test_value,
+                                  uint32_t **R);
 
 /**
  * @brief Print a plaint text file.
@@ -496,9 +496,9 @@ unsigned int gt_count_records_plt(struct plt_file pf,
  *
  * @retval number of records printed 
  */
-unsigned int print_plt(struct plt_file pf,
-                       unsigned int *record_ids,
-                       unsigned int num_r);
+uint32_t print_plt(struct plt_file pf,
+                       uint32_t *record_ids,
+                       uint32_t num_r);
 
 /**
  * @brief Print plain text file (wrapper around print_plt). 
@@ -512,9 +512,9 @@ unsigned int print_plt(struct plt_file pf,
  *
  * @retval number of records printed 
  */
-unsigned int print_by_name_plt(char *pf_file_name,
-                               unsigned int *record_ids,
-                               unsigned int num_r);
+uint32_t print_by_name_plt(char *pf_file_name,
+                               uint32_t *record_ids,
+                               uint32_t num_r);
 
 /**
  * @brief 
@@ -525,7 +525,7 @@ unsigned int print_by_name_plt(char *pf_file_name,
  * @retval 
  */
 
-unsigned int pack_2_bit_ints(int *ints, int num_ints);
+uint32_t pack_2_bit_ints(int *ints, int num_ints);
 
 /**
  * @brief Invert a plain text line into an array of uncompressed binary encoded
@@ -546,13 +546,13 @@ unsigned int pack_2_bit_ints(int *ints, int num_ints);
  *
  * @retval The next field index in the uncompressed binary 
  */
-unsigned int invert_plt_to_ubin(char *line,
-                                unsigned int num_fields,
-                                unsigned int num_records,
-                                unsigned int *new_num_fields,
-                                unsigned int *new_num_records,
-                                unsigned int field_i,
-                                unsigned int ***ubin);
+uint32_t invert_plt_to_ubin(char *line,
+                                uint32_t num_fields,
+                                uint32_t num_records,
+                                uint32_t *new_num_fields,
+                                uint32_t *new_num_records,
+                                uint32_t field_i,
+                                uint32_t ***ubin);
 /**
  * @brief Invert a plain text file and store as an uncompressed binary
  *

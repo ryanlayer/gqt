@@ -5,7 +5,7 @@
 
 struct ubin_file {
     FILE *file;
-    unsigned int num_fields, num_records;
+    uint32_t num_fields, num_records;
     long header_offset;
 };
 
@@ -27,20 +27,20 @@ struct ubin_file init_ubin_file(char *file_name);
  *
  * Example Usage:
  * @code
- *      unsigned int U1[4] = {
+ *      uint32_t U1[4] = {
  *              bin_char_to_int("00011011000110110001101100011011"),
  *              bin_char_to_int("00000101010110101111000001010110"),
  *              bin_char_to_int("00000000000000000000000000000000"),
  *              bin_char_to_int("11111111111111111111111111111111")
  *      };
- *      unsigned int *B;
- *      unsigned int B_len = ubin_to_bitmap(U1,4,128,u,&B);
+ *      uint32_t *B;
+ *      uint32_t B_len = ubin_to_bitmap(U1,4,128,u,&B);
  * @endcode
  */
-unsigned int  ubin_to_bitmap(unsigned int *U,
-                             unsigned int U_len,
-                             unsigned int used_bits,
-                             unsigned int **B);
+uint32_t  ubin_to_bitmap(uint32_t *U,
+                             uint32_t U_len,
+                             uint32_t used_bits,
+                             uint32_t **B);
 
 /**
  * @brief Convert an array of uncompressed binary values to a bitmap index of
@@ -59,22 +59,22 @@ unsigned int  ubin_to_bitmap(unsigned int *U,
  * Example Usage:
  * @code
  *      #include <stdint.h>
- *      unsigned int U1[4] = {
+ *      uint32_t U1[4] = {
  *              bin_char_to_int("00011011000110110001101100011011"),
  *              bin_char_to_int("00000101010110101111000001010110"),
  *              bin_char_to_int("00000000000000000000000000000000"),
  *              bin_char_to_int("11111111111111111111111111111111")
  *      };
  *      uint16_t *B;
- *      unsigned int B_len = ubin_to_bitmap(U1,4,128,u,&B);
+ *      uint32_t B_len = ubin_to_bitmap(U1,4,128,u,&B);
  * @endcode
  */
 
-unsigned int ubin_to_bitmap_wah16(unsigned int *U,
-                                  unsigned int U_len,
-                                  unsigned int num_fields,
+uint32_t ubin_to_bitmap_wah16(uint32_t *U,
+                                  uint32_t U_len,
+                                  uint32_t num_fields,
                                   uint16_t **W,
-                                  unsigned int **wah_sizes);
+                                  uint32_t **wah_sizes);
 
 
 /**
@@ -110,25 +110,25 @@ unsigned int ubin_to_bitmap_wah16(unsigned int *U,
  *                "3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 "
  *                "3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3";
  *
- *    unsigned int *ubin;
- *    unsigned int ubin_len = plt_line_to_packed_ints(plt, 192, &ubin);
+ *    uint32_t *ubin;
+ *    uint32_t ubin_len = plt_line_to_packed_ints(plt, 192, &ubin);
  *
  *    TEST_ASSERT_EQUAL(12, ubin_len);
  *
- *    unsigned int *wah;
- *    unsigned int *wah_sizes;
- *    unsigned int wah_len = ubin_to_bitmap_wah(ubin,
+ *    uint32_t *wah;
+ *    uint32_t *wah_sizes;
+ *    uint32_t wah_len = ubin_to_bitmap_wah(ubin,
  *                                              ubin_len,
  *                                              192,
  *                                              &wah,
  *                                              &wah_sizes);
  * @endcode
  */
-unsigned int ubin_to_bitmap_wah(unsigned int *U,
-                                unsigned int U_len,
-                                unsigned int num_fields,
-                                unsigned int **W,
-                                unsigned int **wah_sizes);
+uint32_t ubin_to_bitmap_wah(uint32_t *U,
+                            uint32_t U_len,
+                            uint32_t num_fields,
+                            uint32_t **W,
+                            uint32_t **wah_sizes);
 
 /**
  * @brief convert an uncompressed binary file to a WAH encoded bitmap index
@@ -161,7 +161,7 @@ unsigned int ubin_to_bitmap_wah(unsigned int *U,
  *      convert_file_by_name_ubin_to_wahbm(ubin_file_name, wah_file_name);
  * @endcode
  */
-unsigned int convert_file_by_name_ubin_to_wahbm(char *ubin_in, char *wah_out);
+uint32_t convert_file_by_name_ubin_to_wahbm(char *ubin_in, char *wah_out);
 
 /**
  * @brief convert an uncompressed binary file to a 16-bit WAH encoded bitmap
@@ -195,7 +195,7 @@ unsigned int convert_file_by_name_ubin_to_wahbm(char *ubin_in, char *wah_out);
  *      convert_file_by_name_ubin_to_wahbm(ubin_file_name, wah_file_name);
  * @endcode
  */
-unsigned int convert_file_by_name_ubin_to_wahbm16(char *ubin_in,
+uint32_t convert_file_by_name_ubin_to_wahbm16(char *ubin_in,
                                                   char *wah_out);
 /**
  * @brief Get a pointer to the uncompressed binary encoded record
@@ -211,14 +211,14 @@ unsigned int convert_file_by_name_ubin_to_wahbm16(char *ubin_in,
  *     char *ubin_file_name="data/10.1e4.ind.ubin";
  *     struct ubin_file uf = init_ubin_file(ubin_file_name);
  *
- *     unsigned int *ints, num_ints;
- *     unsigned int record_id = 0;
+ *     uint32_t *ints, num_ints;
+ *     uint32_t record_id = 0;
  *     num_ints = get_ubin_record(uf, record_id, &ints);
  * @endcode
  */
-unsigned int get_ubin_record(struct ubin_file uf,
-                             unsigned int record_id,
-                             unsigned int **ubin_record);
+uint32_t get_ubin_record(struct ubin_file uf,
+                             uint32_t record_id,
+                             uint32_t **ubin_record);
 /**
  * @brief
  *
@@ -231,11 +231,11 @@ unsigned int get_ubin_record(struct ubin_file uf,
  * @endcode
  */
 
-unsigned int gt_records_ubin(struct ubin_file uf,
-                             unsigned int *record_ids,
-                             unsigned int num_r,
-                             unsigned int test_value,
-                             unsigned int **R);
+uint32_t gt_records_ubin(struct ubin_file uf,
+                             uint32_t *record_ids,
+                             uint32_t num_r,
+                             uint32_t test_value,
+                             uint32_t **R);
 
 /**
  * @brief convert an uncompressed binary file using WAH (no bitmaps)
@@ -263,7 +263,7 @@ unsigned int gt_records_ubin(struct ubin_file uf,
  *      convert_file_by_name_ubin_to_wah(ubin_file_name, wah_file_name);
  * @endcode
  */
-unsigned int convert_file_by_name_ubin_to_wah(char *ubin_in, char *wah_out);
+uint32_t convert_file_by_name_ubin_to_wah(char *ubin_in, char *wah_out);
 
 
 /**
@@ -280,10 +280,10 @@ unsigned int convert_file_by_name_ubin_to_wah(char *ubin_in, char *wah_out);
  *
  * @retval number of records printed 
  */
-unsigned int print_ubin(struct ubin_file uf,
-                        unsigned int *record_ids,
-                        unsigned int num_r,
-                        unsigned int format);
+uint32_t print_ubin(struct ubin_file uf,
+                        uint32_t *record_ids,
+                        uint32_t num_r,
+                        uint32_t format);
 
 
 /**
@@ -301,10 +301,10 @@ unsigned int print_ubin(struct ubin_file uf,
  *
  * @retval number of records printed 
  */
-unsigned int print_by_name_ubin(char *ubin_file_name,
-                               unsigned int *record_ids,
-                               unsigned int num_r,
-                               unsigned int format);
+uint32_t print_by_name_ubin(char *ubin_file_name,
+                               uint32_t *record_ids,
+                               uint32_t num_r,
+                               uint32_t format);
 
 /**
  * @brief Return records whose values are >= start_test_value and <
@@ -322,24 +322,24 @@ unsigned int print_by_name_ubin(char *ubin_file_name,
  * @code
  * @endcode
  */
-unsigned int range_records_ubin(struct ubin_file uf,
-                                unsigned int *record_ids,
-                                unsigned int num_r,
-                                unsigned int start_test_value,
-                                unsigned int end_test_value,
-                                unsigned int **R);
+uint32_t range_records_ubin(struct ubin_file uf,
+                            uint32_t *record_ids,
+                            uint32_t num_r,
+                            uint32_t start_test_value,
+                            uint32_t end_test_value,
+                            uint32_t **R);
 
-unsigned int count_range_records_ubin(struct ubin_file uf,
-                                      unsigned int *record_ids,
-                                      unsigned int num_r,
-                                      unsigned int start_test_value,
-                                      unsigned int end_test_value,
-                                      unsigned int **R);
+uint32_t count_range_records_ubin(struct ubin_file uf,
+                                  uint32_t *record_ids,
+                                  uint32_t num_r,
+                                  uint32_t start_test_value,
+                                  uint32_t end_test_value,
+                                  uint32_t **R);
 
-unsigned int convert_file_by_name_ubin_to_plt(char *ubin_in, char *plt_out);
+uint32_t convert_file_by_name_ubin_to_plt(char *ubin_in, char *plt_out);
 
 /*
-unsigned int convert_hdf5_ind_ubin_to_ind_wah(struct hdf5_file hdf5_f,
+uint32_t convert_hdf5_ind_ubin_to_ind_wah(struct hdf5_file hdf5_f,
                                               char *wah_out);
 */
 #endif

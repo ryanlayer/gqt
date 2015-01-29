@@ -12,61 +12,61 @@
 int count_help();
 
 int count_plt(char *in,
-              unsigned int query_value,
+              uint32_t query_value,
               char *op,
-              unsigned int *R,
-              unsigned int num_records,
+              uint32_t *R,
+              uint32_t num_records,
               int time,
               int quiet,
               char *bim);
 
 int count_ubin(char *in,
-               unsigned int query_value,
+               uint32_t query_value,
                char *op,
-               unsigned int *R,
-               unsigned int num_records,
+               uint32_t *R,
+               uint32_t num_records,
                int time,
                int quiet,
                char *bim);
 int count_wah(char *in,
-              unsigned int query_value,
+              uint32_t query_value,
               char *op,
-              unsigned int *R,
-              unsigned int num_records,
+              uint32_t *R,
+              uint32_t num_records,
               int time,
               int quiet,
               char *bim);
 int count_wahbm(char *in,
-                unsigned int query_value,
+                uint32_t query_value,
                 char *op,
-                unsigned int *R,
-                unsigned int num_records,
+                uint32_t *R,
+                uint32_t num_records,
                 int time,
                 int quiet,
                 char *bim);
 
 int count_in_place_wahbm(char *in,
-                         unsigned int query_value,
+                         uint32_t query_value,
                          char *op,
-                         unsigned int *R,
-                         unsigned int num_records,
+                         uint32_t *R,
+                         uint32_t num_records,
                          int time,
                          int quiet,
                          int avx,
                          char *bim);
 
 int count_compressed_in_place_wahbm(char *in,
-                                    unsigned int query_value,
+                                    uint32_t query_value,
                                     char *op,
-                                    unsigned int *R,
-                                    unsigned int num_records,
+                                    uint32_t *R,
+                                    uint32_t num_records,
                                     int time,
                                     int quiet,
                                     char *bim);
 
 
-void print_count_result(unsigned int *R,
-                        unsigned int num_fields,
+void print_count_result(uint32_t *R,
+                        uint32_t num_fields,
                         char *bim);
 
 
@@ -76,7 +76,7 @@ int count(int argc, char **argv)
 
     int c;
     char *in=NULL, *out=NULL, *record_ids=NULL, *op=NULL, *bim=NULL;
-    unsigned int query_value, num_records;
+    uint32_t query_value, num_records;
     int i_is_set = 0,
         a_is_set = 0,
         b_is_set = 0,
@@ -180,7 +180,7 @@ int count(int argc, char **argv)
     }
 
 
-    unsigned int R[num_records];
+    uint32_t R[num_records];
     parse_cmd_line_int_csv(R, num_records, record_ids);
 
     if (strcmp(type, "plt") == 0)
@@ -272,19 +272,19 @@ int count_help()
 }
 
 int count_plt(char *in,
-              unsigned int query_value,
+              uint32_t query_value,
               char *op,
-              unsigned int *R,
-              unsigned int num_records,
+              uint32_t *R,
+              uint32_t num_records,
               int time,
               int quiet,
               char *bim)
 {
     start();
     struct plt_file pf = init_plt_file(in);
-    unsigned int *pf_R;
+    uint32_t *pf_R;
 
-    unsigned int len_pf_R;
+    uint32_t len_pf_R;
     
     if (strcmp(op,"gt") == 0)
         len_pf_R = gt_count_records_plt(pf,
@@ -310,10 +310,10 @@ int count_plt(char *in,
 }
 
 int count_ubin(char *in,
-               unsigned int query_value,
+               uint32_t query_value,
                char *op,
-               unsigned int *R,
-               unsigned int num_records,
+               uint32_t *R,
+               uint32_t num_records,
                int time,
                int quiet,
                char *bim)
@@ -322,8 +322,8 @@ int count_ubin(char *in,
     start();
 #if 0
     struct ubin_file uf = init_ubin_file(in);
-    unsigned int *uf_R;
-    unsigned int len_uf_R;
+    uint32_t *uf_R;
+    uint32_t len_uf_R;
 
     if (strcmp(op,"gt") == 0)
         len_uf_R = gt_count_records_ubin(uf,
@@ -349,10 +349,10 @@ int count_ubin(char *in,
 }
 
 int count_wah(char *in,
-              unsigned int query_value,
+              uint32_t query_value,
               char *op,
-              unsigned int *R,
-              unsigned int num_records,
+              uint32_t *R,
+              uint32_t num_records,
               int time,
               int quiet,
               char *bim)
@@ -362,10 +362,10 @@ int count_wah(char *in,
 }
 
 int count_in_place_wahbm(char *in,
-                         unsigned int query_value,
+                         uint32_t query_value,
                          char *op,
-                         unsigned int *R,
-                         unsigned int num_records,
+                         uint32_t *R,
+                         uint32_t num_records,
                          int time,
                          int quiet,
                          int avx,
@@ -376,9 +376,9 @@ int count_in_place_wahbm(char *in,
         start();
 
     struct wah_file wf = init_wahbm_file(in);
-    __attribute__((aligned(64)))unsigned int *wf_R;
-    //__declspec(align(64)) unsigned int *wf_R;
-    unsigned int len_wf_R;
+    __attribute__((aligned(64)))uint32_t *wf_R;
+    //__declspec(align(64)) uint32_t *wf_R;
+    uint32_t len_wf_R;
 
     if (strcmp(op,"gt") == 0) {
         if (avx == 0)
@@ -415,10 +415,10 @@ int count_in_place_wahbm(char *in,
 }
 
 int count_compressed_in_place_wahbm(char *in,
-                                    unsigned int query_value,
+                                    uint32_t query_value,
                                     char *op,
-                                    unsigned int *R,
-                                    unsigned int num_records,
+                                    uint32_t *R,
+                                    uint32_t num_records,
                                     int time,
                                     int quiet,
                                     char *bim)
@@ -426,8 +426,8 @@ int count_compressed_in_place_wahbm(char *in,
 {
     start();
     struct wah_file wf = init_wahbm_file(in);
-    unsigned int *wf_R;
-    unsigned int len_wf_R;
+    uint32_t *wf_R;
+    uint32_t len_wf_R;
 
     if (strcmp(op,"gt") == 0)
         len_wf_R = gt_count_records_compressed_in_place_wahbm(wf,
@@ -456,10 +456,10 @@ int count_compressed_in_place_wahbm(char *in,
 }
 
 int count_wahbm(char *in,
-                unsigned int query_value,
+                uint32_t query_value,
                 char *op,
-                unsigned int *R,
-                unsigned int num_records,
+                uint32_t *R,
+                uint32_t num_records,
                 int time,
                 int quiet,
                 char *bim)
@@ -467,8 +467,8 @@ int count_wahbm(char *in,
 {
     start();
     struct wah_file wf = init_wahbm_file(in);
-    unsigned int *wf_R;
-    unsigned int len_wf_R;
+    uint32_t *wf_R;
+    uint32_t len_wf_R;
 
     if (strcmp(op,"gt") == 0)
         len_wf_R = gt_count_records_wahbm(wf,
@@ -493,8 +493,8 @@ int count_wahbm(char *in,
     return 0;
 }
 
-void print_count_result(unsigned int *R,
-                        unsigned int num_fields,
+void print_count_result(uint32_t *R,
+                        uint32_t num_fields,
                         char *bim)
 {
 

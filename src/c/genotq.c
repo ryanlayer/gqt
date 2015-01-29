@@ -16,7 +16,7 @@
 
 // utils
 //{{{ void parse_cmd_line_int_csv(int *I,
-void parse_cmd_line_int_csv(unsigned int *I,
+void parse_cmd_line_int_csv(uint32_t *I,
                             int num_I,
                             char *cmd_line_arg)
 {
@@ -30,8 +30,8 @@ void parse_cmd_line_int_csv(unsigned int *I,
 }
 //}}}
 
-//{{{unsigned int ints_to_rle(unsigned int *I, int I_len, unsigned int **O)
-unsigned int ints_to_rle(unsigned int *I, int I_len, unsigned int **O)
+//{{{uint32_t ints_to_rle(uint32_t *I, int I_len, uint32_t **O)
+uint32_t ints_to_rle(uint32_t *I, int I_len, uint32_t **O)
 {
     struct uint_ll *head=NULL,*tail=NULL;
 
@@ -40,7 +40,7 @@ unsigned int ints_to_rle(unsigned int *I, int I_len, unsigned int **O)
         curr_bit,
         ll_len = 0,
         last_bit = -1;
-    unsigned int rle_v;
+    uint32_t rle_v;
     for (i = 0; i < I_len; ++i) {
         for(j = 0; j < 32; ++j) {
             curr_bit = ((I[i] >> (31-j)) & 1);
@@ -87,7 +87,7 @@ unsigned int ints_to_rle(unsigned int *I, int I_len, unsigned int **O)
 
     tail = n;
 
-    *O = (unsigned int *) malloc(ll_len*sizeof(unsigned int));
+    *O = (uint32_t *) malloc(ll_len*sizeof(uint32_t));
     struct uint_ll *last, *curr = head;
     for (i = 0; i < ll_len; ++i) {
         (*O)[i] = curr->value;
@@ -101,13 +101,13 @@ unsigned int ints_to_rle(unsigned int *I, int I_len, unsigned int **O)
 //}}}
 
 //{{{const char *int_to_binary(int x)
-const char *int_to_binary(unsigned int x)
+const char *int_to_binary(uint32_t x)
 {
     static char b[33];
     b[0] = '\0';
 
-    unsigned int z;
-    for (z = (unsigned int)(pow(2,31)); z > 0; z >>= 1) {
+    uint32_t z;
+    for (z = (uint32_t)(pow(2,31)); z > 0; z >>= 1) {
         strcat(b, ((x & z) == z) ? "1" : "0");
     }
 
@@ -115,10 +115,10 @@ const char *int_to_binary(unsigned int x)
 }
 //}}}
 
-//{{{ unsigned int bin_char_to_int(char *bin)
-unsigned int bin_char_to_int(char *bin)
+//{{{ uint32_t bin_char_to_int(char *bin)
+uint32_t bin_char_to_int(char *bin)
 {
-    unsigned int i = 0;
+    uint32_t i = 0;
     int j = 0;
 
     while (bin[j] != '\0') {
@@ -132,8 +132,8 @@ unsigned int bin_char_to_int(char *bin)
 }
 //}}}
 
-//{{{unsigned int *unpack_1_bit_ints(int packed_int)
-int *unpack_1_bit_ints(unsigned int packed_ints)
+//{{{uint32_t *unpack_1_bit_ints(int packed_int)
+int *unpack_1_bit_ints(uint32_t packed_ints)
 {
     int *r = (int *) malloc (32*sizeof(int));
 
@@ -145,8 +145,8 @@ int *unpack_1_bit_ints(unsigned int packed_ints)
 }
 //}}}
 
-//{{{unsigned int *unpack_2_bit_ints(int packed_int)
-int *unpack_2_bit_ints(unsigned int packed_ints)
+//{{{uint32_t *unpack_2_bit_ints(int packed_int)
+int *unpack_2_bit_ints(uint32_t packed_ints)
 {
     int *r = (int *) malloc (16*sizeof(int));
 

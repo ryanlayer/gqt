@@ -7,29 +7,29 @@ MORE_DATA_PATH=~/data/genotq/sim/
 #{{{
 #$GTQ_PATH/gqt convert vcf-plt -f 10 -r 43 -i $DATA_PATH/10.1e4.var.vcf -o tmp.var.plt
 #$GTQ_PATH/gqt convert plt-ubin -i $DATA_PATH/10.1e4.ind.txt -o tmp.ubin
-#$GTQ_PATH/gqt convert ubin-wahbm -i tmp.ubin -o tmp.wahbm
-#$GTQ_PATH/gqt convert ubin-wah -i tmp.ubin -o tmp.wah
+#$GTQ_PATH/gqt convert ubin-gqtbm -i tmp.ubin -o tmp.wahbm
+#$GTQ_PATH/gqt convert ubin-gqt -i tmp.ubin -o tmp.wah
 #$GTQ_PATH/gqt convert ubin-plt -i tmp.ubin -o tmp.ubin.to.plt
 #
 #$GTQ_PATH/gqt view plt -i $DATA_PATH/10.1e4.ind.txt > tmp.plt.plt
 #$GTQ_PATH/gqt view ubin -i tmp.ubin > tmp.ubin.plt
-#$GTQ_PATH/gqt view wahbm -i tmp.wahbm > tmp.wahbm.plt
-#$GTQ_PATH/gqt view wah -i tmp.wah > tmp.wah.plt
+#$GTQ_PATH/gqt view gqtbm -i tmp.wahbm > tmp.wahbm.plt
+#$GTQ_PATH/gqt view gqt -i tmp.wah > tmp.wah.plt
 #
 #diff tmp.var.plt $DATA_PATH/10.1e4.var.txt
 #diff tmp.plt.plt tmp.ubin.plt
-#diff tmp.plt.plt tmp.wahbm.plt
-#diff tmp.plt.plt tmp.wah.plt
+#diff tmp.plt.plt tmp.gqtbm.plt
+#diff tmp.plt.plt tmp.gqt.plt
 #diff tmp.ubin.to.plt $DATA_PATH/10.1e4.ind.txt
 #
 #rm tmp.var.plt \
 #    tmp.plt.plt \
 #    tmp.ubin.plt \
-#    tmp.wahbm.plt \
-#    tmp.wah.plt \
+#    tmp.gqtbm.plt \
+#    tmp.gqt.plt \
 #    tmp.ubin \
-#    tmp.wahbm \
-#    tmp.wah \
+#    tmp.gqtbm \
+#    tmp.gqt \
 #    tmp.ubin.to.plt
 #
 #ARGS="-q 0 -n 5 -r 1,2,4,5,7"
@@ -43,30 +43,30 @@ MORE_DATA_PATH=~/data/genotq/sim/
 #    -b $DATA_PATH/10.1e4.ind.bim \
 #    $ARGS \
 #    > tmp.gt.ubin
-#$GTQ_PATH/gqt gt wahbm \
-#    -i $DATA_PATH/10.1e4.ind.wahbm \
+#$GTQ_PATH/gqt gt gqtbm \
+#    -i $DATA_PATH/10.1e4.ind.gqtbm \
 #    -b $DATA_PATH/10.1e4.ind.bim \
 #    $ARGS \
-#    > tmp.gt.wahbm
-#$GTQ_PATH/gqt gt ipwahbm \
-#    -i $DATA_PATH/10.1e4.ind.wahbm \
+#    > tmp.gt.gqtbm
+#$GTQ_PATH/gqt gt ipgqtbm \
+#    -i $DATA_PATH/10.1e4.ind.gqtbm \
 #    -b $DATA_PATH/10.1e4.ind.bim \
 #    $ARGS \
-#    > tmp.gt.ipwahbm
-#$GTQ_PATH/gqt gt cipwahbm\
-#    -i $DATA_PATH/10.1e4.ind.wahbm \
+#    > tmp.gt.ipgqtbm
+#$GTQ_PATH/gqt gt cipgqtbm\
+#    -i $DATA_PATH/10.1e4.ind.gqtbm \
 #    -b $DATA_PATH/10.1e4.ind.bim \
 #    $ARGS \
-#    > tmp.gt.cipwahbm
+#    > tmp.gt.cipgqtbm
 #diff tmp.gt.plt tmp.gt.ubin
-#diff tmp.gt.plt tmp.gt.wahbm
-#diff tmp.gt.plt tmp.gt.ipwahbm
-#diff tmp.gt.plt tmp.gt.cipwahbm
+#diff tmp.gt.plt tmp.gt.gqtbm
+#diff tmp.gt.plt tmp.gt.ipgqtbm
+#diff tmp.gt.plt tmp.gt.cipgqtbm
 #rm tmp.gt.plt \
 #    tmp.gt.ubin \
-#    tmp.gt.wahbm \
-#    tmp.gt.ipwahbm \
-#    tmp.gt.cipwahbm
+#    tmp.gt.gqtbm \
+#    tmp.gt.ipgqtbm \
+#    tmp.gt.cipgqtbm
 #
 #ARGS="-o gt -q 0 -n 5 -r 1,2,4,5,7"
 #$GTQ_PATH/gqt count plt \
@@ -79,31 +79,31 @@ MORE_DATA_PATH=~/data/genotq/sim/
 #    -b $DATA_PATH/10.1e4.ind.bim \
 #    $ARGS > tmp.count.ubin
 #
-#$GTQ_PATH/gqt count wahbm \
-#    -i $DATA_PATH/10.1e4.ind.wahbm \
+#$GTQ_PATH/gqt count gqtbm \
+#    -i $DATA_PATH/10.1e4.ind.gqtbm \
 #    -b $DATA_PATH/10.1e4.ind.bim \
-#    $ARGS > tmp.count.wahbm
+#    $ARGS > tmp.count.gqtbm
 #
-#$GTQ_PATH/gqt count ipwahbm \
-#    -i $DATA_PATH/10.1e4.ind.wahbm \
+#$GTQ_PATH/gqt count ipgqtbm \
+#    -i $DATA_PATH/10.1e4.ind.gqtbm \
 #    -b $DATA_PATH/10.1e4.ind.bim \
-#    $ARGS > tmp.count.ipwahbm
+#    $ARGS > tmp.count.ipgqtbm
 #
-#$GTQ_PATH/gqt count cipwahbm \
-#    -i $DATA_PATH/10.1e4.ind.wahbm \
+#$GTQ_PATH/gqt count cipgqtbm \
+#    -i $DATA_PATH/10.1e4.ind.gqtbm \
 #    -b $DATA_PATH/10.1e4.ind.bim \
-#    $ARGS > tmp.count.cipwahbm
+#    $ARGS > tmp.count.cipgqtbm
 #
-#diff tmp.count.plt tmp.count.wahbm
+#diff tmp.count.plt tmp.count.gqtbm
 ##diff tmp.count.plt tmp.count.ubin
-##diff tmp.count.plt tmp.count.ipwahbm
-##diff tmp.count.plt tmp.count.cipwahbm
+##diff tmp.count.plt tmp.count.ipgqtbm
+##diff tmp.count.plt tmp.count.cipgqtbm
 #
 #rm -f tmp.count.plt \
 #    tmp.count.ubin \
-#    tmp.count.wahbm \
-#    tmp.count.ipwahbm \
-#    tmp.count.cipwahbm
+#    tmp.count.gqtbm \
+#    tmp.count.ipgqtbm \
+#    tmp.count.cipgqtbm
 #
 #plink --file ../data/10.1e4.ind --freq >/dev/null
 #
@@ -119,8 +119,8 @@ MORE_DATA_PATH=~/data/genotq/sim/
 #
 #echo -en "\n" >> plink.frq.common
 #
-#$GTQ_PATH/gqt sum ipwahbm \
-#    -i ../data/10.1e4.ind.wahbm \
+#$GTQ_PATH/gqt sum ipgqtbm \
+#    -i ../data/10.1e4.ind.gqtbm \
 #    -b ../data/10.1e4.ind.bim \
 #    -n 10 \
 #    -r 0,1,2,3,4,5,6,7,8,9 \
@@ -130,9 +130,9 @@ MORE_DATA_PATH=~/data/genotq/sim/
 #
 #cat gqt.out | cut -f 1,2,7 > gqt.out.common
 #
-#$GTQ_PATH/gqt sum ipwahbm \
+#$GTQ_PATH/gqt sum ipgqtbm \
 #    -a \
-#    -i ../data/10.1e4.ind.wahbm \
+#    -i ../data/10.1e4.ind.gqtbm \
 #    -b ../data/10.1e4.ind.bim \
 #    -n 10 \
 #    -r 0,1,2,3,4,5,6,7,8,9 \
@@ -180,32 +180,32 @@ MORE_DATA_PATH=~/data/genotq/sim/
 #    -i .tmp.sort.ind.plt \
 #    -o .tmp.sort.ind.ubin
 #
-#$GTQ_PATH/gqt convert ubin-wahbm \
+#$GTQ_PATH/gqt convert ubin-gqtbm \
 #    -i .tmp.sort.ind.ubin \
-#    -o .tmp.sort.ind.wahbm
+#    -o .tmp.sort.ind.gqtbm
 #
-#$GTQ_PATH/gqt convert bcf-wahbm \
+#$GTQ_PATH/gqt convert bcf-gqtbm \
 #    -r 43 \
 #    -f 10 \
 #    -i ../data/10.1e4.var.bcf \
 #    -b .tmp.bcf.sort.ind.bim \
 #    -v .tmp.bcf.sort.ind.vid \
-#    -o .tmp.bcf.sort.ind.wahbm
+#    -o .tmp.bcf.sort.ind.gqtbm
 #
-#$GTQ_PATH/gqt sum ipwahbm \
+#$GTQ_PATH/gqt sum ipgqtbm \
 #    -a \
-#    -i .tmp.bcf.sort.ind.wahbm \
+#    -i .tmp.bcf.sort.ind.gqtbm \
 #    -b .tmp.bcf.sort.ind.bim \
 #    -n 10 \
 #    -r 0,1,2,3,4,5,6,7,8,9 \
 #    -u 2 \
 #    -l 1  \
-#    > .tmp.bcf.sort.ind.wahbm.out
+#    > .tmp.bcf.sort.ind.gqtbm.out
 #
 #
-#$GTQ_PATH/gqt sum ipwahbm \
+#$GTQ_PATH/gqt sum ipgqtbm \
 #    -a \
-#    -i .tmp.sort.ind.wahbm \
+#    -i .tmp.sort.ind.gqtbm \
 #    -b .tmp.bcf.sort.ind.bim \
 #    -n 10 \
 #    -r 0,1,2,3,4,5,6,7,8,9 \
@@ -213,20 +213,20 @@ MORE_DATA_PATH=~/data/genotq/sim/
 #    -l 1 \
 #    > .tmp.bcf.sort.ind.bim.out
 #
-#if [ -n "`diff -w .tmp.bcf.sort.ind.wahbm.out .tmp.bcf.sort.ind.bim.out`" ]
+#if [ -n "`diff -w .tmp.bcf.sort.ind.gqtbm.out .tmp.bcf.sort.ind.bim.out`" ]
 #then 
-#    echo "ERROR: gqt vcf...wahbm does not match bcf-wahbm"
+#    echo "ERROR: gqt vcf...gqtbm does not match bcf-wahbm"
 #else
-#    echo "SUCCESS: gqt vcf...wahbm matches bcf-wahbm"
+#    echo "SUCCESS: gqt vcf...gqtbm matches bcf-wahbm"
 #    rm -f .tmp.var.plt \
 #        .tmp.ind.ubin \
 #        .tmp.ind.plt \
 #        .tmp.sort.ind.plt \
 #        .tmp.sort.ind.ubin \
-#        .tmp.sort.ind.wahbm \
+#        .tmp.sort.ind.gqtbm \
 #        .tmp.bcf.sort.ind.bim \
-#        .tmp.bcf.sort.ind.wahbm \
-#        .tmp.bcf.sort.ind.wahbm.out \
+#        .tmp.bcf.sort.ind.gqtbm \
+#        .tmp.bcf.sort.ind.gqtbm.out \
 #        .tmp.bcf.sort.ind.bim.out
 #fi
 #}}}
@@ -234,7 +234,8 @@ MORE_DATA_PATH=~/data/genotq/sim/
 rm -f \
     .tmp.bcf.sort.ind.bim \
     .tmp.bcf.sort.ind.vid \
-    .tmp.bcf.sort.ind.wahbm
+    .tmp.bcf.sort.ind.gqtbm \
+    .tmp.bcf.sort.ind.gqt
 
 $GTQ_PATH/gqt convert bcf \
     -r 43 \
@@ -242,12 +243,12 @@ $GTQ_PATH/gqt convert bcf \
     -i ../data/10.1e4.var.bcf \
     -b .tmp.bcf.sort.ind.bim \
     -v .tmp.bcf.sort.ind.vid \
-    -o .tmp.bcf.sort.ind.wahbm
+    -o .tmp.bcf.sort.ind.gqt
 
 rm -f \
     ../data/10.1e4.var.bcf.bim \
     ../data/10.1e4.var.bcf.vid \
-    ../data/10.1e4.var.bcf.wah 
+    ../data/10.1e4.var.bcf.gqt
 
 $GTQ_PATH/gqt convert bcf \
     -r 43 \
@@ -268,13 +269,12 @@ else
     echo "ERROR: Auto output VID does not match specified VID"
 fi
 
-if [ `md5 -q .tmp.bcf.sort.ind.wahbm` == `md5 -q ../data/10.1e4.var.bcf.wah` ]
+if [ `md5 -q .tmp.bcf.sort.ind.gqt` == `md5 -q ../data/10.1e4.var.bcf.gqt` ]
 then
-    echo "SUCCESS: Auto output WAH matches specified WAH"
+    echo "SUCCESS: Auto output GQT matches specified GQT"
 else
-    echo "ERROR: Auto output WAH does not match specified WAH"
+    echo "ERROR: Auto output GQT does not match specified GQT"
 fi
-
 
 rm -f ../data/10.1e4.var.ped.db
 $GTQ_PATH/gqt convert ped \
@@ -317,24 +317,17 @@ else
     echo "ERROR: 2 rows expect in PED db. $ROWS found."
 fi 
 
-
 # count the number of homo_ref rows
-$GTQ_PATH/gqt sum ipwahbm \
-        -i ../data/10.1e4.ind.wahbm \
-        -b ../data/10.1e4.var.bim \
-        -d .tmp.10.1e4.var.db \
-        -q "Population ='ESN'" \
-        -l 0 \
-        -u 0 \
-> .tmp.homo_ref.count
-
-#ESN are the 2nd and 10th columns in the vcf
-GQT_BOTH_NUM=`cat .tmp.homo_ref.count | awk '$6==2' | wc -l`
-GQT_ONE_NUM=`cat .tmp.homo_ref.count | awk '$6==1' | wc -l`
+GQT_BOTH_NUM=`$GTQ_PATH/gqt query \
+    -i ../data/10.1e4.var.bcf.gqt \
+    -d ../data/10.1e4.var.ped.db \
+    -p "Population ='ESN'" \
+    -g "HOMO_REF" \
+    | grep -v "#" \
+    | wc -l`
 
 VCF_BOTH_NUM=`cat ../data/10.1e4.var.vcf  | cut -f 10- | tail -n+6 | cut -f2,10 | awk '$1=="0|0" && $2=="0|0"' | wc -l`
 
-VCF_ONE_NUM=`cat ../data/10.1e4.var.vcf  | cut -f 10- | tail -n+6 | cut -f2,10 | awk '($1=="0|0" || $2=="0|0") && !($1=="0|0" && $2=="0|0")' | wc -l`
 
 if [ $GQT_BOTH_NUM -eq $VCF_BOTH_NUM ]
 then
@@ -343,44 +336,8 @@ else
     echo "ERROR: Number of HOMO_REF in both ESN do not match in VCF($VCF_BOTH_NUM)  and GQT($GQT_BOTH_NUM)"
 fi 
 
-if [ $GQT_ONE_NUM -eq $VCF_ONE_NUM ]
-then
-    echo "SUCCESS: Number of HOMO_REF in only one ESN match in VCF and GQT"
-else
-    echo "ERROR: Number of HOMO_REF in only one ESN do not match in VCF($VCF_ONE_NUM)  and GQT($GQT_ONE_NUM)"
-fi 
-
-
-$GTQ_PATH/gqt query \
-        -i ../data/10.1e4.ind.wahbm \
-        -b ../data/10.1e4.var.bim \
-        -d .tmp.10.1e4.var.db \
-        -p "Population ='ESN'" \
-        -g "count(HOMO_REF) >= 1" \
-        > .tmp.query.out
-
-$GTQ_PATH/gqt sum ipwahbm \
-        -i ../data/10.1e4.ind.wahbm \
-        -b ../data/10.1e4.var.bim \
-        -d .tmp.10.1e4.var.db \
-        -q "Population ='ESN'" \
-        -l 0 \
-        -u 0 \
-        | awk '$6>=1' \
-        > .tmp.sum.out
-
-
-if [ -n "`diff .tmp.query.out .tmp.sum.out`" ]
-then 
-    echo "ERROR: gqt sum does not gqt query"
-else
-    echo "SUCCESS: gqt sum matches gqt query"
-    rm .tmp.sum.out .tmp.query.out
-fi
-
-
 #$GTQ_PATH/gqt query \
-#        -i ../data/10.1e4.ind.wahbm \
+#        -i ../data/10.1e4.ind.gqtbm \
 #        -b ../data/10.1e4.var.bim \
 #        -d .tmp.10.1e4.var.db \
 #        -p "Population ='ITU'" \
@@ -392,21 +349,21 @@ fi
 #
 
 $GTQ_PATH/gqt query \
-        -i ../data/10.1e4.ind.wahbm \
-        -b ../data/10.1e4.var.bim \
-        -d .tmp.10.1e4.var.db \
+        -i ../data/10.1e4.var.bcf.gqt \
+        -d ../data/10.1e4.var.ped.db \
         -p "Population ='ITU'" \
         -g "pct(HOMO_REF) >= 0.5" \
-        | cut -f 6 \
+        | grep -v "#" \
+        | cut -d "=" -f3 \
         > .tmp.query.pct.out
 
 $GTQ_PATH/gqt query \
-        -i ../data/10.1e4.ind.wahbm \
-        -b ../data/10.1e4.var.bim \
-        -d .tmp.10.1e4.var.db \
+        -i ../data/10.1e4.var.bcf.gqt \
+        -d ../data/10.1e4.var.ped.db \
         -p "Population ='ITU'" \
         -g "count(HOMO_REF) >= 1" \
-        | cut -f 6 \
+        | grep -v "#" \
+        | cut -d "=" -f3 \
         > .tmp.query.count.out
 
 
@@ -419,99 +376,63 @@ else
 fi
 
 $GTQ_PATH/gqt query \
-        -i ../data/10.1e4.ind.wahbm \
-        -b ../data/10.1e4.var.bim \
+        -i ../data/10.1e4.var.bcf.gqt \
+        -d ../data/10.1e4.var.ped.db \
         -d .tmp.10.1e4.var.db \
         -p "Population ='ITU'" \
         -g "pct(HOMO_REF) >= 0.5" \
         -p "Population ='ITU'" \
         -g "count(HOMO_REF) >= 1" \
-        | cut -f 6,7 \
-        > .tmp.query.pct.count.out
+        > .tmp.query.out
 
-if [ -n "`cat .tmp.query.pct.count.out | awk '$1*2 != $2'`" ]
+cat .tmp.query.out \
+        | grep -v "#" \
+        | cut -f 8 | cut -d ";" -f2 | cut -d "=" -f2 \
+        > .tmp.query.pct.out
+
+cat .tmp.query.out \
+        | grep -v "#" \
+        | cut -f 8 | cut -d ";" -f3 | cut -d "=" -f2 \
+        > .tmp.query.count.out
+
+if [ -n "`paste .tmp.query.pct.out .tmp.query.count.out | awk '$1*2 != $2'`" ]
 then 
     echo "ERROR: gqt multi query pct and count do not match"
 else
     echo "SUCCESS: gqt multi query pct and count match" 
-    rm .tmp.query.pct.count.out
+    rm .tmp.query.out .tmp.query.pct.out .tmp.query.count.out
 fi
 
-BCF_R=`$GTQ_PATH/gqt query \
-        -i ../data/10.1e4.ind.wahbm \
-        -s ../data/10.1e4.var.bcf \
-        -v .tmp.bcf.sort.ind.vid \
-        -d .tmp.10.1e4.var.db \
-        -p "Population ='ITU'" \
-        -g "pct(HOMO_REF) >= 0.5" \
-        -p "Population ='ITU'" \
-        -g "count(HOMO_REF) >= 1" \
-        | grep -v "^#" \
-        | cut -f3 | sort |md5 -q`
-        #| cut -f3 | sort |md5sum-lite`
-
-MD_R=`$GTQ_PATH/gqt query \
-        -i ../data/10.1e4.ind.wahbm \
-        -d .tmp.10.1e4.var.db \
-        -b ../data/10.1e4.var.bim \
-        -p "Population ='ITU'" \
-        -g "pct(HOMO_REF) >= 0.5" \
-        -p "Population ='ITU'" \
-        -g "count(HOMO_REF) >= 1" \
-        | cut -f3 | sort |md5 -q`
-        #| cut -f3 | sort |md5sum-lite`
-        
-if [ "$BCF_R" == "$MD_R" ]
-then
-    echo "SUCCESS: BCF output and BIM merge output match"
-else
-    echo "ERROR: BCF output and BIM merge output do not match"
-fi 
-
-rm -f \
-    ../data/10.1e4.var.bcf.bim \
-    ../data/10.1e4.var.bcf.vid \
-    ../data/10.1e4.var.bcf.wah 
-
-$GTQ_PATH/gqt convert bcf \
-    -r 43 \
-    -f 10 \
-    -i ../data/10.1e4.var.bcf 
-
-BCF_R=`$GTQ_PATH/gqt query \
-        -s ../data/10.1e4.var.bcf \
-        -d ../data/10.1e4.var.ped.db \
-        -p "Population ='ITU'" \
-        -g "pct(HOMO_REF) >= 0.5" \
-        -p "Population ='ITU'" \
-        -g "count(HOMO_REF) >= 1" \
-        | grep -v "^#" \
-        | cut -f3 | sort |md5 -q`
-        
-if [ "$BCF_R" == "$MD_R" ]
-then
-    echo "SUCCESS: Autodetect matches"
-else
-    echo "ERROR: Autodetect does not match"
-fi 
-
-rm ../data/10.1e4.var.bcf.vid 
-
-$GTQ_PATH/gqt query \
-        -s ../data/10.1e4.var.bcf \
-        -d ../data/10.1e4.var.ped.db \
-        -p "Population ='ITU'" \
-        -g "pct(HOMO_REF) >= 0.5" \
-        -p "Population ='ITU'" \
-        -g "count(HOMO_REF) >= 1" \
-        2>&1 > /dev/null
-
-if [ "$?" == "1" ]
-then
-    echo "SUCCESS: Autodetect failure detected"
-else
-    echo "ERROR: Autodetect failure not detected"
-fi 
+#BCF_R=`$GTQ_PATH/gqt query \
+#        -i ../data/10.1e4.var.bcf.gqt \
+#        -s ../data/10.1e4.var.bcf \
+#        -v ../data/10.1e4.var.bcf.vid \
+#        -d ../data/10.1e4.var.ped.db \
+#        -p "Population ='ITU'" \
+#        -g "pct(HOMO_REF) >= 0.5" \
+#        -p "Population ='ITU'" \
+#        -g "count(HOMO_REF) >= 1" \
+#        | grep -v "^#" \
+#        | cut -f3 | sort |md5 -q`
+#        #| cut -f3 | sort |md5sum-lite`
+#
+#MD_R=`$GTQ_PATH/gqt query \
+#        -i ../data/10.1e4.ind.gqtbm \
+#        -d .tmp.10.1e4.var.db \
+#        -b ../data/10.1e4.var.bim \
+#        -p "Population ='ITU'" \
+#        -g "pct(HOMO_REF) >= 0.5" \
+#        -p "Population ='ITU'" \
+#        -g "count(HOMO_REF) >= 1" \
+#        | cut -f3 | sort |md5 -q`
+#        #| cut -f3 | sort |md5sum-lite`
+#        
+#if [ "$BCF_R" == "$MD_R" ]
+#then
+#    echo "SUCCESS: BCF output and BIM merge output match"
+#else
+#    echo "ERROR: BCF output and BIM merge output do not match"
+#fi 
 
 $GTQ_PATH/gqt convert bcf \
     -r 43 \
@@ -529,52 +450,52 @@ $GTQ_PATH/gqt convert bcf \
     -i ../data/10.1e4.var.vcf.gz
 
 
-if [ `md5 -q ../data/10.1e4.var.vcf.wah` == `md5 -q ../data/10.1e4.var.bcf.wah` ]
+if [ `md5 -q ../data/10.1e4.var.vcf.gqt` == `md5 -q ../data/10.1e4.var.bcf.wah` ]
 then
-    echo "SUCCESS: VCF-source WAH matches BCF-source WAH"
-    rm ../data/10.1e4.var.vcf.wah
+    echo "SUCCESS: VCF-source GQT matches BCF-source GQT"
+    rm ../data/10.1e4.var.vcf.gqt
 else
-    echo "ERROR: VCF-source WAH does not match BCF-source WAH"
+    echo "ERROR: VCF-source GQT does not match BCF-source GQT"
 fi 
 
-if [ `md5 -q ../data/10.1e4.var.vcf.gz.wah` == `md5 -q ../data/10.1e4.var.bcf.wah` ]
+if [ `md5 -q ../data/10.1e4.var.vcf.gz.gqt` == `md5 -q ../data/10.1e4.var.bcf.wah` ]
 then
-    echo "SUCCESS: VCF.GZ-source WAH matches BCF-source WAH"
-    rm ../data/10.1e4.var.vcf.gz.wah
+    echo "SUCCESS: VCF.GZ-source GQT matches BCF-source GQT"
+    rm ../data/10.1e4.var.vcf.gz.gqt
 else
-    echo "ERROR: VCF.GZ-source WAH does not match BCF-source WAH"
+    echo "ERROR: VCF.GZ-source GQT does not match BCF-source GQT"
 fi 
 
 if [ `md5 -q ../data/10.1e4.var.vcf.vid` == `md5 -q ../data/10.1e4.var.bcf.vid` ]
 then
-    echo "SUCCESS: VCF-source VID matches BCF-source WAH"
+    echo "SUCCESS: VCF-source VID matches BCF-source GQT"
     rm ../data/10.1e4.var.vcf.vid
 else
-    echo "ERROR: VCF-source VID does not match BCF-source WAH"
+    echo "ERROR: VCF-source VID does not match BCF-source GQT"
 fi 
 
 if [ `md5 -q ../data/10.1e4.var.vcf.gz.vid` == `md5 -q ../data/10.1e4.var.bcf.vid` ]
 then
-    echo "SUCCESS: VCF.GZ-source VID matches BCF-source WAH"
+    echo "SUCCESS: VCF.GZ-source VID matches BCF-source GQT"
     rm ../data/10.1e4.var.vcf.gz.vid
 else
-    echo "ERROR: VCF.GZ-source VID does not match BCF-source WAH"
+    echo "ERROR: VCF.GZ-source VID does not match BCF-source GQT"
 fi 
 
 if [ `md5 -q ../data/10.1e4.var.vcf.bim` == `md5 -q ../data/10.1e4.var.bcf.bim` ]
 then
-    echo "SUCCESS: VCF-source BIM matches BCF-source WAH"
+    echo "SUCCESS: VCF-source BIM matches BCF-source GQT"
     rm ../data/10.1e4.var.vcf.bim
 else
-    echo "ERROR: VCF-source BIM does not match BCF-source WAH"
+    echo "ERROR: VCF-source BIM does not match BCF-source GQT"
 fi 
 
 if [ `md5 -q ../data/10.1e4.var.vcf.gz.bim` == `md5 -q ../data/10.1e4.var.bcf.bim` ]
 then
-    echo "SUCCESS: VCF.GZ-source BIM matches BCF-source WAH"
+    echo "SUCCESS: VCF.GZ-source BIM matches BCF-source GQT"
     rm ../data/10.1e4.var.vcf.gz.bim
 else
-    echo "ERROR: VCF.GZ-source BIM does not match BCF-source WAH"
+    echo "ERROR: VCF.GZ-source BIM does not match BCF-source GQT"
 fi 
 
 rm -f .tmp.test.ped

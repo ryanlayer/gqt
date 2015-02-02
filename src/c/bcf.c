@@ -752,10 +752,17 @@ void rotate_gt(uint32_t num_inds,
 
         for (j = 0; j < num_vars; ++j) { // loop over head row in that col
             // skip to the value at the row/col
+            uint64_t row = j;
+            row *=  num_ind_ints;// col
+            uint64_t col = i;
+            col *= sizeof(uint32_t);// col
+            /*
             fseek(s_gt_of, 
                   j*num_ind_ints*sizeof(uint32_t) + //row
                   i*sizeof(uint32_t), //col
                   SEEK_SET);
+            */
+            fseek(s_gt_of, row + col, SEEK_SET);
 
             int r = fread(&v, sizeof(uint32_t), 1, s_gt_of);
 

@@ -388,7 +388,9 @@ void sort_gt_md(pri_queue *q,
         md_s_index[var_i] = cumul_len;
 
         // jump to the sport in the genotypes, read and write
-        fseek(gt_of, (*d)*num_ind_ints*sizeof(uint32_t), SEEK_SET);
+        start = num_ind_ints*sizeof(uint32_t);
+        start = (*d)*start;
+        fseek(gt_of, start, SEEK_SET);
         r = fread(packed_ints, sizeof(uint32_t), num_ind_ints, gt_of);
         fwrite(packed_ints, sizeof(uint32_t), num_ind_ints,s_gt_of);
 

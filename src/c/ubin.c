@@ -577,9 +577,10 @@ uint32_t print_ubin(struct ubin_file uf,
         }
     } else {
         for (i = 0; i < num_r; ++i) {
-            fseek(uf.file, uf.header_offset + 
-                        record_ids[i]*num_bytes_per_record, 
-                        SEEK_SET);
+            uint64_t o = record_ids[i];
+            o*=num_bytes_per_record;
+            o+=uf.header_offset;
+            fseek(uf.file, o, SEEK_SET);
             int r = fread(c,sizeof(uint32_t),num_ints_per_record,uf.file);
 
             uint32_t printed_bits = 0;
@@ -756,7 +757,7 @@ uint32_t gt_count_records_ubin(struct ubin_file uf,
 }
 //}}}
 
-//{{{ uint32_t print_ubin(struct ubin_file uf,
+//{{{ uint32_t convert_file_by_name_ubin_to_plt(char *ubin_in, char *plt_out)
 uint32_t convert_file_by_name_ubin_to_plt(char *ubin_in, char *plt_out)
 {
     struct ubin_file uf = init_ubin_file(ubin_in);

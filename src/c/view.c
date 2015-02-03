@@ -7,7 +7,7 @@
 
 int view_help();
 int view_plt(char *in);
-int view_ubin(char *in);
+int view_ubin(char *in, int record_id);
 int view_wahbm(char *in);
 
 int view(int argc, char **argv)
@@ -16,13 +16,19 @@ int view(int argc, char **argv)
 
     int c;
     char *in, *out;
-    int i_is_set = 0; 
+    int i_is_set = 0,
+        r_is_set; 
+    int record_id = -1;
 
-    while ((c = getopt (argc, argv, "hi:")) != -1) {
+    while ((c = getopt (argc, argv, "hi:r:")) != -1) {
         switch (c) {
             case 'i':
                 i_is_set = 1;
                 in = optarg;
+                break;
+            case 'r':
+                r_is_set = 1;
+                record_id = atoi(optarg);
                 break;
             case 'h':
                 view_help();
@@ -49,7 +55,7 @@ int view(int argc, char **argv)
     } 
 
     if (strcmp(type, "plt") == 0)  return view_plt(in);
-    else if (strcmp(type, "ubin") == 0) return view_ubin(in);
+    else if (strcmp(type, "ubin") == 0) return view_ubin(in, record_id);
     else if (strcmp(type, "wahbm") == 0) return view_wahbm(in);
 
     return 1;
@@ -61,6 +67,7 @@ int view_help()
            "         plt   Plain text\n"
            "         ubin  Uncompressed binary\n"
            "         wahbm WAH-encoded bitmap\n"
+           "         -r    Record number to print\n"
     );
 
     return 0;
@@ -71,9 +78,14 @@ int view_plt(char *in)
     uint32_t num_printed = print_by_name_plt(in, NULL, 0);
     return 0;
 }
-int view_ubin(char *in)
+int view_ubin(char *in, int record_id)
 {
-    uint32_t num_printed = print_by_name_ubin(in, NULL, 0, 0);
+    if (record_id != -1) {
+        uint32_t R[1] = { record_id };
+        uint32_t num_printed = print_by_name_ubin(in, R, 1, 0);
+    } else {
+        uint32_t num_printed = print_by_name_ubin(in, NULL, 0, 0);
+    }
     return 0;
 }
 

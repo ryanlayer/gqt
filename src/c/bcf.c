@@ -73,7 +73,7 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
     asprintf(&gt_s_of_name, "%s/.s.gt.tmp.packed", tmp_dir);
     asprintf(&gt_s_r_of_name, "%s/.r.s.gt.tmp.packed", tmp_dir);
     asprintf(&md_of_name, "%s/.md.tmp", tmp_dir);
-    asprintf(&md_s_of_name, "%s/.md.s.tmp", tmp_dir);
+    asprintf(&md_s_of_name, "%s/.s.md.tmp", tmp_dir);
 
 
     struct bcf_file bcf_f = init_bcf_file(in);
@@ -117,13 +117,11 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 
     int r = convert_file_by_name_ubin_to_wahbm(gt_s_r_of_name, wah_out);
 
-    /*
     remove(gt_of_name);
     remove(gt_s_of_name);
     remove(gt_s_r_of_name);
     remove(md_of_name);
     remove(md_s_of_name);
-    */
 
     free(md_index);
     free(md_s_index);

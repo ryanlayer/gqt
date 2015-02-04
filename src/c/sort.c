@@ -10,7 +10,7 @@ int plt_field_freq(char *in, char *out);
 
 struct pair
 {
-    unsigned int a,b;
+    uint32_t a,b;
 };
 
 int compare (const void *a, const void *b)
@@ -24,7 +24,7 @@ int sort(int argc, char **argv)
 
     int c;
     char *in, *out;
-    unsigned int num_fields, num_records;
+    uint32_t num_fields, num_records;
     int i_is_set = 0, 
         o_is_set = 0; 
 
@@ -104,7 +104,7 @@ int plt_field_freq(char *in, char *out)
         read = getline(&line, &len, pf.file);
         for (j = 0; j < pf.num_fields; ++j) {
             S[j].a = j;
-            S[j].b += (unsigned int)line[j*2] - 48;
+            S[j].b += (uint32_t)line[j*2] - 48;
         }
     }
 

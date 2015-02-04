@@ -5,6 +5,7 @@
 
 #ifndef __PTHREAD_POOL_H__
 #define __PTHREAD_POOL_H__
+#include <stdint.h>
 #include <pthread.h>
 /**
  * Create a new thread pool.
@@ -17,7 +18,7 @@
  * \param threads The number of threads in the pool.
  * \return A pointer to the thread pool.
  */
-void * pool_start(void * (*thread_func)(void *), unsigned int threads);
+void * pool_start(void * (*thread_func)(void *), uint32_t threads);
 
 /**
  * Enqueue a new task for the thread pool.
@@ -52,8 +53,8 @@ struct pool_queue {
 struct pool {
 	char cancelled;
 	void *(*fn)(void *);
-	unsigned int remaining;
-	unsigned int nthreads;
+	uint32_t remaining;
+	uint32_t nthreads;
 	struct pool_queue *q;
 	struct pool_queue *end;
 	pthread_mutex_t q_mtx;

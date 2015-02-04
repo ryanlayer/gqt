@@ -71,7 +71,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    unsigned int R[num_r];
+    uint32_t R[num_r];
     parse_cmd_line_int_csv(R, num_r, record_ids);
 
     index_info index;
@@ -86,28 +86,28 @@ int main(int argc, char **argv)
     size_t len;
     len = get_line(index, bgzf_fp, 1, &line);
 
-    unsigned int num_fields = atoi(line);
+    uint32_t num_fields = atoi(line);
 
     free(line);
 
     len = get_line(index, bgzf_fp, 2, &line);
 
-    unsigned int num_records = atoi(line);
+    uint32_t num_records = atoi(line);
 
     free(line);
 
 
 
-    unsigned int num_ints_per_record = 1 + ((num_fields - 1) / 32);
+    uint32_t num_ints_per_record = 1 + ((num_fields - 1) / 32);
 
-    unsigned int *G =
-            (unsigned int *) malloc(num_ints_per_record*sizeof(unsigned int));
+    uint32_t *G =
+            (uint32_t *) malloc(num_ints_per_record*sizeof(uint32_t));
 
     int i, j;
     for (i = 0; i < num_ints_per_record; ++i)
         G[i] = -1;
 
-    unsigned int int_i, bit_i;
+    uint32_t int_i, bit_i;
     for (i = 0; i < num_r; ++i) {
         len = get_line(index, bgzf_fp, R[i]+3, &line);
         
@@ -116,9 +116,9 @@ int main(int argc, char **argv)
         int_i = 0;
         bit_i = 0;
         for (j = 0; j < num_fields; ++j) {
-            //cout << ((unsigned int)line[j*2] - 48) << endl;
+            //cout << ((uint32_t)line[j*2] - 48) << endl;
             // clear the bit
-            if  ( !( 0 < ((unsigned int)line[j*2] - 48))) 
+            if  ( !( 0 < ((uint32_t)line[j*2] - 48))) 
                 G[int_i] = G[int_i] & ~(1 << (31 - bit_i));
 
             bit_i += 1;

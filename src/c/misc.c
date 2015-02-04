@@ -14,8 +14,8 @@ int ubin_wahbm16(char *in, char *out);
 int ubin_wah(char *in, char *out);
 int vcf_plt(char *in,
             char *out,
-            unsigned int num_fields,
-            unsigned int num_records);
+            uint32_t num_fields,
+            uint32_t num_records);
 int plt_invert(char *in, char *out);
 int plt_invert_ubin(char *in, char *out);
 
@@ -25,7 +25,7 @@ int misc(int argc, char **argv)
 
     int c;
     char *in, *out, *bim, *vid;
-    unsigned int num_fields, num_records;
+    uint32_t num_fields, num_records;
     int i_is_set = 0, 
         o_is_set = 0, 
         f_is_set = 0, 
@@ -101,6 +101,22 @@ int misc(int argc, char **argv)
 
         return vcf_plt(in, out, num_fields, num_records);
     } 
+    if (strcmp(type, "rotate-hlubin") == 0) {
+        if (f_is_set == 0) {
+            printf("Number of fields is not set\n");
+            return misc_help();
+        }
+        if (r_is_set == 0) {
+            printf("Number of records is not set\n");
+            return misc_help();
+        }
+
+        rotate_gt(num_fields,
+                  num_records,
+                  in,
+                  out);
+        return 0;
+    }
 
     if (strcmp(type, "plt-ubin") == 0)  return plt_ubin(in, out);
     if (strcmp(type, "plt-vcf") == 0)  return plt_vcf(in, out);
@@ -129,6 +145,7 @@ int misc_help()
            "         vcf-plt           VCF to by-variant plain text\n"
            "         bcf-wahbm         BCF to by-individual sorted WAH bitmap\n"
            "         ped-db            PED to SQLite3 database\n"
+           "         rotate-hlubin     Rotate a ubin w/o a header to one w/\n"
            "         -v                VID output file name"
                                        "(required for bcf-wahbm)\n"
            "         -b                BIM output file name"
@@ -185,8 +202,8 @@ int plt_invert_ubin(char *in, char *out)
 
 int vcf_plt(char *in,
             char *out,
-            unsigned int num_fields,
-            unsigned int num_records)
+            uint32_t num_fields,
+            uint32_t num_records)
 {
     return convert_file_by_name_vcf_to_plt(in, num_fields, num_records, out);
 }

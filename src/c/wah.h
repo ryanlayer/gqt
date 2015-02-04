@@ -3,13 +3,13 @@
 
 struct wah_file {
     FILE *file;
-    unsigned int num_fields, num_records;
-    unsigned int *record_offsets;
+    uint32_t num_fields, num_records;
+    uint64_t *record_offsets;
     long header_offset;
 };
 
 struct wah_active_word {
-    unsigned int value, nbits;
+    uint32_t value, nbits;
 };
 
 struct wah16_active_word {
@@ -27,8 +27,8 @@ struct wah_ll {
 };
 
 struct wah_run {
-    unsigned int *words;
-    unsigned int len,
+    uint32_t *words;
+    uint32_t len,
                  word_i,
                  fill, // one word-long version of the fill
                  fill_bit, // if it is a fill, set this bit
@@ -57,54 +57,6 @@ struct wah_run {
 struct wah_file init_wah_file(char *file_name);
 
 /**
- * @brief Get a pointer to the bitmap of a particular WAH-encoded record
- *
- * @param wf The WAH file data structure
- * @param wah_record The record ID
- * @param wah A pointer set within the fuction that points to the record
- *            of intrest
- *
- * @retval number of words in the record
- *
- * Example Usage:
- * @code
- *      char *wah_file_name="data/10.1e4.ind.wah";
- *      struct wah_file wf = init_wah_file(wah_file_name);
- *      unsigned int *wah;
- *      unsinged int wah_size = get_wah(wf,
- *                                      test_record,
- *                                      &wah);
- *      unsinged int *ints;
- *      unsigned int num_ints = wah_to_ints(wah, wah_size, &ints);
- * @endcode
- */
-unsigned int get_wah_record(struct wah_file wf,
-                            unsigned int wah_record,
-                            unsigned int **wah);
-
-/**
- * @brief Print a WAH encoded bitmap file.
- *
- * If num_r > 0, then record_ids should contain the ids of records in the file
- * that will be displayed, otherwise all records will be displayed.
- *
- * @param wf An initilized WAH bitmap file 
- * @param record_ids An array of record ids
- * @param num_r number of records in the array
- * @param format Output format: 0:plain text
- *                              1:packed int
- *                              2:packed int
- *
- *
- * @retval number of records printed 
- */
-
-unsigned int print_wahbm(struct wah_file wf,
-                        unsigned int *record_ids,
-                        unsigned int num_r,
-                        unsigned int format);
-
-/**
  * @brief   AND two WAH runs
  *
  * @param x WAH run for
@@ -117,33 +69,33 @@ unsigned int print_wahbm(struct wah_file wf,
  *
  * Example Usage:
  * @code
- *      unsigned int X[5] = {
+ *      uint32_t X[5] = {
  *          bin_char_to_int("01000000000000000000000000000001"),
  *          bin_char_to_int("11111111111111111111111111111111"),
  *          bin_char_to_int("11111111111111111111111111111111"),
  *          bin_char_to_int("01000000000101010100000000000000"),
  *          bin_char_to_int("01000000000000000001010101000000")
  *      };
- *      unsigned int Y[5] = {
+ *      uint32_t Y[5] = {
  *          bin_char_to_int("01000000000000000000000000000001"),
  *          bin_char_to_int("11111111111111111111111111111111"),
  *          bin_char_to_int("11111111111111111111111111111000"),
  *          bin_char_to_int("00000000000000000000000000000000"),
  *          bin_char_to_int("00000000000000000000000000001011")
  *      };
- *      unsigned int *w_X;
+ *      uint32_t *w_X;
  *      int wah_size_X = ints_to_wah(X,5,160,&w_X);
  *      struct wah_run r_X = init_wah_run(w_X, wah_size_X);
- *      unsigned int *w_Y;
+ *      uint32_t *w_Y;
  *      int wah_size_Y = ints_to_wah(Y,5,160,&w_Y);
  *      struct wah_run r_Y = init_wah_run(w_Y, wah_size_Y);
- *      unsigned int *Z;
- *      unsigned int Z_len = wah_and(&r_X, &r_Y, &Z);
+ *      uint32_t *Z;
+ *      uint32_t Z_len = wah_and(&r_X, &r_Y, &Z);
  * @endcode
  */
-unsigned int wah_and(struct wah_run *x,
+uint32_t wah_and(struct wah_run *x,
                      struct wah_run *y,
-                     unsigned int **O);
+                     uint32_t **O);
 
 
 /**
@@ -159,33 +111,33 @@ unsigned int wah_and(struct wah_run *x,
  *
  * Example Usage:
  * @code
- *      unsigned int X[5] = {
+ *      uint32_t X[5] = {
  *          bin_char_to_int("01000000000000000000000000000001"),
  *          bin_char_to_int("11111111111111111111111111111111"),
  *          bin_char_to_int("11111111111111111111111111111111"),
  *          bin_char_to_int("01000000000101010100000000000000"),
  *          bin_char_to_int("01000000000000000001010101000000")
  *      };
- *      unsigned int Y[5] = {
+ *      uint32_t Y[5] = {
  *          bin_char_to_int("01000000000000000000000000000001"),
  *          bin_char_to_int("11111111111111111111111111111111"),
  *          bin_char_to_int("11111111111111111111111111111000"),
  *          bin_char_to_int("00000000000000000000000000000000"),
  *          bin_char_to_int("00000000000000000000000000001011")
  *      };
- *      unsigned int *w_X;
+ *      uint32_t *w_X;
  *      int wah_size_X = ints_to_wah(X,5,160,&w_X);
  *      struct wah_run r_X = init_wah_run(w_X, wah_size_X);
- *      unsigned int *w_Y;
+ *      uint32_t *w_Y;
  *      int wah_size_Y = ints_to_wah(Y,5,160,&w_Y);
  *      struct wah_run r_Y = init_wah_run(w_Y, wah_size_Y);
- *      unsigned int *Z;
- *      unsigned int Z_len = wah_or(&r_X, &r_Y, &Z);
+ *      uint32_t *Z;
+ *      uint32_t Z_len = wah_or(&r_X, &r_Y, &Z);
  * @endcode
  */
-unsigned int wah_or(struct wah_run *x,
+uint32_t wah_or(struct wah_run *x,
                     struct wah_run *y,
-                    unsigned int **O);
+                    uint32_t **O);
 
 /**
  * @brief   Initialize the values of WAH run for subsequent binary op
@@ -199,7 +151,7 @@ unsigned int wah_or(struct wah_run *x,
  *
  * Example Usage:
  * @code
- *      unsigned int X[5] =
+ *      uint32_t X[5] =
  *              { bin_char_to_int("01000000000000000000000000000001"),
  *                bin_char_to_int("11111111111111111111111111111111"),
  *                bin_char_to_int("11111111111111111111111111111111"),
@@ -207,13 +159,13 @@ unsigned int wah_or(struct wah_run *x,
  *                bin_char_to_int("01000000000000000001010101000000")
  *              };
  *
- *      unsigned int *w_X;
- *      unsigned int wah_size_X = ints_to_wah(X,5,160,&w_X);
+ *      uint32_t *w_X;
+ *      uint32_t wah_size_X = ints_to_wah(X,5,160,&w_X);
  *      struct wah_run r_X = init_wah_run(w_X, wah_size_X); 
  * @endcode
  */
-struct wah_run init_wah_run(unsigned int *words,
-                            unsigned int len);
+struct wah_run init_wah_run(uint32_t *words,
+                            uint32_t len);
 
 /**
  * @brief   Decoded the word-ith element
@@ -229,9 +181,9 @@ struct wah_run init_wah_run(unsigned int *words,
  *
  * Example Usage:
  * @code
- *      unsigned int I[5] = {2147483648,0,0,3,1};
- *      unsigned int *O;
- *      unsigned int wah_size = ints_to_wah(I,5,160,&O);
+ *      uint32_t I[5] = {2147483648,0,0,3,1};
+ *      uint32_t *O;
+ *      uint32_t wah_size = ints_to_wah(I,5,160,&O);
  *      struct wah_run r = init_wah_run(O, wah_size);
  *      wah_run_decode(&r);
  * @endcode
@@ -253,21 +205,21 @@ void wah_run_decode(struct wah_run *r);
  *
  * Example Usage:
  * @code
- *      unsigned int X[5] =
+ *      uint32_t X[5] =
  *          { bin_char_to_int("01000000000000000000000000000001"),
  *            bin_char_to_int("11111111111111111111111111111111"),
  *            bin_char_to_int("11111111111111111111111111111111"),
  *            bin_char_to_int("01000000000101010100000000000000"),
  *            bin_char_to_int("01000000000000000001010101000000")
  *          };
- *      unsigned int *w_X;
- *      unsigned int wah_size_X = ints_to_wah(X,5,160,&w_X);
+ *      uint32_t *w_X;
+ *      uint32_t wah_size_X = ints_to_wah(X,5,160,&w_X);
  * @endcode
  */
-unsigned int ints_to_wah(unsigned int *I,
+uint32_t ints_to_wah(uint32_t *I,
                          int I_len,
-                         unsigned int used_bits,
-                         unsigned int **W);
+                         uint32_t used_bits,
+                         uint32_t **W);
 
 /**
  * @brief   Convert an array of 32-bit integers to 16-bit WAH encoding
@@ -284,7 +236,7 @@ unsigned int ints_to_wah(unsigned int *I,
  *
  * Example Usage:
  * @code
- *      unsigned int X[5] =
+ *      uint32_t X[5] =
  *          { bin_char_to_int("01000000000000000000000000000001"),
  *            bin_char_to_int("11111111111111111111111111111111"),
  *            bin_char_to_int("11111111111111111111111111111111"),
@@ -292,12 +244,12 @@ unsigned int ints_to_wah(unsigned int *I,
  *            bin_char_to_int("01000000000000000001010101000000")
  *          };
  *      uint16_t *w_X;
- *      unsigned int wah_size_X = ints_to_wah(X,5,160,&w_X);
+ *      uint32_t wah_size_X = ints_to_wah(X,5,160,&w_X);
  * @endcode
  */
-unsigned int ints_to_wah16(unsigned int *I,
+uint32_t ints_to_wah16(uint32_t *I,
                            int I_len,
-                           unsigned int used_bits,
+                           uint32_t used_bits,
                            uint16_t **W);
 
 /**
@@ -315,16 +267,16 @@ unsigned int ints_to_wah16(unsigned int *I,
  *
  * Example Usage:
  * @code
- *      unsigned int A[6] = {1073741824, 0, 0, 0, 402653184, 67108864};
- *      unsigned int *O;
+ *      uint32_t A[6] = {1073741824, 0, 0, 0, 402653184, 67108864};
+ *      uint32_t *O;
  *      int l;
  *      int num_31_groups = map_from_32_bits_to_31_bits(I,5,160,&O,&l);
  * @endcode
  */
-unsigned int map_from_32_bits_to_31_bits(unsigned int *I,
+uint32_t map_from_32_bits_to_31_bits(uint32_t *I,
                                          int I_len,
-                                         unsigned int used_bits,
-                                         unsigned int **O);
+                                         uint32_t used_bits,
+                                         uint32_t **O);
 
 /**
  * @brief   A helper function to group ints encoding 32-bits to ones encoding
@@ -342,15 +294,15 @@ unsigned int map_from_32_bits_to_31_bits(unsigned int *I,
  * Example Usage:
  * @code
  *      #include <stdint.h>
- *      unsigned int A[6] = {1073741824, 0, 0, 0, 402653184, 67108864};
+ *      uint32_t A[6] = {1073741824, 0, 0, 0, 402653184, 67108864};
  *      uint16_t *O;
  *      int l;
  *      int num_31_groups = map_from_32_bits_to_15_bits(I,5,160,&O,&l);
  * @endcode
  */
-unsigned int map_from_32_bits_to_15_bits(unsigned int *I,
+uint32_t map_from_32_bits_to_15_bits(uint32_t *I,
                                          int I_len,
-                                         unsigned int used_bits,
+                                         uint32_t used_bits,
                                          uint16_t **O);
 
 /**
@@ -456,7 +408,7 @@ int append_active_16word(struct wah16_ll **A_head,
 int append_fill_word(struct wah_ll **A_head,
                      struct wah_ll **A_tail,
                      int fill_bit,
-                     unsigned int fill_size);
+                     uint32_t fill_size);
 /**
  * @brief Convert WAH encoding to uncompressed binary ints.
  *
@@ -472,16 +424,16 @@ int append_fill_word(struct wah_ll **A_head,
  *
  * Example Usage:
  * @code
- *     unsigned int I[5] = {2147483648,0,0,3,1};
- *     unsigned int *WAH;
- *     unsigned int wah_size = ints_to_wah(I,5,160,&WAH);
- *     unsigned int *INTS;
- *     unsigned int ints_size = wah_to_ints(WAH,wah_size,&INTS);
+ *     uint32_t I[5] = {2147483648,0,0,3,1};
+ *     uint32_t *WAH;
+ *     uint32_t wah_size = ints_to_wah(I,5,160,&WAH);
+ *     uint32_t *INTS;
+ *     uint32_t ints_size = wah_to_ints(WAH,wah_size,&INTS);
  * @endcode
  */
-unsigned int wah_to_ints(unsigned int *W,
-                         unsigned int W_len,
-                         unsigned int **O);
+uint32_t wah_to_ints(uint32_t *W,
+                         uint32_t W_len,
+                         uint32_t **O);
 
 /**
  * @brief Print a WAH encoded (non-bitmap) file.
@@ -500,29 +452,9 @@ unsigned int wah_to_ints(unsigned int *W,
  * @retval number of records printed 
  */
 
-unsigned int print_wah(struct wah_file wf,
-                       unsigned int *record_ids,
-                       unsigned int num_r,
-                       unsigned int format);
+uint32_t print_wah(struct wah_file wf,
+                       uint32_t *record_ids,
+                       uint32_t num_r,
+                       uint32_t format);
 
-/**
- * @brief Print a WAH encoded (non-bitmap) file (wrapper around print_wah). 
- *
- * If num_r > 0, then record_ids should contain the ids of records in the file
- * that will be displayed, otherwise all records will be displayed.
- *
- * @param wahbm_file_name WAH (non-bitmap) file name
- * @param record_ids An array of record ids
- * @param num_r number of records in the array
- * @param format Output format: 0:plain text
- *                              1:packed int
- *                              3:wah
- *
- *
- * @retval number of records printed 
- */
-unsigned int print_by_name_wah(char *wahbm_file_name,
-                               unsigned int *record_ids,
-                               unsigned int num_r,
-                               unsigned int format);
 #endif

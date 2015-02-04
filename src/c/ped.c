@@ -239,7 +239,11 @@ uint32_t resolve_ind_query(uint32_t **R, char *query, char *ped_db_file)
     }
 
     char *test_q;
-    int r = asprintf(&test_q, "SELECT Ind_ID FROM ped WHERE %s;", query);
+    int r;
+    if (strlen(query) == 0)
+        r = asprintf(&test_q, "SELECT Ind_ID FROM ped");
+    else
+        r = asprintf(&test_q, "SELECT Ind_ID FROM ped WHERE %s;", query);
 
     struct uint32_t_ll ll;
     ll.head = NULL;

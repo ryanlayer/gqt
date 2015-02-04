@@ -16,13 +16,13 @@
 #include "timer.h"
 
 // wahbm compressed in place
-//{{{ unsigned int wah_compressed_in_place_or(unsigned int *r_wah,
-unsigned int wah_compressed_in_place_or(unsigned int *r_wah,
-                                         unsigned int r_wah_size,
-                                         unsigned int *wah,
-                                         unsigned int wah_size)
+//{{{ uint32_t wah_compressed_in_place_or(uint32_t *r_wah,
+uint32_t wah_compressed_in_place_or(uint32_t *r_wah,
+                                         uint32_t r_wah_size,
+                                         uint32_t *wah,
+                                         uint32_t wah_size)
 {
-    unsigned int wah_i, wah_v, wah_fill_size, wah_fill_value,
+    uint32_t wah_i, wah_v, wah_fill_size, wah_fill_value,
                  r_wah_i, r_wah_v, r_wah_fill_size, r_wah_fill_value,
                  end, num_words;
 
@@ -157,20 +157,20 @@ unsigned int wah_compressed_in_place_or(unsigned int *r_wah,
 }
 //}}}
 
-//{{{ unsigned int wah_compressed_in_place_and_compressed_in_place(
+//{{{ uint32_t wah_compressed_in_place_and_compressed_in_place(
 //Here wer are dealing with two compressed_in_place values
-unsigned int wah_compressed_in_place_and_compressed_in_place(
-                                          unsigned int *r_wah,
-                                          unsigned int r_wah_size,
-                                          unsigned int *wah,
-                                          unsigned int wah_size)
+uint32_t wah_compressed_in_place_and_compressed_in_place(
+                                          uint32_t *r_wah,
+                                          uint32_t r_wah_size,
+                                          uint32_t *wah,
+                                          uint32_t wah_size)
 {
-    unsigned int wah_i, wah_v, wah_fill_size, wah_fill_value,
+    uint32_t wah_i, wah_v, wah_fill_size, wah_fill_value,
                  r_wah_i, r_wah_v, r_wah_fill_size, r_wah_fill_value,
                  end, num_words;
 
     r_wah_i = 0;
-    unsigned int wah_c = 0;
+    uint32_t wah_c = 0;
 
     for (wah_i = 0; wah_i < wah_size;)
     {
@@ -334,19 +334,19 @@ unsigned int wah_compressed_in_place_and_compressed_in_place(
 }
 //}}}
 
-//{{{ unsigned int wah_compressed_in_place_and(unsigned int *r_wah,
+//{{{ uint32_t wah_compressed_in_place_and(uint32_t *r_wah,
 //Here wer are dealing with two compressed_in_place values
-unsigned int wah_compressed_in_place_and(unsigned int *r_wah,
-                                          unsigned int r_wah_size,
-                                          unsigned int *wah,
-                                          unsigned int wah_size)
+uint32_t wah_compressed_in_place_and(uint32_t *r_wah,
+                                          uint32_t r_wah_size,
+                                          uint32_t *wah,
+                                          uint32_t wah_size)
 {
-    unsigned int wah_i, wah_v, wah_fill_size, wah_fill_value,
+    uint32_t wah_i, wah_v, wah_fill_size, wah_fill_value,
                  r_wah_i, r_wah_v, r_wah_fill_size, r_wah_fill_value,
                  end, num_words;
 
     r_wah_i = 0;
-    unsigned int wah_c = 0;
+    uint32_t wah_c = 0;
 
     for (wah_i = 0; wah_i < wah_size; ++wah_i)
     {
@@ -485,34 +485,34 @@ unsigned int wah_compressed_in_place_and(unsigned int *r_wah,
 }
 //}}}
 
-//{{{ unsigned int range_records_compressed_in_place_wahbm(struct wah_file wf,
-unsigned int range_records_compressed_in_place_wahbm(
+//{{{ uint32_t range_records_compressed_in_place_wahbm(struct wah_file wf,
+uint32_t range_records_compressed_in_place_wahbm(
             struct wah_file wf,
-            unsigned int *record_ids,
-            unsigned int num_r,
-            unsigned int start_test_value,
-            unsigned int end_test_value,
-            unsigned int **R) 
+            uint32_t *record_ids,
+            uint32_t num_r,
+            uint32_t start_test_value,
+            uint32_t end_test_value,
+            uint32_t **R) 
 
 {
 
-    unsigned int max_wah_size = (wf.num_fields + 31 - 1)/ 31;
-    unsigned int *record_new_bm = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size);
+    uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    uint32_t *record_new_bm = (uint32_t *)
+                        malloc(sizeof(uint32_t)*max_wah_size);
 
-    unsigned int *or_result_bm = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size);
-    unsigned int *and_result_bm = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size);
-    unsigned int and_result_bm_size, record_new_bm_size, or_result_bm_size;
-    unsigned int i,j;
+    uint32_t *or_result_bm = (uint32_t *)
+                        malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *and_result_bm = (uint32_t *)
+                        malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t and_result_bm_size, record_new_bm_size, or_result_bm_size;
+    uint32_t i,j;
 
     //for (i = 0; i < max_wah_size; ++i)
     and_result_bm[0] = (3<<30) + max_wah_size;
 
     for (i = 0; i < num_r; ++i) {
         // or the appropriate bitmaps
-        //memset(or_result_bm, 0, sizeof(unsigned int)*max_wah_size);
+        //memset(or_result_bm, 0, sizeof(uint32_t)*max_wah_size);
         or_result_bm[0] = (2<<30) + max_wah_size; 
 
         for (j = start_test_value; j < end_test_value; ++j) {
@@ -547,27 +547,27 @@ unsigned int range_records_compressed_in_place_wahbm(
 }
 //}}}
 
-//{{{ unsigned int count_range_records_compressed_in_place_wahbm(struct
-unsigned int count_range_records_compressed_in_place_wahbm(
+//{{{ uint32_t count_range_records_compressed_in_place_wahbm(struct
+uint32_t count_range_records_compressed_in_place_wahbm(
             struct wah_file wf,
-            unsigned int *record_ids,
-            unsigned int num_r,
-            unsigned int start_test_value,
-            unsigned int end_test_value,
-            unsigned int **R) 
+            uint32_t *record_ids,
+            uint32_t num_r,
+            uint32_t start_test_value,
+            uint32_t end_test_value,
+            uint32_t **R) 
 
 {
-    *R = (unsigned int *) calloc(wf.num_fields,sizeof(unsigned int));
+    *R = (uint32_t *) calloc(wf.num_fields,sizeof(uint32_t));
 
-    unsigned int max_wah_size = (wf.num_fields + 31 - 1)/ 31;
-    unsigned int *record_new_bm = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size);
+    uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    uint32_t *record_new_bm = (uint32_t *)
+                        malloc(sizeof(uint32_t)*max_wah_size);
 
-    unsigned int *or_result_bm = (unsigned int *)
-                        malloc(sizeof(unsigned int)*max_wah_size);
+    uint32_t *or_result_bm = (uint32_t *)
+                        malloc(sizeof(uint32_t)*max_wah_size);
 
-    unsigned int and_result_bm_size, record_new_bm_size, or_result_bm_size;
-    unsigned int i,j,r_size;
+    uint32_t and_result_bm_size, record_new_bm_size, or_result_bm_size;
+    uint32_t i,j,r_size;
 
 #ifdef time_count_range_records_compressed_in_place_wahbm
     unsigned long t1 = 0, t2 = 0, t3 = 0;
@@ -575,7 +575,7 @@ unsigned int count_range_records_compressed_in_place_wahbm(
 
     for (i = 0; i < num_r; ++i) {
         // or the appropriate bitmaps
-        //memset(or_result_bm, 0, sizeof(unsigned int)*max_wah_size);
+        //memset(or_result_bm, 0, sizeof(uint32_t)*max_wah_size);
         or_result_bm[0] = (2<<30) + max_wah_size; 
 
         for (j = start_test_value; j < end_test_value; ++j) {
@@ -639,14 +639,14 @@ unsigned int count_range_records_compressed_in_place_wahbm(
 }
 //}}}
 
-//{{{ unsigned int add_compressed_in_place_wahbm(unsigned int *R,
-unsigned int add_compressed_in_place_wahbm(unsigned int *R,
-                                           unsigned int r_size,
-                                           unsigned int *wah,
-                                           unsigned int wah_size)
+//{{{ uint32_t add_compressed_in_place_wahbm(uint32_t *R,
+uint32_t add_compressed_in_place_wahbm(uint32_t *R,
+                                           uint32_t r_size,
+                                           uint32_t *wah,
+                                           uint32_t wah_size)
 {
 
-    unsigned int wah_i,
+    uint32_t wah_i,
                  wah_v,
                  num_words,
                  fill_bit,
@@ -693,13 +693,13 @@ unsigned int add_compressed_in_place_wahbm(unsigned int *R,
 }
 //}}}
 
-//{{{ unsigned int gt_count_records_compressed_in_place_wahbm(
-unsigned int gt_count_records_compressed_in_place_wahbm(
+//{{{ uint32_t gt_count_records_compressed_in_place_wahbm(
+uint32_t gt_count_records_compressed_in_place_wahbm(
                                              struct wah_file wf,
-                                             unsigned int *record_ids,
-                                             unsigned int num_r,
-                                             unsigned int test_value,
-                                             unsigned int **R) 
+                                             uint32_t *record_ids,
+                                             uint32_t num_r,
+                                             uint32_t test_value,
+                                             uint32_t **R) 
 
 {
     // TODO: need constants for upper bound.
@@ -712,12 +712,12 @@ unsigned int gt_count_records_compressed_in_place_wahbm(
 }
 //}}}
 
-//{{{ unsigned int gt_records_compressed_in_place_wahbm(struct wah_file wf,
-unsigned int gt_records_compressed_in_place_wahbm(struct wah_file wf,
-                                       unsigned int *record_ids,
-                                       unsigned int num_r,
-                                       unsigned int test_value,
-                                       unsigned int **R) 
+//{{{ uint32_t gt_records_compressed_in_place_wahbm(struct wah_file wf,
+uint32_t gt_records_compressed_in_place_wahbm(struct wah_file wf,
+                                       uint32_t *record_ids,
+                                       uint32_t num_r,
+                                       uint32_t test_value,
+                                       uint32_t **R) 
 
 {
     // TODO: need constants for upper bound.
@@ -730,14 +730,14 @@ unsigned int gt_records_compressed_in_place_wahbm(struct wah_file wf,
 }
 //}}}
 
-//{{{ unsigned int compressed_in_place_wah_to_ints(unsigned int *W,
-unsigned int compressed_in_place_wah_to_ints(unsigned int *W,
-                                             unsigned int W_len,
-                                             unsigned int **O)
+//{{{ uint32_t compressed_in_place_wah_to_ints(uint32_t *W,
+uint32_t compressed_in_place_wah_to_ints(uint32_t *W,
+                                             uint32_t W_len,
+                                             uint32_t **O)
 {
 
-    unsigned int wah_i;
-    unsigned int num_bits = 0;
+    uint32_t wah_i;
+    uint32_t num_bits = 0;
 
     wah_i = 0;
     while (wah_i < W_len) {
@@ -750,11 +750,11 @@ unsigned int compressed_in_place_wah_to_ints(unsigned int *W,
         }
     }
 
-    unsigned int num_ints = (num_bits + 32 - 1) / 32;
-    *O = (unsigned int *) malloc (num_ints * sizeof(unsigned int));
+    uint32_t num_ints = (num_bits + 32 - 1) / 32;
+    *O = (uint32_t *) malloc (num_ints * sizeof(uint32_t));
 
 
-    unsigned int num_words,
+    uint32_t num_words,
                  word_i,
                  fill_bit,
                  bits,

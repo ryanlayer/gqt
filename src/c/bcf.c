@@ -57,23 +57,23 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 
     /*
     char *gt_of_name = ".gt.tmp.packed";
-    char *s_gt_of_name = ".s.gt.tmp.packed";
-    char *r_s_gt_of_name = ".r.s.gt.tmp.packed";
+    char *gt_s_of_name = ".s.gt.tmp.packed";
+    char *gt_s_r_of_name = ".r.s.gt.tmp.packed";
     char *md_of_name = ".md.tmp.packed";
-    char *bim_of_name = ".md.tmp.packed.bim";
+    char *md_s_of_name = ".md.tmp.packed.bim";
     */
 
     char *gt_of_name,
-         *s_gt_of_name,
-         *r_s_gt_of_name,
+         *gt_s_of_name,
+         *gt_s_r_of_name,
          *md_of_name,
-         *bim_of_name;
+         *md_s_of_name;
 
     asprintf(&gt_of_name, "%s/.gt.tmp.packed", tmp_dir);
-    asprintf(&s_gt_of_name, "%s/.s.gt.tmp.packed", tmp_dir);
-    asprintf(&r_s_gt_of_name, "%s/.r.s.gt.tmp.packed", tmp_dir);
-    asprintf(&md_of_name, "%s/.md.tmp.packed", tmp_dir);
-    asprintf(&bim_of_name, "%s/.md.tmp.packed.bim", tmp_dir);
+    asprintf(&gt_s_of_name, "%s/.s.gt.tmp.packed", tmp_dir);
+    asprintf(&gt_s_r_of_name, "%s/.r.s.gt.tmp.packed", tmp_dir);
+    asprintf(&md_of_name, "%s/.md.tmp", tmp_dir);
+    asprintf(&md_s_of_name, "%s/.s.md.tmp", tmp_dir);
 
 
     struct bcf_file bcf_f = init_bcf_file(in);
@@ -81,7 +81,7 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 
     uint64_t *md_index = (uint64_t *) malloc(num_vars * sizeof(uint64_t));
 
-    uint64_t *md_lens = (uint64_t *) malloc(num_vars * sizeof(uint64_t));
+    uint64_t *md_s_index = (uint64_t *) malloc(num_vars * sizeof(uint64_t));
 
     push_bcf_gt_md(&q,
                    &bcf_f,
@@ -93,43 +93,61 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 
     sort_gt_md(&q,
                md_index,
-               md_lens,
+               md_s_index,
                num_inds,
                num_vars,
                gt_of_name,
-               s_gt_of_name,
+               gt_s_of_name,
                md_of_name,
-               bim_of_name,
+               md_s_of_name,
                vid_out);
 
     compress_md(&bcf_f,
-                bim_of_name,
+                md_s_of_name,
                 bim_out,
-                md_lens,
+                md_s_index,
                 num_vars);
 
     rotate_gt(num_inds,
               num_vars,
-              s_gt_of_name,
-              r_s_gt_of_name);
+              gt_s_of_name,
+              gt_s_r_of_name);
 
     close_bcf_file(&bcf_f);
 
-    int r = convert_file_by_name_ubin_to_wahbm(r_s_gt_of_name, wah_out);
+    int r = convert_file_by_name_ubin_to_wahbm(gt_s_r_of_name, wah_out);
 
     remove(gt_of_name);
-    remove(s_gt_of_name);
-    remove(r_s_gt_of_name);
+    remove(gt_s_of_name);
+    remove(gt_s_r_of_name);
     remove(md_of_name);
-    remove(bim_of_name);
+    remove(md_s_of_name);
 
     free(md_index);
-    free(md_lens);
+    free(md_s_index);
     return r;
 }
 //}}}
 
 //{{{ void push_bcf_gt_md(pri_queue *q,
+/*
+ * Read a BCF file and populated:
+ * INPUT:
+ *   bcf_f: a bcf_file struct that contains the file handle and metadata for
+ *          the target BCF file 
+ * OUTPUT:
+ *   q: a prioriy queue where the priority is the alt allele count and
+ *      the number of leaded zeros, and the value is the index of that 
+ *      variant both in md_of_name (where md_index maps index to the file
+ *      offset) and in gt_of_name (which is fixed width and that index can be
+ *      multiplied by width to get fill offset)
+ *   md_of_name: a file containg the variant metadata
+ *   md_index: an array of 64-bit ints that contains that maps the index of a
+ *             vairiant to its offset in md_of_name
+ *   gt_of_name: a variant-major file containing arrays of pakced genotypes
+ *               (0,1,2,3) this is a fixed-width file and each element in the
+ *               array is a 32-bit int
+ */
 void push_bcf_gt_md(pri_queue *q,
                     struct bcf_file *bcf_f,
                     uint64_t *md_index,
@@ -144,6 +162,7 @@ void push_bcf_gt_md(pri_queue *q,
 
     uint32_t num_ind_ints = 1 + ((num_inds - 1) / 16);
 
+    // Allocate this array once, and reuse it for every variant
     uint32_t *packed_ints = (uint32_t *) calloc(num_ind_ints,
                                                 sizeof(uint32_t));
 
@@ -269,15 +288,50 @@ void push_bcf_gt_md(pri_queue *q,
 //}}}
 
 //{{{void sort_gt_md(pri_queue *q,
+/*
+ * Use the priority queue q to create new variant metadata and packed int files
+ * that are sorted.  Also create a md_s_index, which stores the end of each
+ * variant metadata entry as part of the bim file.
+ *
+ * Each element is poped from the q.  The value of that element (d) is used to
+ * find the variants in gt_of_name (d*width) and the metadata inf md_of_name
+ * (md_index[d-1] or 0 if d is zero).  The target variant line is written to
+ * gt_s_of_name and the target metadata is writein to md_s_of_name.  The length
+ * of that metadata line is added with the previous and appended to md_s_index.
+ * The index (d) is appended to vid_out.
+ *
+ * INPUT:
+ *   q: a prioriy queue where the priority is the alt allele count and
+ *      the number of leaded zeros, and the value is the index of that 
+ *      variant both in md_of_name (where md_index maps index to the file
+ *      offset) and in gt_of_name (which is fixed width and that index can be
+ *      multiplied by width to get fill offset)
+ *   md_of_name: a file containg the variant metadata
+ *   md_index: an array of 64-bit ints that contains that maps the index of a
+ *             vairiant to its offset in md_of_name
+ *   gt_of_name: a variant-major file containing arrays of pakced genotypes
+ *               (0,1,2,3) this is a fixed-width file and each element in the
+ *               array is a 32-bit int
+ *
+ * OUTPUT:
+ *   md_s_index:  an array of 64-bit ints that store the end of each metadata
+ *                entry in the sorted md_s_of_name file
+ *   gt_s_of_name: a variant-major file containing sorted arrays of pakced
+ *                 genotypes (0,1,2,3) this is a fixed-width file and each
+ *                 element in the array is a 32-bit int
+ *   md_s_of_name: a file containing the sorted variant metadata
+ *   vid_out: a file containg the index of the sorted variant in the original
+ *            BCF file
+ */
 void sort_gt_md(pri_queue *q,
                 uint64_t *md_index,
-                uint64_t *md_lens,
+                uint64_t *md_s_index,
                 uint32_t num_inds,
                 uint32_t num_vars,
                 char *gt_of_name,
-                char *s_gt_of_name,
+                char *gt_s_of_name,
                 char *md_of_name,
-                char *bim_of_name,
+                char *md_s_of_name,
                 char *vid_out)
 {
     // unsorted metadata
@@ -285,11 +339,11 @@ void sort_gt_md(pri_queue *q,
     // unsorted genotypes
     FILE *gt_of = fopen(gt_of_name,"rb");
     // sorted genotypes
-    FILE *md_out = fopen(bim_of_name,"w");
+    FILE *md_out = fopen(md_s_of_name,"w");
     // sorted variant row #s
     FILE *v_out = fopen(vid_out,"wb");
     // sorted genotypes
-    FILE *s_gt_of = fopen(s_gt_of_name,"wb");
+    FILE *s_gt_of = fopen(gt_s_of_name,"wb");
 
     uint32_t num_ind_ints = 1 + ((num_inds - 1) / 16);
 
@@ -320,7 +374,7 @@ void sort_gt_md(pri_queue *q,
         // get the length of meta data
         uint64_t len = md_index[*d] - start;
 
-        // jump to the sport the metadata and read
+        // jump to the spot the metadata and read
         fseek(md_of, start*sizeof(char), SEEK_SET);
         char buf[len+1];
         int r = fread(buf, sizeof(char), len, md_of);
@@ -329,10 +383,12 @@ void sort_gt_md(pri_queue *q,
         fprintf(md_out, "%s", buf);
 
         cumul_len += strlen(buf);
-        md_lens[var_i] = cumul_len;
+        md_s_index[var_i] = cumul_len;
 
         // jump to the sport in the genotypes, read and write
-        fseek(gt_of, (*d)*num_ind_ints*sizeof(uint32_t), SEEK_SET);
+        start = num_ind_ints*sizeof(uint32_t);
+        start = (*d)*start;
+        fseek(gt_of, start, SEEK_SET);
         r = fread(packed_ints, sizeof(uint32_t), num_ind_ints, gt_of);
         fwrite(packed_ints, sizeof(uint32_t), num_ind_ints,s_gt_of);
 
@@ -356,10 +412,33 @@ void sort_gt_md(pri_queue *q,
 //}}}
 
 //{{{ void compress_md(struct bcf_file *bcf_f,
+/*
+ * Create the bim file that contains some header information then the
+ * compressed metadata. md line lengths are from md_s_index
+ *
+ * The file is :
+ * uncompressed size     ( sizeof(uint64_t))
+ * compressed size       ( sizeof(uint64_t))
+ * header size           ( sizeof(uint64_t))
+ * number of var/records ( bcf_f->num_records*sizeof(uint64_t))
+ * md line lengths       ( bcf_f->num_records*sizeof(uint64_t))
+ * compressed data 
+ *
+ * INPUT
+ *   bcf_f: a bcf_file struct that contains the file handle and metadata for
+ *          the target BCF file 
+ *   md_s_of_name: a file containing the sorted variant metadata
+ *   md_s_index:  an array of 64-bit ints that store the end of each metadata
+ *                entry in the sorted md_s_of_name file
+ *   num_var: number of variants
+ * OUTPUT
+ *   bim_out: the file containing some metadata about the variant metadata and
+ *            the compressed metadata
+ */
 void compress_md(struct bcf_file *bcf_f,
-                 char *md_of_name,
+                 char *md_s_of_name,
                  char *bim_out,
-                 uint64_t *md_lens,
+                 uint64_t *md_s_index,
                  uint32_t num_vars)
 {
     fprintf(stderr, "Compressing metadata.");
@@ -402,7 +481,7 @@ void compress_md(struct bcf_file *bcf_f,
     fwrite(&h_size, sizeof(uint64_t), 1, fp_o);
     uint64_t numv_64 = num_vars;
     fwrite(&numv_64, sizeof(uint64_t), 1, fp_o);
-    fwrite(md_lens, sizeof(uint64_t), num_vars, fp_o);
+    fwrite(md_s_index, sizeof(uint64_t), num_vars, fp_o);
 
     // in_buf will hold the uncompressed data and out_buf the compressed
     unsigned char *in_buf = (unsigned char *)
@@ -490,15 +569,15 @@ void compress_md(struct bcf_file *bcf_f,
     FILE *fp = NULL;
 
     struct stat md_stat;
-    stat(md_of_name, &md_stat);
+    stat(md_s_of_name, &md_stat);
     size_t md_size = md_stat.st_size;
     uint64_t md_size_tenth = md_size/10;
     uint64_t md_size_status = md_size_tenth;
 
-    if ((fp = fopen(md_of_name, "r")) == NULL) {
+    if ((fp = fopen(md_s_of_name, "r")) == NULL) {
         fprintf(stderr,
                 "error: unable to open file %s.\n",
-                md_of_name);
+                md_s_of_name);
         exit(1);
     }
 
@@ -610,10 +689,36 @@ void compress_md(struct bcf_file *bcf_f,
 //}}}
 
 //{{{void rotate_gt(uint32_t num_inds,
+/* Take a variant major packed integer genotype file and rotate it to be a
+ * individual major file.
+ *
+ * In the rotated file, the first variant (row) in the variant major file will
+ * become the first column in the individual major file.  The rotation is done
+ * blocked manner.  That is,  1 int (16 genotypes) will be read from a line in
+ * the variant-major file.  Those genotypes will be appended to a matrix of 16
+ * individual-major ints.  We then jump to the same column in the next variant,
+ * read another int (16 genotypes), and then transpose those into the
+ * individual-major matrix.  After 16 variants have been read, that matrix is
+ * written to the file, and the process continues, with the next group of 16
+ * variants.  Once the first int (16 genotypes) have been read and transposed,
+ * we return to the next int (next 16 genotypes) in the first 16 variants and
+ * proceed similarly.
+ *
+ * INPUT
+ *   num_inds: number of individual
+ *   num_var: number of variants
+ *   gt_s_of_name: a variant-major file containing sorted arrays of pakced
+ *                 genotypes (0,1,2,3) this is a fixed-width file and each
+ *                 element in the array is a 32-bit int
+ * OUTPUT
+ *   gt_s_r_of_name: an individual-major file containing sorted arrays of
+ *                   pakced genotypes (0,1,2,3) this is a fixed-width file and
+ *                   each element in the array is a 32-bit int
+ */
 void rotate_gt(uint32_t num_inds,
                uint32_t num_vars,
-               char *s_gt_of_name,
-               char *r_s_gt_of_name)
+               char *gt_s_of_name,
+               char *gt_s_r_of_name)
 {
     uint32_t num_var_ints = 1 + ((num_vars - 1) / 16);
     uint32_t num_ind_ints = 1 + ((num_inds - 1) / 16);
@@ -626,11 +731,11 @@ void rotate_gt(uint32_t num_inds,
         I[i] = I_data + i*num_var_ints;
     uint32_t I_i = 0, I_int_i = 0, two_bit_i;
 
-    FILE *s_gt_of = fopen(s_gt_of_name,"rb");
-    FILE *rs_gt_of = fopen(r_s_gt_of_name,"wb");
+    FILE *s_gt_of = fopen(gt_s_of_name,"rb");
+    FILE *rs_gt_of = fopen(gt_s_r_of_name,"wb");
 
-    // Write these to values to that this is a well-formed uncompressed 
-    // packed int binary file (ubin) file
+    // Write these to values to a well-formed uncompressed packed int binary
+    // file (ubin) file
     fwrite(&num_vars, sizeof(uint32_t), 1, rs_gt_of);
     fwrite(&num_inds, sizeof(uint32_t), 1, rs_gt_of);
      
@@ -645,10 +750,12 @@ void rotate_gt(uint32_t num_inds,
 
         for (j = 0; j < num_vars; ++j) { // loop over head row in that col
             // skip to the value at the row/col
-            fseek(s_gt_of, 
-                  j*num_ind_ints*sizeof(uint32_t) + //row
-                  i*sizeof(uint32_t), //col
-                  SEEK_SET);
+            uint64_t row = j;
+            row *=  num_ind_ints;
+            row *=  sizeof(uint32_t);
+            uint64_t col = i;
+            col *= sizeof(uint32_t);
+            fseek(s_gt_of, row + col, SEEK_SET);
 
             int r = fread(&v, sizeof(uint32_t), 1, s_gt_of);
 

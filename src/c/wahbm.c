@@ -6,6 +6,7 @@
  * strategies
  */
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,6 +16,7 @@
 #include <pthread.h>
 #include <assert.h>
 #include <immintrin.h>
+#include <inttypes.h>
 #include "genotq.h"
 #include "pthread_pool.h"
 
@@ -50,15 +52,15 @@ struct wah_file init_wahbm_file(char *file_name)
 
     // Jump to the begining of the file to grab the record size
     fseek(wf.file, 0, SEEK_SET);
-    int r = fread(&wf.num_fields,sizeof(unsigned int),1,wf.file);
-    r = fread(&wf.num_records,sizeof(unsigned int),1,wf.file);
+    int r = fread(&wf.num_fields,sizeof(uint32_t),1,wf.file);
+    r = fread(&wf.num_records,sizeof(uint32_t),1,wf.file);
 
-    wf.record_offsets = (unsigned int *) 
-            malloc(sizeof (unsigned int)*wf.num_records*4);
+    wf.record_offsets = (uint64_t *) 
+            malloc(sizeof (uint64_t)*wf.num_records*4);
 
-    unsigned int i;
+    uint32_t i;
     for (i = 0; i < wf.num_records*4; ++i)
-        r = fread(&(wf.record_offsets[i]),sizeof(unsigned int),1,wf.file);
+        r = fread(&(wf.record_offsets[i]),sizeof(uint64_t),1,wf.file);
 
 
     wf.header_offset = ftell(wf.file);
@@ -67,35 +69,25 @@ struct wah_file init_wahbm_file(char *file_name)
 }
 //}}}
 
-//{{{ unsigned int print_wahbm(struct wah_file wf,
-unsigned int print_wahbm(struct wah_file wf,
-                         unsigned int *record_ids,
-                         unsigned int num_r,
-                         unsigned int format)
+//{{{ uint32_t print_wahbm(struct wah_file wf,
+uint32_t print_wahbm(struct wah_file wf,
+                     uint32_t *record_ids,
+                     uint32_t num_r,
+                     uint32_t format)
 {
-    unsigned int i,j,k,l, bm_size, to_print = num_r;
-    unsigned int *bm = NULL;
+    uint32_t i,j,k,l, bm_size, to_print = num_r;
+    uint32_t *bm = NULL;
 
-    unsigned int num_ints_per_record = 1 + ((wf.num_fields - 1) / 16);
+    uint32_t num_ints_per_record = 1 + ((wf.num_fields - 1) / 16);
+
+    uint32_t *output = (uint32_t *)malloc(wf.num_fields*sizeof(uint32_t));
 
     if (num_r == 0)
         to_print = wf.num_records;
 
-
-    unsigned int *output_record = (unsigned int *) malloc 
-            (num_ints_per_record * sizeof(unsigned int));
-
-    unsigned int *tmp_record = (unsigned int *) malloc 
-            (num_ints_per_record * sizeof(unsigned int));
-
     for (i = 0; i < to_print; ++i) {
-
-        memset(output_record, 0, num_ints_per_record * sizeof(unsigned int));
-
+        memset(output, 0, wf.num_fields*sizeof(uint32_t));
         for (j = 0; j < 4; ++j) {
-            memset(tmp_record, 0, 
-                    num_ints_per_record * sizeof(unsigned int));
-
             // get the compressed bitmap
             if (num_r > 0)
                 bm_size = get_wah_bitmap(wf,
@@ -109,38 +101,53 @@ unsigned int print_wahbm(struct wah_file wf,
                                          &bm);
 
             // decompress 
-            unsigned int *ints = NULL;
-            unsigned int ints_size = wah_to_ints(bm,bm_size,&ints);
-
-
-#if 0
+            uint32_t *ints = NULL;
+            uint32_t ints_size = wah_to_ints(bm,bm_size,&ints);
+            uint32_t output_i = 0;
+            free(bm);
+            bm = NULL;
 
             for (k = 0; k < ints_size; ++k) {
-                if (k !=0)
-                    printf(" ");
                 for (l = 0; l < 32; ++l) {
-                    if (l !=0)
-                        printf(" ");
-                    unsigned int bit = (ints[k] >> (31 - l)) & 1;
-                    printf("%u",bit);
-                    
+                    uint32_t bit = (ints[k] >> (31 - l)) & 1;
+                    if (bit == 1) 
+                        output[output_i] = j;
+
+                    output_i += 1;
+
+                    if (output_i >= wf.num_fields)
+                        break;
                 }
+                if (output_i >= wf.num_fields)
+                    break;
             }
-            printf("\n");
-#endif
 
+            free(ints);
+        }
 
+        for (j = 0; j < wf.num_fields; ++j) {
+            if (j != 0)
+                printf(" ");
+            printf("%u", output[j]);
+        }
+        printf("\n");
 
-#if 1
+ 
+
+    }
+
+#if 0
             // loop through each bit, and set the corresponding possition to j
             // if the bit is one
             int int_i = 0, bit_i = 0;
             for (k = 0; k < ints_size; ++k) {
+                fprintf(stderr, "k:%u\n", k);
                 for (l = 0; l < 32; ++l) {
-                    unsigned int bit = (ints[k] >> (31 - l)) & 1;
+                    uint32_t bit = (ints[k] >> (31 - l)) & 1;
 
-                    if (bit == 1)
+                    if (bit == 1) {
                         tmp_record[int_i] += j << (30 - (bit_i * 2));
+                    }
 
                     bit_i += 1;
                     if (bit_i == 16) {
@@ -148,28 +155,28 @@ unsigned int print_wahbm(struct wah_file wf,
                         bit_i = 0;
                     }
 
+                    if (int_i >= num_ints_per_record)
+                        break;
                 }
+                if (int_i >= num_ints_per_record)
+                    break;
             }
-#endif
 
             free(bm);
             free(ints);
             bm = NULL;
             ints = NULL;
 
-#if 1
             for (k = 0; k < num_ints_per_record; ++k) 
                 output_record[k] += tmp_record[k];
-#endif
         }
 
-#if 1
-        unsigned int printed_bits = 0;
+        uint32_t printed_bits = 0;
         for (j = 0; j < num_ints_per_record; ++j) {
             if (j !=0)
                 printf(" ");
             for (k = 0; k < 16; ++k) {
-                unsigned int bit = (output_record[j] >> (30 - 2*k)) & 3;
+                uint32_t bit = (output_record[j] >> (30 - 2*k)) & 3;
                 if (k !=0)
                     printf(" ");
                 printf("%u", bit);
@@ -179,35 +186,37 @@ unsigned int print_wahbm(struct wah_file wf,
             }
         }
         printf("\n");
-#endif
-    }
 
     free(tmp_record);
     free(output_record);
+#endif
+    free(output);
 
     return to_print;
 }
 //}}}
 
-//{{{ unsigned int print_by_name_wahbm(char *wahbm_file_name,
-unsigned int print_by_name_wahbm(char *wahbm_file_name,
-                               unsigned int *record_ids,
-                               unsigned int num_r,
-                               unsigned int format)
+//{{{ uint32_t print_by_name_wahbm(char *wahbm_file_name,
+uint32_t print_by_name_wahbm(char *wahbm_file_name,
+                               uint32_t *record_ids,
+                               uint32_t num_r,
+                               uint32_t format)
 {
     struct wah_file wf = init_wahbm_file(wahbm_file_name);
     return print_wahbm(wf, record_ids, num_r, format);
 }
 //}}} 
 
-//{{{ unsigned int get_wah_bitmap(struct wah_file wf,
-unsigned int get_wah_bitmap(struct wah_file wf,
-                            unsigned int wah_record,
-                            unsigned int bitmap,
-                            unsigned int **wah_bitmap)
+//{{{ uint32_t get_wah_bitmap(struct wah_file wf,
+uint32_t get_wah_bitmap(struct wah_file wf,
+                        uint32_t wah_record,
+                        uint32_t bitmap,
+                        uint32_t **wah_bitmap)
 {
     // get the size of the WAH-encoded bitmap
-    unsigned int wah_size = 0, wah_offset = 0;
+    uint64_t wah_size = 0;
+    uint64_t wah_offset = 0;
+    //fprintf(stderr, "wah_record:%u\tbitmap:%u\n", wah_record, bitmap);
     if ((wah_record == 0) && (bitmap == 0)) {
         wah_size = wf.record_offsets[wah_record + bitmap];
         wah_offset = wf.header_offset;
@@ -228,47 +237,57 @@ unsigned int get_wah_bitmap(struct wah_file wf,
         */
 
         wah_offset = wf.header_offset +
-                     sizeof(unsigned int) * 
+                     sizeof(uint32_t) * 
                         (wf.record_offsets[wah_record*4 + bitmap] - wah_size);
+
+        /*
+        fprintf(stderr, "from:%llu\tto:%llu\tsize:%llu\n", 
+                        wf.record_offsets[wah_record*4 + bitmap - 1],
+                        wf.record_offsets[wah_record*4 + bitmap],
+                        wah_size);
+        */
+
+
     }
+    //fprintf(stderr, "offset:%llu\n", wah_offset); 
 
-    //fprintf(stderr, "wah_size:%u\twah_offset:%u\n", wah_size, wah_offset);
+    //fprintf(stderr, "wah_size:%llu\twah_offset:%llu\n", wah_size, wah_offset);
 
 
-    *wah_bitmap = (unsigned int *) malloc(sizeof(unsigned int)*wah_size);
+    *wah_bitmap = (uint32_t *) malloc(sizeof(uint32_t)*wah_size);
     fseek(wf.file, wah_offset, SEEK_SET);
-    int r = fread(*wah_bitmap,sizeof(unsigned int),wah_size,wf.file);
+    int r = fread(*wah_bitmap,sizeof(uint32_t),wah_size,wf.file);
 
-    return wah_size;
+    return (uint32_t)wah_size;
 }
 //}}}
 
-//{{{ unsigned int range_records_w_exclude_wahbm(struct wah_file wf,
-unsigned int range_records_w_exclude_wahbm(struct wah_file wf,
-                                           unsigned int *record_ids,
-                                           unsigned int num_r,
-                                           unsigned int start_test_value,
-                                           unsigned int end_test_value,
-                                           unsigned int exclude_value,
-                                           unsigned int **R) 
+//{{{ uint32_t range_records_w_exclude_wahbm(struct wah_file wf,
+uint32_t range_records_w_exclude_wahbm(struct wah_file wf,
+                                           uint32_t *record_ids,
+                                           uint32_t num_r,
+                                           uint32_t start_test_value,
+                                           uint32_t end_test_value,
+                                           uint32_t exclude_value,
+                                           uint32_t **R) 
 
 {
-    unsigned int *record_curr_bm = NULL,
+    uint32_t *record_curr_bm = NULL,
                  *record_new_bm = NULL,
                  *record_tmp_bm = NULL;
 
-    unsigned int record_curr_bm_size,
+    uint32_t record_curr_bm_size,
                  record_new_bm_size,
                  record_tmp_bm_size;
 
-    unsigned int *query_curr_bm = NULL,
+    uint32_t *query_curr_bm = NULL,
                  *query_tmp_bm = NULL;
 
-    unsigned int query_curr_bm_size,
+    uint32_t query_curr_bm_size,
                  query_tmp_bm_size;
 
 
-    unsigned int i,j,k,l;
+    uint32_t i,j,k,l;
 
     for (i = 0; i < num_r; ++i) {
         // or all of the bit maps for this record then and that will a 
@@ -335,26 +354,26 @@ unsigned int range_records_w_exclude_wahbm(struct wah_file wf,
 }
 //}}}
 
-//{{{ unsigned int count_range_records_wahbm(struct wah_file wf,
-unsigned int count_range_records_wahbm(struct wah_file wf,
-                                       unsigned int *record_ids,
-                                       unsigned int num_r,
-                                       unsigned int start_test_value,
-                                       unsigned int end_test_value,
-                                       unsigned int **R) 
+//{{{ uint32_t count_range_records_wahbm(struct wah_file wf,
+uint32_t count_range_records_wahbm(struct wah_file wf,
+                                       uint32_t *record_ids,
+                                       uint32_t num_r,
+                                       uint32_t start_test_value,
+                                       uint32_t end_test_value,
+                                       uint32_t **R) 
 
 {
-    *R = (unsigned int *) calloc(wf.num_fields,sizeof(unsigned int));
+    *R = (uint32_t *) calloc(wf.num_fields,sizeof(uint32_t));
 
-    unsigned int *record_curr_bm = NULL,
+    uint32_t *record_curr_bm = NULL,
                  *record_new_bm = NULL,
                  *record_tmp_bm = NULL;
 
-    unsigned int record_curr_bm_size,
+    uint32_t record_curr_bm_size,
                  record_new_bm_size,
                  record_tmp_bm_size;
 
-    unsigned int i,j, r_size;
+    uint32_t i,j, r_size;
 
     for (i = 0; i < num_r; ++i) {
         // or all of the bit maps for this record then and that will a 
@@ -400,24 +419,24 @@ unsigned int count_range_records_wahbm(struct wah_file wf,
 }
 //}}}
 
-//{{{ unsigned int sum_range_records_wahbm(struct wah_file wf,
-unsigned int sum_range_records_wahbm(struct wah_file wf,
-                                     unsigned int *record_ids,
-                                     unsigned int num_r,
-                                     unsigned int **R) 
+//{{{ uint32_t sum_range_records_wahbm(struct wah_file wf,
+uint32_t sum_range_records_wahbm(struct wah_file wf,
+                                     uint32_t *record_ids,
+                                     uint32_t num_r,
+                                     uint32_t **R) 
 
 {
-    *R = (unsigned int *) calloc(wf.num_fields,sizeof(unsigned int));
+    *R = (uint32_t *) calloc(wf.num_fields,sizeof(uint32_t));
 
-    unsigned int *record_curr_bm = NULL,
+    uint32_t *record_curr_bm = NULL,
                  *record_new_bm = NULL,
                  *record_tmp_bm = NULL;
 
-    unsigned int record_curr_bm_size,
+    uint32_t record_curr_bm_size,
                  record_new_bm_size,
                  record_tmp_bm_size;
 
-    unsigned int i,j, r_size;
+    uint32_t i,j, r_size;
 
     for (i = 0; i < num_r; ++i) {
         // or all of the bit maps for this record then and that will a 
@@ -463,31 +482,31 @@ unsigned int sum_range_records_wahbm(struct wah_file wf,
 }
 //}}}
 
-//{{{ unsigned int range_records_wahbm(struct wah_file wf,
-unsigned int range_records_wahbm(struct wah_file wf,
-                              unsigned int *record_ids,
-                              unsigned int num_r,
-                              unsigned int start_test_value,
-                              unsigned int end_test_value,
-                              unsigned int **R) 
+//{{{ uint32_t range_records_wahbm(struct wah_file wf,
+uint32_t range_records_wahbm(struct wah_file wf,
+                              uint32_t *record_ids,
+                              uint32_t num_r,
+                              uint32_t start_test_value,
+                              uint32_t end_test_value,
+                              uint32_t **R) 
 
 {
-    unsigned int *record_curr_bm = NULL,
+    uint32_t *record_curr_bm = NULL,
                  *record_new_bm = NULL,
                  *record_tmp_bm = NULL;
 
-    unsigned int record_curr_bm_size,
+    uint32_t record_curr_bm_size,
                  record_new_bm_size,
                  record_tmp_bm_size;
 
-    unsigned int *query_curr_bm = NULL,
+    uint32_t *query_curr_bm = NULL,
                  *query_tmp_bm = NULL;
 
-    unsigned int query_curr_bm_size,
+    uint32_t query_curr_bm_size,
                  query_tmp_bm_size;
 
 
-    unsigned int i,j,k,l;
+    uint32_t i,j,k,l;
 
     for (i = 0; i < num_r; ++i) {
         // or all of the bit maps for this record then and that will a 
@@ -549,14 +568,14 @@ unsigned int range_records_wahbm(struct wah_file wf,
 }
 //}}}
 
-//{{{ unsigned int add_wahbm(unsigned int *R,
-unsigned int add_wahbm(unsigned int *R,
-                       unsigned int r_size,
-                       unsigned int *wah,
-                       unsigned int wah_size)
+//{{{ uint32_t add_wahbm(uint32_t *R,
+uint32_t add_wahbm(uint32_t *R,
+                       uint32_t r_size,
+                       uint32_t *wah,
+                       uint32_t wah_size)
 {
 
-    unsigned int wah_c,
+    uint32_t wah_c,
                  wah_i,
                  num_words,
                  fill_bit,
@@ -567,7 +586,7 @@ unsigned int add_wahbm(unsigned int *R,
                  field_i;
     field_i = 0;
 
-    unsigned int v;
+    uint32_t v;
 
     for (wah_i = 0; wah_i < wah_size; ++wah_i) {
         wah_c = wah[wah_i];
@@ -620,18 +639,18 @@ unsigned int add_wahbm(unsigned int *R,
 //}}}
 
 #ifdef __AVX2__
-//{{{void avx_add(unsigned int bits,
-void avx_add(unsigned int bits,
+//{{{void avx_add(uint32_t bits,
+void avx_add(uint32_t bits,
              __m256i *s_1,
              __m256i *s_2,
              __m256i *s_3,
              __m256i *s_4,
              __m256i *m,
              __m256i *R_avx,
-             unsigned int field_i)
+             uint32_t field_i)
 {
 
-    unsigned int avx_i = field_i/8;
+    uint32_t avx_i = field_i/8;
 
     __m256i y1 = _mm256_set1_epi32(bits);
 
@@ -655,11 +674,11 @@ void avx_add(unsigned int bits,
 #endif
 
 #ifdef __AVX2__
-//{{{ unsigned int avx_add_wahbm(unsigned int *R,
-unsigned int avx_add_wahbm(unsigned int *R,
-                       unsigned int r_size,
-                       unsigned int *wah,
-                       unsigned int wah_size)
+//{{{ uint32_t avx_add_wahbm(uint32_t *R,
+uint32_t avx_add_wahbm(uint32_t *R,
+                       uint32_t r_size,
+                       uint32_t *wah,
+                       uint32_t wah_size)
 {
     __attribute__((aligned(64))) int rshift_4[8] = { 31, 30, 29, 28, 27, 26, 25, 24 };
     __attribute__((aligned(64))) int rshift_3[8] = { 23, 22, 21, 20, 19, 18, 17, 16 };
@@ -683,7 +702,7 @@ unsigned int avx_add_wahbm(unsigned int *R,
     __m256i m = _mm256_load_si256(masks_avx);
     __m256i y1, y2, y3;
 
-    unsigned int wah_c,
+    uint32_t wah_c,
                  wah_i,
                  num_words,
                  fill_bit,
@@ -694,7 +713,7 @@ unsigned int avx_add_wahbm(unsigned int *R,
                  field_i;
     field_i = 0;
 
-    unsigned int buf, buf_empty_bits = 32;
+    uint32_t buf, buf_empty_bits = 32;
 
     for (wah_i = 0; wah_i < wah_size; ++wah_i) {
         wah_c = wah[wah_i];
@@ -754,7 +773,7 @@ unsigned int avx_add_wahbm(unsigned int *R,
                             // add padding to buf that makes up for the
                             // difference, then add 32 - (field_i % 32) bits to
                             // the buff
-                            unsigned int padding = field_i % 32;
+                            uint32_t padding = field_i % 32;
                             buf = bits >> (padding - 1);
                             avx_add(buf,
                                     &s_1,
@@ -808,8 +827,8 @@ unsigned int avx_add_wahbm(unsigned int *R,
 #endif
 
 #ifdef __AVX2__
-//{{{void avx_add_n(unsigned int bits,
-void avx_add_n(unsigned int bits,
+//{{{void avx_add_n(uint32_t bits,
+void avx_add_n(uint32_t bits,
              __m256i *s_1,
              __m256i *s_2,
              __m256i *s_3,
@@ -817,9 +836,9 @@ void avx_add_n(unsigned int bits,
              __m256i *m,
              __m256i *N,
              __m256i *R_avx,
-             unsigned int field_i)
+             uint32_t field_i)
 {
-    unsigned int avx_i = field_i/8;
+    uint32_t avx_i = field_i/8;
 
     __m256i y1 = _mm256_set1_epi32(bits);
 
@@ -847,12 +866,12 @@ void avx_add_n(unsigned int bits,
 #endif
 
 #ifdef __AVX2__
-//{{{ unsigned int avx_add_n_wahbm(unsigned int *R,
-unsigned int avx_add_n_wahbm(unsigned int *R,
-                             unsigned int n,
-                             unsigned int r_size,
-                             unsigned int *wah,
-                             unsigned int wah_size)
+//{{{ uint32_t avx_add_n_wahbm(uint32_t *R,
+uint32_t avx_add_n_wahbm(uint32_t *R,
+                             uint32_t n,
+                             uint32_t r_size,
+                             uint32_t *wah,
+                             uint32_t wah_size)
 {
     __attribute__((aligned(64))) int rshift_4[8] = 
             { 31, 30, 29, 28, 27, 26, 25, 24 };
@@ -882,7 +901,7 @@ unsigned int avx_add_n_wahbm(unsigned int *R,
 
     __m256i n_avx = _mm256_set1_epi32(n);
 
-    unsigned int wah_c,
+    uint32_t wah_c,
                  wah_i,
                  num_words,
                  fill_bit,
@@ -893,7 +912,7 @@ unsigned int avx_add_n_wahbm(unsigned int *R,
                  field_i;
     field_i = 0;
 
-    unsigned int buf, buf_empty_bits = 32;
+    uint32_t buf, buf_empty_bits = 32;
 
     for (wah_i = 0; wah_i < wah_size; ++wah_i) {
         wah_c = wah[wah_i];
@@ -969,7 +988,7 @@ unsigned int avx_add_n_wahbm(unsigned int *R,
                             // add padding to buf that makes up for the
                             // difference, then add 32 - (field_i % 32) bits to
                             // the buff
-                            unsigned int padding = field_i % 32;
+                            uint32_t padding = field_i % 32;
                             buf = bits >> (padding - 1);
                             avx_add_n(buf,
                                       &s_1,
@@ -1024,15 +1043,15 @@ unsigned int avx_add_n_wahbm(unsigned int *R,
 //}}}
 #endif
 
-//{{{ unsigned int add_n_wahbm(unsigned int *R,
-unsigned int add_n_wahbm(unsigned int *R,
-                       unsigned int n,
-                       unsigned int r_size,
-                       unsigned int *wah,
-                       unsigned int wah_size)
+//{{{ uint32_t add_n_wahbm(uint32_t *R,
+uint32_t add_n_wahbm(uint32_t *R,
+                       uint32_t n,
+                       uint32_t r_size,
+                       uint32_t *wah,
+                       uint32_t wah_size)
 {
 
-    unsigned int wah_i,
+    uint32_t wah_i,
                  num_words,
                  fill_bit,
                  bits,
@@ -1040,7 +1059,7 @@ unsigned int add_n_wahbm(unsigned int *R,
                  bit_i,
                  word_i,
                  field_i;
-    unsigned int t;
+    uint32_t t;
     field_i = 0;
 
     for (wah_i = 0; wah_i < wah_size; ++wah_i) {
@@ -1108,7 +1127,7 @@ void *t_add_n_wahbm(void *arg)
 {
     struct t_add_n_wahbm_args *a = (struct t_add_n_wahbm_args *)arg;
 
-    unsigned int bit_i,
+    uint32_t bit_i,
                  bit,
                  bits = a->bits,
                  field_i = a->field_i, 
@@ -1134,7 +1153,7 @@ void *t_add_n_wahbm_2(void *arg)
 {
     struct t_add_n_wahbm_args *a = (struct t_add_n_wahbm_args *)arg;
 
-    unsigned int bit_i,
+    uint32_t bit_i,
                  word_i,
                  bit,
                  bits = a->bits,
@@ -1159,15 +1178,15 @@ void *t_add_n_wahbm_2(void *arg)
 }
 //}}}
 
-//{{{ unsigned int p_pool_add_n_wahbm(unsigned int *R,
-unsigned int p_pool_add_n_wahbm(unsigned int *R,
-                                unsigned int n,
-                                unsigned int r_size,
-                                unsigned int *wah,
-                                unsigned int wah_size,
+//{{{ uint32_t p_pool_add_n_wahbm(uint32_t *R,
+uint32_t p_pool_add_n_wahbm(uint32_t *R,
+                                uint32_t n,
+                                uint32_t r_size,
+                                uint32_t *wah,
+                                uint32_t wah_size,
                                 struct pool *t_pool)
 {
-    unsigned int wah_i,
+    uint32_t wah_i,
                  num_words,
                  fill_bit,
                  bits,
@@ -1175,7 +1194,7 @@ unsigned int p_pool_add_n_wahbm(unsigned int *R,
                  bit_i,
                  word_i,
                  field_i;
-    unsigned int t;
+    uint32_t t;
     field_i = 0;
 
     struct t_add_n_wahbm_args *arg;
@@ -1259,12 +1278,12 @@ unsigned int p_pool_add_n_wahbm(unsigned int *R,
 //}}}
 
 //{{{ eq, ne, gt, gte, lt, lte :records_wahbm
-//{{{ unsigned int eq_records_wahbm(struct wah_file wf,
-unsigned int eq_records_wahbm(struct wah_file wf,
-                              unsigned int *record_ids,
-                              unsigned int num_r,
-                              unsigned int test_value,
-                              unsigned int **R) 
+//{{{ uint32_t eq_records_wahbm(struct wah_file wf,
+uint32_t eq_records_wahbm(struct wah_file wf,
+                              uint32_t *record_ids,
+                              uint32_t num_r,
+                              uint32_t test_value,
+                              uint32_t **R) 
 
 {
     // TODO: need constants for upper bound.
@@ -1272,12 +1291,12 @@ unsigned int eq_records_wahbm(struct wah_file wf,
 }
 //}}}
 
-//{{{ unsigned int ne_records_wahbm(struct wah_file wf,
-unsigned int ne_records_wahbm(struct wah_file wf,
-                              unsigned int *record_ids,
-                              unsigned int num_r,
-                              unsigned int test_value,
-                              unsigned int **R) 
+//{{{ uint32_t ne_records_wahbm(struct wah_file wf,
+uint32_t ne_records_wahbm(struct wah_file wf,
+                              uint32_t *record_ids,
+                              uint32_t num_r,
+                              uint32_t test_value,
+                              uint32_t **R) 
 
 {
     // TODO: need constants for lower bound and upper bound.
@@ -1286,12 +1305,12 @@ unsigned int ne_records_wahbm(struct wah_file wf,
 }
 //}}}
 
-//{{{ unsigned int gt_records_wahbm(struct wah_file wf,
-unsigned int gt_records_wahbm(struct wah_file wf,
-                              unsigned int *record_ids,
-                              unsigned int num_r,
-                              unsigned int test_value,
-                              unsigned int **R) 
+//{{{ uint32_t gt_records_wahbm(struct wah_file wf,
+uint32_t gt_records_wahbm(struct wah_file wf,
+                              uint32_t *record_ids,
+                              uint32_t num_r,
+                              uint32_t test_value,
+                              uint32_t **R) 
 
 {
     // TODO: need constants for upper bound.
@@ -1299,12 +1318,12 @@ unsigned int gt_records_wahbm(struct wah_file wf,
 }
 //}}}
 
-//{{{ unsigned int gte_records_wahbm(struct wah_file wf,
-unsigned int gte_records_wahbm(struct wah_file wf,
-                              unsigned int *record_ids,
-                              unsigned int num_r,
-                              unsigned int test_value,
-                              unsigned int **R) 
+//{{{ uint32_t gte_records_wahbm(struct wah_file wf,
+uint32_t gte_records_wahbm(struct wah_file wf,
+                              uint32_t *record_ids,
+                              uint32_t num_r,
+                              uint32_t test_value,
+                              uint32_t **R) 
 
 {
     // TODO: need constants for upper bound.
@@ -1312,12 +1331,12 @@ unsigned int gte_records_wahbm(struct wah_file wf,
 }
 //}}}
 
-//{{{ unsigned int lt_records_wahbm(struct wah_file wf,
-unsigned int lt_records_wahbm(struct wah_file wf,
-                              unsigned int *record_ids,
-                              unsigned int num_r,
-                              unsigned int test_value,
-                              unsigned int **R) 
+//{{{ uint32_t lt_records_wahbm(struct wah_file wf,
+uint32_t lt_records_wahbm(struct wah_file wf,
+                              uint32_t *record_ids,
+                              uint32_t num_r,
+                              uint32_t test_value,
+                              uint32_t **R) 
 
 {
     // TODO: need constants for upper bound.
@@ -1325,12 +1344,12 @@ unsigned int lt_records_wahbm(struct wah_file wf,
 }
 //}}}
 
-//{{{ unsigned int lte_records_wahbm(struct wah_file wf,
-unsigned int lte_records_wahbm(struct wah_file wf,
-                              unsigned int *record_ids,
-                              unsigned int num_r,
-                              unsigned int test_value,
-                              unsigned int **R) 
+//{{{ uint32_t lte_records_wahbm(struct wah_file wf,
+uint32_t lte_records_wahbm(struct wah_file wf,
+                              uint32_t *record_ids,
+                              uint32_t num_r,
+                              uint32_t test_value,
+                              uint32_t **R) 
 
 {
     // TODO: need constants for upper bound.
@@ -1339,12 +1358,12 @@ unsigned int lte_records_wahbm(struct wah_file wf,
 //}}}
 //}}}
 
-//{{{ unsigned int gt_count_records_wahbm(struct wah_file wf,
-unsigned int gt_count_records_wahbm(struct wah_file wf,
-                                    unsigned int *record_ids,
-                                    unsigned int num_r,
-                                    unsigned int test_value,
-                                    unsigned int **R)
+//{{{ uint32_t gt_count_records_wahbm(struct wah_file wf,
+uint32_t gt_count_records_wahbm(struct wah_file wf,
+                                    uint32_t *record_ids,
+                                    uint32_t num_r,
+                                    uint32_t test_value,
+                                    uint32_t **R)
 {
     // TODO: need constants for upper bound.
     return count_range_records_wahbm(wf,

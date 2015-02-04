@@ -17,15 +17,15 @@
 #define CHUNK 16384
 
 struct uint_ll {
-        unsigned int value;
+        uint32_t value;
             struct uint_ll *next;
 };
 
-unsigned int bin_char_to_int(char *bin);
+uint32_t bin_char_to_int(char *bin);
 
-int *unpack_2_bit_ints(unsigned int packed_ints);
+int *unpack_2_bit_ints(uint32_t packed_ints);
 
-int *unpack_1_bit_ints(unsigned int packed_ints);
+int *unpack_1_bit_ints(uint32_t packed_ints);
 
 
 /**
@@ -42,11 +42,11 @@ int *unpack_1_bit_ints(unsigned int packed_ints);
  * @code
  * @endcode
  */
-unsigned int ints_to_rle(unsigned int *I, int I_len, unsigned int **O);
+uint32_t ints_to_rle(uint32_t *I, int I_len, uint32_t **O);
 
 
-void parse_cmd_line_int_csv(unsigned int *I,
+void parse_cmd_line_int_csv(uint32_t *I,
                             int num_I,
                             char *cmd_line_arg);
-const char *int_to_binary(unsigned int x);
+const char *int_to_binary(uint32_t x);
 #endif

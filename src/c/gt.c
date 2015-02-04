@@ -11,65 +11,65 @@
 int gt_help();
 
 int gt_plt(char *in,
-           unsigned int query_value,
-           unsigned int *R,
-           unsigned int num_records,
+           uint32_t query_value,
+           uint32_t *R,
+           uint32_t num_records,
            int time,
            int quiet,
            char *bim);
 
 int gt_plt_fields(char *in,
-                  unsigned int query_value,
-                  unsigned int *R,
-                  unsigned int num_fields,
+                  uint32_t query_value,
+                  uint32_t *R,
+                  uint32_t num_fields,
                   int time,
                   int quiet,
                   char *bim);
 
 int gt_ubin(char *in,
-            unsigned int query_value,
-            unsigned int *R,
-            unsigned int num_records,
+            uint32_t query_value,
+            uint32_t *R,
+            uint32_t num_records,
             int time,
             int quiet,
             char *bim);
 
 int gt_wah(char *in,
-           unsigned int query_value,
-           unsigned int *R,
-           unsigned int num_records,
+           uint32_t query_value,
+           uint32_t *R,
+           uint32_t num_records,
            int time,
            int quiet,
            char *bim);
 
 int gt_wahbm(char *in,
-             unsigned int query_value,
-             unsigned int *R,
-             unsigned int num_records,
+             uint32_t query_value,
+             uint32_t *R,
+             uint32_t num_records,
              int time,
              int quiet,
              char *bim);
 
 int gt_in_place_wahbm(char *in,
-                      unsigned int query_value,
-                      unsigned int *R,
-                      unsigned int num_records,
+                      uint32_t query_value,
+                      uint32_t *R,
+                      uint32_t num_records,
                       int time,
                       int quiet,
                       char *bim);
 
 int gt_compressed_in_place_wahbm(char *in,
-                                 unsigned int query_value,
-                                 unsigned int *R,
-                                 unsigned int num_records,
+                                 uint32_t query_value,
+                                 uint32_t *R,
+                                 uint32_t num_records,
                                  int time,
                                  int quiet,
                                  char *bim);
 
 
-void print_result(unsigned int len,
-                  unsigned int *R,
-                  unsigned int num_fields,
+void print_result(uint32_t len,
+                  uint32_t *R,
+                  uint32_t num_fields,
                   char *bim);
 
 
@@ -80,7 +80,7 @@ int gt(int argc, char **argv)
 
     int c;
     char *in, *out, *record_ids, *bim = NULL;
-    unsigned int query_value, num_records;
+    uint32_t query_value, num_records;
     int i_is_set = 0, 
         r_is_set = 0, 
         f_is_set = 0, 
@@ -165,7 +165,7 @@ int gt(int argc, char **argv)
         return gt_help();
     } 
 
-    unsigned int R[num_records];
+    uint32_t R[num_records];
     parse_cmd_line_int_csv(R, num_records, record_ids);
 
     if (strcmp(type, "plt") == 0) {
@@ -255,17 +255,17 @@ int gt_help()
 }
 
 int gt_plt(char *in,
-           unsigned int query_value,
-           unsigned int *R,
-           unsigned int num_records,
+           uint32_t query_value,
+           uint32_t *R,
+           uint32_t num_records,
            int time,
            int quiet,
            char *bim)
 {
     start();
     struct plt_file pf = init_plt_file(in);
-    unsigned int *pf_R;
-    unsigned int len_pf_R = gt_records_plt(pf,
+    uint32_t *pf_R;
+    uint32_t len_pf_R = gt_records_plt(pf,
                                            R,
                                            num_records,
                                            query_value,
@@ -286,17 +286,17 @@ int gt_plt(char *in,
 }
 
 int gt_plt_fields(char *in,
-                  unsigned int query_value,
-                  unsigned int *R,
-                  unsigned int num_records,
+                  uint32_t query_value,
+                  uint32_t *R,
+                  uint32_t num_records,
                   int time,
                   int quiet,
                   char *bim)
 {
     start();
     struct plt_file pf = init_plt_file(in);
-    unsigned int *pf_R;
-    unsigned int len_pf_R = gt_fields_plt(pf,
+    uint32_t *pf_R;
+    uint32_t len_pf_R = gt_fields_plt(pf,
                                           R,
                                           num_records,
                                           query_value,
@@ -316,9 +316,9 @@ int gt_plt_fields(char *in,
 }
 
 int gt_ubin(char *in,
-            unsigned int query_value,
-            unsigned int *R,
-            unsigned int num_records,
+            uint32_t query_value,
+            uint32_t *R,
+            uint32_t num_records,
             int time,
             int quiet,
             char *bim)
@@ -326,8 +326,8 @@ int gt_ubin(char *in,
 {
     start();
     struct ubin_file uf = init_ubin_file(in);
-    unsigned int *uf_R;
-    unsigned int len_uf_R = gt_records_ubin(uf,
+    uint32_t *uf_R;
+    uint32_t len_uf_R = gt_records_ubin(uf,
                                            R,
                                            num_records,
                                            query_value,
@@ -345,9 +345,9 @@ int gt_ubin(char *in,
     return 0;
 }
 int gt_wah(char *in,
-           unsigned int query_value,
-           unsigned int *R,
-           unsigned int num_records,
+           uint32_t query_value,
+           uint32_t *R,
+           uint32_t num_records,
            int time,
            int quiet,
            char *bim)
@@ -357,9 +357,9 @@ int gt_wah(char *in,
 }
 
 int gt_in_place_wahbm(char *in,
-                      unsigned int query_value,
-                      unsigned int *R,
-                      unsigned int num_records,
+                      uint32_t query_value,
+                      uint32_t *R,
+                      uint32_t num_records,
                       int time,
                       int quiet,
                       char *bim)
@@ -367,14 +367,14 @@ int gt_in_place_wahbm(char *in,
 {
     start();
     struct wah_file wf = init_wahbm_file(in);
-    unsigned int *wf_R;
-    unsigned int len_wf_R = gt_records_in_place_wahbm(wf,
+    uint32_t *wf_R;
+    uint32_t len_wf_R = gt_records_in_place_wahbm(wf,
                                                       R,
                                                       num_records,
                                                       query_value,
                                                       &wf_R);
-    unsigned int *ints;
-    unsigned int len_ints = wah_to_ints(wf_R,len_wf_R,&ints);
+    uint32_t *ints;
+    uint32_t len_ints = wah_to_ints(wf_R,len_wf_R,&ints);
     stop();
     if (time != 0)
         fprintf(stderr,"%lu\n", report());
@@ -390,9 +390,9 @@ int gt_in_place_wahbm(char *in,
 }
 
 int gt_compressed_in_place_wahbm(char *in,
-                                 unsigned int query_value,
-                                 unsigned int *R,
-                                 unsigned int num_records,
+                                 uint32_t query_value,
+                                 uint32_t *R,
+                                 uint32_t num_records,
                                  int time,
                                  int quiet,
                                  char *bim)
@@ -400,14 +400,14 @@ int gt_compressed_in_place_wahbm(char *in,
 {
     start();
     struct wah_file wf = init_wahbm_file(in);
-    unsigned int *wf_R;
-    unsigned int len_wf_R = gt_records_compressed_in_place_wahbm(wf,
+    uint32_t *wf_R;
+    uint32_t len_wf_R = gt_records_compressed_in_place_wahbm(wf,
                                                                  R,
                                                                  num_records,
                                                                  query_value,
                                                                  &wf_R);
-    unsigned int *ints;
-    unsigned int len_ints = compressed_in_place_wah_to_ints(wf_R,
+    uint32_t *ints;
+    uint32_t len_ints = compressed_in_place_wah_to_ints(wf_R,
                                                             len_wf_R,
                                                             &ints);
     stop();
@@ -425,9 +425,9 @@ int gt_compressed_in_place_wahbm(char *in,
 }
 
 int gt_wahbm(char *in,
-             unsigned int query_value,
-             unsigned int *R,
-             unsigned int num_records,
+             uint32_t query_value,
+             uint32_t *R,
+             uint32_t num_records,
              int time,
              int quiet,
              char *bim)
@@ -435,15 +435,15 @@ int gt_wahbm(char *in,
 {
     start();
     struct wah_file wf = init_wahbm_file(in);
-    unsigned int *wf_R;
-    unsigned int len_wf_R = gt_records_wahbm(wf,
+    uint32_t *wf_R;
+    uint32_t len_wf_R = gt_records_wahbm(wf,
                                              R,
                                              num_records,
                                              query_value,
                                              &wf_R);
 
-    unsigned int *ints;
-    unsigned int len_ints = wah_to_ints(wf_R,len_wf_R,&ints);
+    uint32_t *ints;
+    uint32_t len_ints = wah_to_ints(wf_R,len_wf_R,&ints);
     stop();
     if (time != 0)
         fprintf(stderr,"%lu\n", report());
@@ -458,14 +458,14 @@ int gt_wahbm(char *in,
     return 0;
 }
 
-void print_result(unsigned int len,
-                  unsigned int *R,
-                  unsigned int num_fields,
+void print_result(uint32_t len,
+                  uint32_t *R,
+                  uint32_t num_fields,
                   char *bim)
 {
 
 	/* OLD WAY *********************
-    unsigned int i,j, bit_i = 0;
+    uint32_t i,j, bit_i = 0;
     for(i = 0; i < len; ++i) {
         if (i!= 0)
             printf(" ");
@@ -490,7 +490,7 @@ void print_result(unsigned int len,
 
     NEW WAY */
 
-    unsigned int i,j,line_idx,bytes, bit_i = 0;
+    uint32_t i,j,line_idx,bytes, bit_i = 0;
 
 	struct quick_file_info qfile;
 	struct output_buffer outbuf;

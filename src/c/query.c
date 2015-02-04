@@ -12,13 +12,13 @@
 
 int query_help();
 
-void print_query_result(unsigned int *mask,
-                        unsigned int mask_len,
+void print_query_result(uint32_t *mask,
+                        uint32_t mask_len,
                         struct gqt_query *q,
-                        unsigned int **counts,
-                        unsigned int *id_lens,
-                        unsigned int num_qs,
-                        unsigned int num_fields,
+                        uint32_t **counts,
+                        uint32_t *id_lens,
+                        uint32_t num_qs,
+                        uint32_t num_fields,
                         char *bim);
 int query_cmp(uint32_t value,
               int op_condition,
@@ -26,13 +26,13 @@ int query_cmp(uint32_t value,
 
 int popcount(uint32_t x);
 
-void get_bcf_query_result(unsigned int *mask,
-                        unsigned int mask_len,
+void get_bcf_query_result(uint32_t *mask,
+                        uint32_t mask_len,
                         struct gqt_query *q,
                         char **id_query_list,
-                        unsigned int *id_lens,
-                        unsigned int num_qs,
-                        unsigned int num_fields,
+                        uint32_t *id_lens,
+                        uint32_t num_qs,
+                        uint32_t num_fields,
                         char *vid_file_name,
                         char *src_bcf_file_name,
                         int bcf_output);
@@ -244,9 +244,9 @@ int query(int argc, char **argv)
     //}}}
 
     struct gqt_query q[100];
-    unsigned int *gt_mask[100];
-    unsigned int *counts[100];
-    unsigned int id_lens[100];
+    uint32_t *gt_mask[100];
+    uint32_t *counts[100];
+    uint32_t id_lens[100];
 
     int r, i, j, k;
 
@@ -258,12 +258,12 @@ int query(int argc, char **argv)
     }
 
     struct wah_file wf = init_wahbm_file(wahbm_file_name);
-    unsigned int num_ints = (wf.num_fields + 32 - 1)/ 32;
-    unsigned int len_ints;
+    uint32_t num_ints = (wf.num_fields + 32 - 1)/ 32;
+    uint32_t len_ints;
 
     for (i = 0; i < gt_q_count; ++i) {
-        unsigned int len_count_R;
-        unsigned int *R;
+        uint32_t len_count_R;
+        uint32_t *R;
         /* 
          * Submit the population query to the PED database and get back both
          * the list of of ids in R and the length of R in id_lens[i]
@@ -396,8 +396,8 @@ int query(int argc, char **argv)
             }
         /* User only gives genotype filters, no funtion/condition */
         } else {
-            unsigned int *gt_R;
-            unsigned int len_wf_R = range_records_in_place_wahbm(wf,
+            uint32_t *gt_R;
+            uint32_t len_wf_R = range_records_in_place_wahbm(wf,
                                                                  R,
                                                                  id_lens[i],
                                                                  low_v,
@@ -479,14 +479,14 @@ int query(int argc, char **argv)
 }
 //}}}
 
-//{{{ void get_bcf_query_result(unsigned int *mask,
-void get_bcf_query_result(unsigned int *mask,
-                        unsigned int mask_len,
+//{{{ void get_bcf_query_result(uint32_t *mask,
+void get_bcf_query_result(uint32_t *mask,
+                        uint32_t mask_len,
                         struct gqt_query *q,
                         char **id_query_list,
-                        unsigned int *id_lens,
-                        unsigned int num_qs,
-                        unsigned int num_fields,
+                        uint32_t *id_lens,
+                        uint32_t num_qs,
+                        uint32_t num_fields,
                         char *vid_file_name,
                         char *src_bcf_file_name,
                         int bcf_output)
@@ -560,17 +560,17 @@ void get_bcf_query_result(unsigned int *mask,
 }
 //}}}
  
-//{{{ void print_query_result(unsigned int *mask,
-void print_query_result(unsigned int *mask,
-                        unsigned int mask_len,
+//{{{ void print_query_result(uint32_t *mask,
+void print_query_result(uint32_t *mask,
+                        uint32_t mask_len,
                         struct gqt_query *q,
-                        unsigned int **counts,
-                        unsigned int *id_lens,
-                        unsigned int num_qs,
-                        unsigned int num_fields,
+                        uint32_t **counts,
+                        uint32_t *id_lens,
+                        uint32_t num_qs,
+                        uint32_t num_fields,
                         char *bim)
 {
-    unsigned int i,j,k,line_idx,bytes, bit_i = 0;
+    uint32_t i,j,k,line_idx,bytes, bit_i = 0;
 
     struct quick_file_info qfile;
     struct output_buffer outbuf;

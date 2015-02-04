@@ -11,8 +11,8 @@ int bcf_wahbm(char *in,
               char *bim_out,
               char *vid_out,
               char *tmp_dir,
-              unsigned int num_fields,
-              unsigned int num_records);
+              uint32_t num_fields,
+              uint32_t num_records);
 int ped_db(char *in, char *out);
 
 int convert(int argc, char **argv)
@@ -21,7 +21,7 @@ int convert(int argc, char **argv)
 
     int c;
     char *in=NULL, *out=NULL, *bim=NULL, *vid=NULL, *tmp_dir=NULL;
-    unsigned int num_fields, num_records;
+    uint32_t num_fields, num_records;
     int i_is_set = 0, 
         o_is_set = 0, 
         f_is_set = 0, 
@@ -121,12 +121,14 @@ int convert(int argc, char **argv)
 
         int r = bcf_wahbm(in, out, bim, vid, tmp_dir, num_fields, num_records);
 
+        /*
         if (vid != NULL)
             free(vid);
         if (bim != NULL)
             free(bim);
         if (out != NULL)
             free(out);
+        */
 
 
         return r;
@@ -174,8 +176,8 @@ int bcf_wahbm(char *in,
               char *bim_out,
               char *vid_out,
               char *tmp_dir,
-              unsigned int num_fields,
-              unsigned int num_records)
+              uint32_t num_fields,
+              uint32_t num_records)
 {
     return convert_file_by_name_bcf_to_wahbm_bim(in,
                                                  num_fields,

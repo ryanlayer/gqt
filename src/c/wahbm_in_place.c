@@ -88,6 +88,39 @@ uint32_t wah_in_place_and(uint32_t *r_wah,
 }
 //}}}
 
+//{{{ uint32_t wah_in_place_xor(uint32_t *r_wah,
+uint32_t wah_in_place_xor(uint32_t *r_wah,
+                          uint32_t r_wah_size,
+                          uint32_t *wah,
+                          uint32_t wah_size)
+{
+
+    uint32_t r_wah_i = 0;
+    uint32_t wah_i, fill_size, fill_v, wah_v, end;
+    for (wah_i = 0; wah_i < wah_size; ++wah_i)
+    {
+        wah_v = wah[wah_i];
+        // is the current word a fill
+        if (wah_v >= 0x80000000) {
+            fill_size = wah_v & 0x3fffffff;
+            if (wah_v >> 30 == 3) // fill of 1s
+                fill_v = 0x7fffffff;
+            else  // fill of 0s
+                fill_v = 0;
+
+            end =  r_wah_i + fill_size;
+            for ( ; r_wah_i < end; ++r_wah_i)
+                r_wah[r_wah_i] = r_wah[r_wah_i] ^ fill_v;
+        } else {
+            r_wah[r_wah_i] = r_wah[r_wah_i] ^ wah[wah_i];
+            r_wah_i += 1;
+        }
+    }
+
+    return r_wah_i;
+}
+//}}}
+
 //{{{ uint32_t get_wah_bitmap_in_place(struct wah_file wf,
 uint32_t get_wah_bitmap_in_place(struct wah_file wf,
                                      uint32_t wah_record,

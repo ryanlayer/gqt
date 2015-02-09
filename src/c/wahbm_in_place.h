@@ -50,6 +50,12 @@ uint32_t  wah_in_place_or(uint32_t *r_wah,
                               uint32_t *wah,
                               uint32_t wah_size);
 
+uint32_t wah_in_place_xor(uint32_t *r_wah,
+                          uint32_t r_wah_size,
+                          uint32_t *wah,
+                          uint32_t wah_size);
+
+
 /**
  * @brief   in-place AND two WAH runs
  *

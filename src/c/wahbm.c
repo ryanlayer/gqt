@@ -69,6 +69,141 @@ struct wah_file init_wahbm_file(char *file_name)
 }
 //}}}
 
+uint32_t wahbm_pca_by_name(char *in, char *out)
+{
+
+    struct wah_file wf = init_wahbm_file(in);
+
+    uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+
+    uint32_t i_0_s, i_1_s, i_2_s;
+    uint32_t *i_0 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *i_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *i_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+
+    uint32_t j_0_s, j_1_s, j_2_s;
+    uint32_t *j_0 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *j_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *j_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+
+    uint32_t x_0_s, x_1_s, x_2_s;
+    uint32_t *x_0 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *x_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *x_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+
+
+    uint32_t x_0_sc, x_1_sc, x_2_sc;
+    uint32_t *x_0_c = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *x_1_c = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *x_2_c = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+
+    uint32_t t_s;
+    uint32_t *t = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+
+    uint32_t i,j,k, i_to_j_d;
+    for (i = 0; i < wf.num_records; ++i) {
+        //load in the ith record
+        i_0_s = get_wah_bitmap_in_place(wf, i, 0, &i_0);
+        i_1_s = get_wah_bitmap_in_place(wf, i, 1, &i_1);
+        i_2_s = get_wah_bitmap_in_place(wf, i, 2, &i_2);
+
+        memset(x_0_c, 0, sizeof(uint32_t)*max_wah_size);
+        memset(x_1_c, 0, sizeof(uint32_t)*max_wah_size);
+        memset(x_2_c, 0, sizeof(uint32_t)*max_wah_size);
+
+        x_0_sc = wah_in_place_or(x_0_c, max_wah_size, i_0, i_0_s);
+        x_1_sc = wah_in_place_or(x_1_c, max_wah_size, i_1, i_1_s);
+        x_2_sc = wah_in_place_or(x_2_c, max_wah_size, i_2, i_2_s);
+
+        for (j = 0; j < wf.num_records; ++j) {
+            //fprintf(stderr, "i:%u\tj:%u\n", i, j);
+            //fprintf(stderr, "i:%u\tj:%u\t", i, j);
+            memcpy(x_0, x_0_c, x_0_sc * sizeof(uint32_t));
+            memcpy(x_1, x_1_c, x_1_sc * sizeof(uint32_t));
+            memcpy(x_2, x_2_c, x_2_sc * sizeof(uint32_t));
+            x_0_s = x_0_sc;
+            x_1_s = x_1_sc;
+            x_2_s = x_2_sc;
+
+            /*
+            for (k = 0; k < x_0_s; ++k)
+                fprintf(stderr, "%u ", x_0[k]);
+            fprintf(stderr, "\n");
+            for (k = 0; k < x_1_s; ++k)
+                fprintf(stderr, "%u ", x_1[k]);
+            fprintf(stderr, "\n");
+            for (k = 0; k < x_2_s; ++k)
+                fprintf(stderr, "%u ", x_2[k]);
+            fprintf(stderr, "\n--\n");
+            */
+
+
+
+            //load in the jth record
+            j_0_s = get_wah_bitmap_in_place(wf, j, 0, &j_0);
+            j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
+            j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
+            //find the xor of all 4
+            
+            /*
+            for (k = 0; k < j_0_s; ++k)
+                fprintf(stderr, "%u ", j_0[k]);
+            fprintf(stderr, "\n");
+            for (k = 0; k < j_1_s; ++k)
+                fprintf(stderr, "%u ", j_1[k]);
+            fprintf(stderr, "\n");
+            for (k = 0; k < j_2_s; ++k)
+                fprintf(stderr, "%u ", j_2[k]);
+            fprintf(stderr, "\n--\n");
+            */
+
+
+
+            x_0_s =  wah_in_place_xor(x_0, x_0_s, j_0, j_0_s);
+            x_1_s =  wah_in_place_xor(x_1, x_1_s, j_1, j_1_s);
+            x_2_s =  wah_in_place_xor(x_2, x_2_s, j_2, j_2_s);
+
+
+            /*
+            for (k = 0; k < x_0_s; ++k)
+                fprintf(stderr, "%u ", x_0[k]);
+            fprintf(stderr, "\n");
+            for (k = 0; k < x_1_s; ++k)
+                fprintf(stderr, "%u ", x_1[k]);
+            fprintf(stderr, "\n");
+            for (k = 0; k < x_2_s; ++k)
+                fprintf(stderr, "%u ", x_2[k]);
+            fprintf(stderr, "\n");
+            */
+
+
+            memcpy(t, x_0, x_0_s * sizeof(uint32_t));
+            t_s = x_0_s;
+
+            //r1-> (0 AND 1) OR (1 AND 2) --> (0 OR 2) AND 1
+            x_0_s =  wah_in_place_or(x_0, x_0_s, x_2, x_2_s);
+            x_0_s =  wah_in_place_and(x_0, x_0_s, x_1, x_1_s);
+            
+            //r2-> 2 AND 0
+            x_2_s =  wah_in_place_and(x_2, x_2_s, t, t_s);
+
+            i_to_j_d = 0;
+            for (k = 0; k < x_0_s; ++k)
+                i_to_j_d += popcount(x_0[k]);
+            for (k = 0; k < x_2_s; ++k)
+                i_to_j_d += popcount(x_2[k])*2;
+
+            //fprintf(stderr, "%u\n", i_to_j_d);
+            if (j!=0)
+                printf("\t");
+            printf("%u", i_to_j_d);
+        }
+        printf("\n");
+    }
+
+    return 0;
+}
+
 //{{{ uint32_t print_wahbm(struct wah_file wf,
 uint32_t print_wahbm(struct wah_file wf,
                      uint32_t *record_ids,

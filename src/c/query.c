@@ -24,7 +24,6 @@ int query_cmp(uint32_t value,
               int op_condition,
               int condition_value);
 
-int popcount(uint32_t x);
 
 void get_bcf_query_result(uint32_t *mask,
                         uint32_t mask_len,
@@ -43,15 +42,6 @@ int compare_uint32_t (const void *a, const void *b);
 int compare_uint32_t (const void *a, const void *b)
 {
     return ( *(uint32_t*)a - *(uint32_t*)b );
-}
-//}}}
-
-//{{{int popcount(uint32_t x) {
-int popcount(uint32_t x) {
-    int count;
-    for (count=0; x; count++)
-        x &= x-1;
-    return count;
 }
 //}}}
 

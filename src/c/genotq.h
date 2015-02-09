@@ -28,6 +28,8 @@ int *unpack_2_bit_ints(uint32_t packed_ints);
 int *unpack_1_bit_ints(uint32_t packed_ints);
 
 
+int popcount(uint32_t x);
+
 /**
  * @brief   Compress an array of integers encoded binary digits using
  *          run-length encoding.

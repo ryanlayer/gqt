@@ -158,3 +158,11 @@ int *unpack_2_bit_ints(uint32_t packed_ints)
 }
 //}}}
 
+//{{{int popcount(uint32_t x) {
+int popcount(uint32_t x) {
+    int count;
+    for (count=0; x; count++)
+        x &= x-1;
+    return count;
+}
+//}}}

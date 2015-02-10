@@ -115,7 +115,7 @@ uint32_t wahbm_pca_by_name(char *in, char *out)
         x_1_sc = wah_in_place_or(x_1_c, max_wah_size, i_1, i_1_s);
         x_2_sc = wah_in_place_or(x_2_c, max_wah_size, i_2, i_2_s);
 
-        for (j = 0; j < wf.num_records; ++j) {
+        for (j = i+1; j < wf.num_records; ++j) {
             //fprintf(stderr, "i:%u\tj:%u\n", i, j);
             //fprintf(stderr, "i:%u\tj:%u\t", i, j);
             memcpy(x_0, x_0_c, x_0_sc * sizeof(uint32_t));
@@ -190,13 +190,16 @@ uint32_t wahbm_pca_by_name(char *in, char *out)
             i_to_j_d = 0;
             for (k = 0; k < x_0_s; ++k)
                 i_to_j_d += popcount(x_0[k]);
+                //i_to_j_d += x_0[k];
             for (k = 0; k < x_2_s; ++k)
-                i_to_j_d += popcount(x_2[k])*2;
+                i_to_j_d += popcount(x_2[k])*4;
+                //i_to_j_d += x_2[k];
 
             //fprintf(stderr, "%u\n", i_to_j_d);
             if (j!=0)
                 printf("\t");
-            printf("%u", i_to_j_d);
+            printf("%f", ((float)i_to_j_d)/((float)wf.num_fields));
+            printf("%f", ((float)i_to_j_d)/((float)wf.num_fields));
         }
         printf("\n");
     }

@@ -13,7 +13,9 @@
 #include <math.h>
 #include <limits.h>
 #include "genotq.h"
+#ifdef __SSE4_2__
 #include <nmmintrin.h>
+#endif
 
 // utils
 //{{{ void parse_cmd_line_int_csv(int *I,
@@ -161,14 +163,15 @@ int *unpack_2_bit_ints(uint32_t packed_ints)
 
 //{{{int popcount(uint32_t x) {
 int popcount(uint32_t x) {
-    /*
+
+#ifndef __SSE4_2__
     int count;
     for (count=0; x; count++)
         x &= x-1;
     return count;
-    */
-
+#else
     return _mm_popcnt_u32(x);
+#endif
 
 }
 //}}}

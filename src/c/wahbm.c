@@ -36,7 +36,6 @@ int log2_32 (uint32_t value)
     return tab32[(uint32_t)(value*0x07C4ACDD) >> 27];
 }
 
-
 // wahbm
 //{{{ struct wah_file init_wahbm_file(char *file_name)
 struct wah_file init_wahbm_file(char *file_name)
@@ -69,6 +68,7 @@ struct wah_file init_wahbm_file(char *file_name)
 }
 //}}}
 
+//{{{ uint32_t wahbm_pca_by_name(char *in, char *out)
 uint32_t wahbm_pca_by_name(char *in, char *out)
 {
 
@@ -116,8 +116,6 @@ uint32_t wahbm_pca_by_name(char *in, char *out)
         x_2_sc = wah_in_place_or(x_2_c, max_wah_size, i_2, i_2_s);
 
         for (j = i+1; j < wf.num_records; ++j) {
-            //fprintf(stderr, "i:%u\tj:%u\n", i, j);
-            //fprintf(stderr, "i:%u\tj:%u\t", i, j);
             memcpy(x_0, x_0_c, x_0_sc * sizeof(uint32_t));
             memcpy(x_1, x_1_c, x_1_sc * sizeof(uint32_t));
             memcpy(x_2, x_2_c, x_2_sc * sizeof(uint32_t));
@@ -125,57 +123,15 @@ uint32_t wahbm_pca_by_name(char *in, char *out)
             x_1_s = x_1_sc;
             x_2_s = x_2_sc;
 
-            /*
-            for (k = 0; k < x_0_s; ++k)
-                fprintf(stderr, "%u ", x_0[k]);
-            fprintf(stderr, "\n");
-            for (k = 0; k < x_1_s; ++k)
-                fprintf(stderr, "%u ", x_1[k]);
-            fprintf(stderr, "\n");
-            for (k = 0; k < x_2_s; ++k)
-                fprintf(stderr, "%u ", x_2[k]);
-            fprintf(stderr, "\n--\n");
-            */
-
-
-
             //load in the jth record
             j_0_s = get_wah_bitmap_in_place(wf, j, 0, &j_0);
             j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
             j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
             //find the xor of all 4
-            
-            /*
-            for (k = 0; k < j_0_s; ++k)
-                fprintf(stderr, "%u ", j_0[k]);
-            fprintf(stderr, "\n");
-            for (k = 0; k < j_1_s; ++k)
-                fprintf(stderr, "%u ", j_1[k]);
-            fprintf(stderr, "\n");
-            for (k = 0; k < j_2_s; ++k)
-                fprintf(stderr, "%u ", j_2[k]);
-            fprintf(stderr, "\n--\n");
-            */
-
-
 
             x_0_s =  wah_in_place_xor(x_0, x_0_s, j_0, j_0_s);
             x_1_s =  wah_in_place_xor(x_1, x_1_s, j_1, j_1_s);
             x_2_s =  wah_in_place_xor(x_2, x_2_s, j_2, j_2_s);
-
-
-            /*
-            for (k = 0; k < x_0_s; ++k)
-                fprintf(stderr, "%u ", x_0[k]);
-            fprintf(stderr, "\n");
-            for (k = 0; k < x_1_s; ++k)
-                fprintf(stderr, "%u ", x_1[k]);
-            fprintf(stderr, "\n");
-            for (k = 0; k < x_2_s; ++k)
-                fprintf(stderr, "%u ", x_2[k]);
-            fprintf(stderr, "\n");
-            */
-
 
             memcpy(t, x_0, x_0_s * sizeof(uint32_t));
             t_s = x_0_s;
@@ -190,15 +146,11 @@ uint32_t wahbm_pca_by_name(char *in, char *out)
             i_to_j_d = 0;
             for (k = 0; k < x_0_s; ++k)
                 i_to_j_d += popcount(x_0[k]);
-                //i_to_j_d += x_0[k];
             for (k = 0; k < x_2_s; ++k)
                 i_to_j_d += popcount(x_2[k])*4;
-                //i_to_j_d += x_2[k];
 
-            //fprintf(stderr, "%u\n", i_to_j_d);
-            if (j!=0)
+            if (j!=i+1)
                 printf("\t");
-            printf("%f", ((float)i_to_j_d)/((float)wf.num_fields));
             printf("%f", ((float)i_to_j_d)/((float)wf.num_fields));
         }
         printf("\n");
@@ -206,6 +158,7 @@ uint32_t wahbm_pca_by_name(char *in, char *out)
 
     return 0;
 }
+//}}}
 
 //{{{ uint32_t print_wahbm(struct wah_file wf,
 uint32_t print_wahbm(struct wah_file wf,

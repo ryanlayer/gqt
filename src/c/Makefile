@@ -2,10 +2,11 @@ BIN=../../bin
 OBJ=../../obj
 HTS_ROOT=$(HOME)/src/htslib
 #HDF5_ROOT=$(HOME)/src/hdf5-1.8.7-mac-intel-x86_64-static
-CFLAGS=-g -D_FILE_OFFSET_BITS=64
-#CFLAGS=-O3
+#CFLAGS=-g -D_FILE_OFFSET_BITS=64
+CFLAGS=-O3 -D_FILE_OFFSET_BITS=64
 #CFLAGS=-Wall -O0 -g -fno-inline -fkeep-inline-functions -D_FILE_OFFSET_BITS=64 -fPIC -DDEBUG -D_DEBUG
 #CFLAGS+=-mavx -mavx2
+#CFLAGS+=-Dtime_wahbm_pca_by_name
 #CFLAGS+=-Dtime_count_range_records_compressed_in_place_wahbm
 #CFLAGS+=-Dtime_count_range_records_in_place_wahbm
 #CFLAGS+=-Dtime_sum_range_records_in_place_wahbm

@@ -19,6 +19,7 @@
 #include <inttypes.h>
 #include "genotq.h"
 #include "pthread_pool.h"
+#include "timer.h"
 
 const int tab32[32] = {
     0,  9,  1, 10, 13, 21,  2, 29,
@@ -101,21 +102,69 @@ uint32_t wahbm_pca_by_name(char *in, char *out)
     uint32_t *t = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
 
     uint32_t i,j,k, i_to_j_d;
+
+#ifdef time_wahbm_pca_by_name
+    unsigned long t_i_get_wah_bitmap_in_place   = 0,
+                  t_i_memset                    = 0,
+                  t_i_wah_in_place_or           = 0,
+                  t_j_memcpy                    = 0,
+                  t_j_get_wah_bitmap_in_place   = 0,
+                  t_j_wah_in_place_xor          = 0,
+                  t_j_r1                        = 0,
+                  t_j_r2                        = 0,
+                  t_j_popcounts                 = 0,
+                  t_j_print                     = 0;
+#endif
+
     for (i = 0; i < wf.num_records; ++i) {
         //load in the ith record
+
+#ifdef time_wahbm_pca_by_name
+        start();
+#endif
+
         i_0_s = get_wah_bitmap_in_place(wf, i, 0, &i_0);
         i_1_s = get_wah_bitmap_in_place(wf, i, 1, &i_1);
         i_2_s = get_wah_bitmap_in_place(wf, i, 2, &i_2);
+
+#ifdef time_wahbm_pca_by_name
+        stop();
+        t_i_get_wah_bitmap_in_place += report();
+#endif
+
+
+#ifdef time_wahbm_pca_by_name
+        start();
+#endif
 
         memset(x_0_c, 0, sizeof(uint32_t)*max_wah_size);
         memset(x_1_c, 0, sizeof(uint32_t)*max_wah_size);
         memset(x_2_c, 0, sizeof(uint32_t)*max_wah_size);
 
+#ifdef time_wahbm_pca_by_name
+        stop();
+        t_i_memset += report();
+#endif
+
+#ifdef time_wahbm_pca_by_name
+        start();
+#endif
+
         x_0_sc = wah_in_place_or(x_0_c, max_wah_size, i_0, i_0_s);
         x_1_sc = wah_in_place_or(x_1_c, max_wah_size, i_1, i_1_s);
         x_2_sc = wah_in_place_or(x_2_c, max_wah_size, i_2, i_2_s);
 
+#ifdef time_wahbm_pca_by_name
+        stop();
+        t_i_wah_in_place_or += report();
+#endif
+
         for (j = i+1; j < wf.num_records; ++j) {
+
+#ifdef time_wahbm_pca_by_name
+            start();
+#endif
+
             memcpy(x_0, x_0_c, x_0_sc * sizeof(uint32_t));
             memcpy(x_1, x_1_c, x_1_sc * sizeof(uint32_t));
             memcpy(x_2, x_2_c, x_2_sc * sizeof(uint32_t));
@@ -123,25 +172,69 @@ uint32_t wahbm_pca_by_name(char *in, char *out)
             x_1_s = x_1_sc;
             x_2_s = x_2_sc;
 
+#ifdef time_wahbm_pca_by_name
+            stop();
+            t_j_memcpy += report();
+#endif
+
+#ifdef time_wahbm_pca_by_name
+            start();
+#endif
+
             //load in the jth record
             j_0_s = get_wah_bitmap_in_place(wf, j, 0, &j_0);
             j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
             j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
             //find the xor of all 4
+            
+#ifdef time_wahbm_pca_by_name
+            stop();
+            t_j_get_wah_bitmap_in_place += report();
+#endif
+
+#ifdef time_wahbm_pca_by_name
+            start();
+#endif
 
             x_0_s =  wah_in_place_xor(x_0, x_0_s, j_0, j_0_s);
             x_1_s =  wah_in_place_xor(x_1, x_1_s, j_1, j_1_s);
             x_2_s =  wah_in_place_xor(x_2, x_2_s, j_2, j_2_s);
 
+#ifdef time_wahbm_pca_by_name
+            stop();
+            t_j_wah_in_place_xor += report();
+#endif
+
             memcpy(t, x_0, x_0_s * sizeof(uint32_t));
             t_s = x_0_s;
+
+#ifdef time_wahbm_pca_by_name
+            start();
+#endif
 
             //r1-> (0 AND 1) OR (1 AND 2) --> (0 OR 2) AND 1
             x_0_s =  wah_in_place_or(x_0, x_0_s, x_2, x_2_s);
             x_0_s =  wah_in_place_and(x_0, x_0_s, x_1, x_1_s);
+
+#ifdef time_wahbm_pca_by_name
+            stop();
+            t_j_r1 += report();
+#endif
             
+#ifdef time_wahbm_pca_by_name
+            start();
+#endif
             //r2-> 2 AND 0
             x_2_s =  wah_in_place_and(x_2, x_2_s, t, t_s);
+
+#ifdef time_wahbm_pca_by_name
+            stop();
+            t_j_r2 += report();
+#endif
+
+#ifdef time_wahbm_pca_by_name
+            start();
+#endif
 
             i_to_j_d = 0;
             for (k = 0; k < x_0_s; ++k)
@@ -149,12 +242,73 @@ uint32_t wahbm_pca_by_name(char *in, char *out)
             for (k = 0; k < x_2_s; ++k)
                 i_to_j_d += popcount(x_2[k])*4;
 
+#ifdef time_wahbm_pca_by_name
+            stop();
+            t_j_popcounts += report();
+#endif
+
+#ifdef time_wahbm_pca_by_name
+            start();
+#endif
+
             if (j!=i+1)
                 printf("\t");
             printf("%f", ((float)i_to_j_d)/((float)wf.num_fields));
+
+#ifdef time_wahbm_pca_by_name
+            stop();
+            t_j_print += report();
+#endif
         }
         printf("\n");
     }
+
+#ifdef time_wahbm_pca_by_name
+    float t_total = t_i_get_wah_bitmap_in_place   +
+                    t_i_memset                    +
+                    t_i_wah_in_place_or           +
+                    t_j_memcpy                    +
+                    t_j_get_wah_bitmap_in_place   +
+                    t_j_wah_in_place_xor          +
+                    t_j_r1                        +
+                    t_j_r2                        +
+                    t_j_popcounts                 +
+                    t_j_print;
+
+    fprintf(stderr, "t_i_get_wah_bitmap_in_place:%lu\t%f\n"
+                    "t_i_memset:%lu\t%f\n"
+                    "t_i_wah_in_place_or:%lu\t%f\n"
+                    "t_j_memcpy:%lu\t%f\n"
+                    "t_j_get_wah_bitmap_in:%lu\t%f\n"
+                    "t_j_wah_in_place_xor:%lu\t%f\n"
+                    "t_j_r1:%lu\t%f\n"
+                    "t_j_r2:%lu\t%f\n"
+                    "t_j_popcounts:%lu\t%f\n"
+                    "t_j_print:%lu\t%f\n",
+                    t_i_get_wah_bitmap_in_place,
+                    t_i_get_wah_bitmap_in_place/t_total,
+                    t_i_memset,
+                    t_i_memset/t_total,
+                    t_i_wah_in_place_or,
+                    t_i_wah_in_place_or/t_total,
+                    t_j_memcpy,
+                    t_j_memcpy/t_total,
+                    t_j_get_wah_bitmap_in_place,
+                    t_j_get_wah_bitmap_in_place/t_total,
+                    t_j_wah_in_place_xor,
+                    t_j_wah_in_place_xor/t_total,
+                    t_j_r1,
+                    t_j_r1/t_total,
+                    t_j_r2,
+                    t_j_r2/t_total,
+                    t_j_popcounts,
+                    t_j_popcounts/t_total,
+                    t_j_print,
+                    t_j_print/t_total);
+#endif
+
+
+
 
     return 0;
 }

@@ -18,6 +18,7 @@ int vcf_plt(char *in,
             uint32_t num_records);
 int plt_invert(char *in, char *out);
 int plt_invert_ubin(char *in, char *out);
+int wahbm_pca(char *in, char *out);
 
 int misc(int argc, char **argv)
 {
@@ -126,6 +127,7 @@ int misc(int argc, char **argv)
     if (strcmp(type, "ubin-wahbm") == 0) return ubin_wahbm(in, out);
     if (strcmp(type, "ubin-wahbm16") == 0) return ubin_wahbm16(in, out);
     if (strcmp(type, "ubin-wah") == 0) return ubin_wah(in, out);
+    if (strcmp(type, "pca") == 0) return wahbm_pca(in, out);
 
     return 1;
 }
@@ -146,6 +148,7 @@ int misc_help()
            "         bcf-wahbm         BCF to by-individual sorted WAH bitmap\n"
            "         ped-db            PED to SQLite3 database\n"
            "         rotate-hlubin     Rotate a ubin w/o a header to one w/\n"
+           "         pca               Run PCA/\n"
            "         -v                VID output file name"
                                        "(required for bcf-wahbm)\n"
            "         -b                BIM output file name"
@@ -206,5 +209,11 @@ int vcf_plt(char *in,
             uint32_t num_records)
 {
     return convert_file_by_name_vcf_to_plt(in, num_fields, num_records, out);
+}
+
+int wahbm_pca(char *in,
+              char *out)
+{
+    return wahbm_pca_by_name(in, out);
 }
 

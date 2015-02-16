@@ -401,5 +401,7 @@ void avx_add_n(uint32_t bits,
                uint32_t field_i);
 #endif
 
+uint32_t wahbm_pca_by_name(char *in, char *out);
+
 ////////////END//////////////////////////////////////////////////////
 #endif

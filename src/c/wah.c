@@ -162,8 +162,8 @@ uint32_t  wah_or(struct wah_run *x,
 
 //{{{ uint32_t wah_and(struct wah_run *x,
 uint32_t wah_and(struct wah_run *x,
-                     struct wah_run *y,
-                     uint32_t **O)
+                 struct wah_run *y,
+                 uint32_t **O)
 {
     struct wah_active_word a;
     uint32_t num_words;

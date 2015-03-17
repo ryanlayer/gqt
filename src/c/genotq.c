@@ -164,6 +164,9 @@ int *unpack_2_bit_ints(uint32_t packed_ints)
 //{{{int popcount(uint32_t x) {
 int popcount(uint32_t x) {
 
+    return __builtin_popcount(x);
+
+#if 0
 #ifndef __SSE4_2__
     int count;
     for (count=0; x; count++)
@@ -171,6 +174,7 @@ int popcount(uint32_t x) {
     return count;
 #else
     return _mm_popcnt_u32(x);
+#endif
 #endif
 
 }

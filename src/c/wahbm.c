@@ -237,10 +237,25 @@ uint32_t wahbm_pca_by_name(char *in, char *out)
 #endif
 
             i_to_j_d = 0;
+            /*
             for (k = 0; k < x_0_s; ++k)
                 i_to_j_d += popcount(x_0[k]);
             for (k = 0; k < x_2_s; ++k)
                 i_to_j_d += popcount(x_2[k])*4;
+            */
+
+            uint64_t *l_x_0 = (uint64_t *)x_0;
+            uint64_t *l_x_2 = (uint64_t *)x_2;
+
+            for (k = 0; k < x_0_s/2; k++)
+                i_to_j_d += __builtin_popcountll(l_x_0[k]);
+            if (k*2 < x_0_s)
+                i_to_j_d += __builtin_popcount(x_0[k*2]);
+
+            for (k = 0; k < x_2_s/2; k++)
+                i_to_j_d += __builtin_popcountll(l_x_2[k])*4;
+            if (k*2 < x_2_s)
+                i_to_j_d += __builtin_popcount(x_2[k*2])*4;
 
 #ifdef time_wahbm_pca_by_name
             stop();

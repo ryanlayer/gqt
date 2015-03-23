@@ -19,23 +19,36 @@ int vcf_plt(char *in,
 int plt_invert(char *in, char *out);
 int plt_invert_ubin(char *in, char *out);
 int wahbm_pca(char *in, char *out);
+//int top_n_matches(char *in, char *db, uint32_t num_matches);
+int top_n_matches(char *in, uint32_t num_matches);
+int speed_check(char *in);
 
 int misc(int argc, char **argv)
 {
     if (argc < 2) return misc_help();
 
     int c;
-    char *in, *out, *bim, *vid;
-    uint32_t num_fields, num_records;
+    char *in, *out, *bim, *vid, *db;
+    uint32_t num_fields, num_records, num_matches;
     int i_is_set = 0, 
         o_is_set = 0, 
+        d_is_set = 0, 
         f_is_set = 0, 
         b_is_set = 0, 
         v_is_set = 0, 
+        n_is_set = 0, 
         r_is_set = 0; 
 
-    while((c = getopt (argc, argv, "hi:o:f:r:b:v:")) != -1) {
+    while((c = getopt (argc, argv, "hi:o:f:r:b:v:n:d:")) != -1) {
         switch (c) {
+            case 'd':
+                d_is_set = 1;
+                db = optarg;
+                break;
+            case 'n':
+                n_is_set = 1;
+                num_matches = atoi(optarg);
+                break;
             case 'v':
                 v_is_set = 1;
                 vid = optarg;
@@ -81,6 +94,20 @@ int misc(int argc, char **argv)
     }
 
     char *type = argv[0];
+
+
+
+    if (strcmp(type, "top-n") == 0) {
+        //if ( (i_is_set == 0) || (n_is_set ==0) || (d_is_set == 0) {
+        if ( (i_is_set == 0) || (n_is_set ==0) ) {
+            //printf("top-n requires an input file, n\n");
+            printf("top-n requires an input file and n to be set\n");
+            return misc_help();
+        }
+
+        return top_n_matches(in, num_matches);
+    }
+
 
     if (i_is_set == 0) {
         printf("Input file is not set\n");
@@ -128,6 +155,8 @@ int misc(int argc, char **argv)
     if (strcmp(type, "ubin-wahbm16") == 0) return ubin_wahbm16(in, out);
     if (strcmp(type, "ubin-wah") == 0) return ubin_wah(in, out);
     if (strcmp(type, "pca") == 0) return wahbm_pca(in, out);
+    if (strcmp(type, "top-n") == 0) return wahbm_pca(in, out);
+    if (strcmp(type, "speed-check") == 0) return speed_check(in);
 
     return 1;
 }
@@ -149,6 +178,8 @@ int misc_help()
            "         ped-db            PED to SQLite3 database\n"
            "         rotate-hlubin     Rotate a ubin w/o a header to one w/\n"
            "         pca               Run PCA/\n"
+           "         speed-check       Test ops/\n"
+           "         top-n             Find the top n matching hets/\n"
            "         -v                VID output file name"
                                        "(required for bcf-wahbm)\n"
            "         -b                BIM output file name"
@@ -216,4 +247,15 @@ int wahbm_pca(char *in,
 {
     return wahbm_pca_by_name(in, out);
 }
+
+int speed_check(char *in)
+{
+    return wahbm_speed_check(in);
+}
+
+int top_n_matches(char *in, uint32_t num_matches)
+{
+    return wahbm_top_n_matches_by_name(in, num_matches);
+}
+
 

@@ -457,4 +457,20 @@ uint32_t print_wah(struct wah_file wf,
                        uint32_t num_r,
                        uint32_t format);
 
+int append_active_word_b(uint32_t *R,
+                         uint32_t R_len,
+                         uint32_t value);
+
+uint32_t append_fill_word_b(uint32_t *R,
+                            uint32_t R_len,
+                            int fill_bit,
+                            uint32_t fill_size);
+
+uint32_t wah_or_b(uint32_t *R,
+                  uint32_t *X,
+                  uint32_t len_X,
+                  uint32_t *Y,
+                  uint32_t len_Y);
+
+
 #endif

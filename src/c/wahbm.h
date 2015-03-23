@@ -403,5 +403,8 @@ void avx_add_n(uint32_t bits,
 
 uint32_t wahbm_pca_by_name(char *in, char *out);
 
+uint32_t wahbm_speed_check(char *in);
+
+uint32_t wahbm_top_n_matches_by_name(char *in, uint32_t n);
 ////////////END//////////////////////////////////////////////////////
 #endif

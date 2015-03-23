@@ -17,6 +17,7 @@
 #include <assert.h>
 #include <immintrin.h>
 #include <inttypes.h>
+#include <math.h>
 #include "genotq.h"
 #include "pthread_pool.h"
 #include "timer.h"
@@ -66,6 +67,161 @@ struct wah_file init_wahbm_file(char *file_name)
     wf.header_offset = ftell(wf.file);
 
     return wf;
+}
+//}}}
+
+//{{{ uint32_t wahbm_speed_check(char *in)
+uint32_t wahbm_speed_check(char *in)
+{
+    struct wah_file wf = init_wahbm_file(in);
+
+    uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+
+    uint32_t i_0_s, i_1_s, i_2_s;
+    uint32_t *i_0 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *i_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *i_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+
+    uint32_t j_0_s, j_1_s, j_2_s;
+    uint32_t *j_0 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *j_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *j_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+
+    uint32_t x_0_s, x_1_s, x_2_s;
+    uint32_t *x_0 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *x_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *x_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+
+
+    uint32_t x_0_sc, x_1_sc, x_2_sc;
+    uint32_t *x_0_c = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *x_1_c = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *x_2_c = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+
+    uint32_t t_s;
+    uint32_t *t = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+
+    uint32_t i,j,k, i_to_j_d;
+
+        
+    i_0_s = get_wah_bitmap_in_place(wf, 0, 0, &i_0);
+    i_1_s = get_wah_bitmap_in_place(wf, 0, 1, &i_1);
+    i_2_s = get_wah_bitmap_in_place(wf, 0, 2, &i_2);
+
+    memset(x_0_c, 0, sizeof(uint32_t)*max_wah_size);
+    memset(x_1_c, 0, sizeof(uint32_t)*max_wah_size);
+    memset(x_2_c, 0, sizeof(uint32_t)*max_wah_size);
+
+
+    x_0_sc = wah_in_place_or(x_0_c, max_wah_size, i_0, i_0_s);
+    x_1_sc = wah_in_place_or(x_1_c, max_wah_size, i_1, i_1_s);
+    x_2_sc = wah_in_place_or(x_2_c, max_wah_size, i_2, i_2_s);
+
+    printf("\nXOR\n");
+    for (i = 0; i < 5; ++i) {
+    start();
+    for (j = 1; j < wf.num_records; ++j) {
+
+        memcpy(x_0, x_0_c, x_0_sc * sizeof(uint32_t));
+        memcpy(x_1, x_1_c, x_1_sc * sizeof(uint32_t));
+        memcpy(x_2, x_2_c, x_2_sc * sizeof(uint32_t));
+        x_0_s = x_0_sc;
+        x_1_s = x_1_sc;
+        x_2_s = x_2_sc;
+
+        //load in the jth record
+        j_0_s = get_wah_bitmap_in_place(wf, j, 0, &j_0);
+        j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
+        j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
+        //find the xor of all 4
+        
+        x_0_s =  wah_in_place_xor(x_0, x_0_s, j_0, j_0_s);
+        x_1_s =  wah_in_place_xor(x_1, x_1_s, j_1, j_1_s);
+        x_2_s =  wah_in_place_xor(x_2, x_2_s, j_2, j_2_s);
+    }
+    stop();
+    printf("%lu\n", report());
+    }
+
+    printf("\nAND\n");
+    for (i = 0; i < 5; ++i) {
+    start();
+    for (j = 1; j < wf.num_records; ++j) {
+
+        memcpy(x_0, x_0_c, x_0_sc * sizeof(uint32_t));
+        memcpy(x_1, x_1_c, x_1_sc * sizeof(uint32_t));
+        memcpy(x_2, x_2_c, x_2_sc * sizeof(uint32_t));
+        x_0_s = x_0_sc;
+        x_1_s = x_1_sc;
+        x_2_s = x_2_sc;
+
+        //load in the jth record
+        j_0_s = get_wah_bitmap_in_place(wf, j, 0, &j_0);
+        j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
+        j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
+        //find the xor of all 4
+        
+        x_0_s =  wah_in_place_and(x_0, x_0_s, j_0, j_0_s);
+        x_1_s =  wah_in_place_and(x_1, x_1_s, j_1, j_1_s);
+        x_2_s =  wah_in_place_and(x_2, x_2_s, j_2, j_2_s);
+    }
+    stop();
+    printf("%lu\n", report());
+    }
+
+    printf("\nOR\n");
+    for (i = 0; i < 5; ++i) {
+    start();
+    for (j = 1; j < wf.num_records; ++j) {
+
+        memcpy(x_0, x_0_c, x_0_sc * sizeof(uint32_t));
+        memcpy(x_1, x_1_c, x_1_sc * sizeof(uint32_t));
+        memcpy(x_2, x_2_c, x_2_sc * sizeof(uint32_t));
+        x_0_s = x_0_sc;
+        x_1_s = x_1_sc;
+        x_2_s = x_2_sc;
+
+        //load in the jth record
+        j_0_s = get_wah_bitmap_in_place(wf, j, 0, &j_0);
+        j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
+        j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
+        //find the xor of all 4
+        
+        x_0_s =  wah_in_place_or(x_0, x_0_s, j_0, j_0_s);
+        x_1_s =  wah_in_place_or(x_1, x_1_s, j_1, j_1_s);
+        x_2_s =  wah_in_place_or(x_2, x_2_s, j_2, j_2_s);
+    }
+    stop();
+    printf("%lu\n", report());
+    }
+
+    printf("\nOR\n");
+    for (i = 0; i < 5; ++i) {
+    start();
+    for (j = 1; j < wf.num_records; ++j) {
+
+        //memcpy(x_0, x_0_c, x_0_sc * sizeof(uint32_t));
+        //memcpy(x_1, x_1_c, x_1_sc * sizeof(uint32_t));
+        //memcpy(x_2, x_2_c, x_2_sc * sizeof(uint32_t));
+        //x_0_s = x_0_sc;
+        //x_1_s = x_1_sc;
+        //x_2_s = x_2_sc;
+
+        //load in the jth record
+        j_0_s = get_wah_bitmap_in_place(wf, j, 0, &j_0);
+        j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
+        j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
+        //find the xor of all 4
+        
+        x_0_s =  wah_or_b(x_0, i_0, i_0_s, j_0, j_0_s);
+        x_1_s =  wah_or_b(x_1, i_1, i_1_s, j_1, j_1_s);
+        x_2_s =  wah_or_b(x_2, i_2, i_2_s, j_2, j_2_s);
+    }
+    stop();
+    printf("%lu\n", report());
+    }
+
+    return 0;
 }
 //}}}
 
@@ -324,6 +480,114 @@ uint32_t wahbm_pca_by_name(char *in, char *out)
 
 
 
+
+    return 0;
+}
+//}}}
+
+//{{{ uint32_t wahbm_top_n_matches_by_name(char *in, uint32_t n)
+uint32_t wahbm_top_n_matches_by_name(char *in, uint32_t num_matches)
+{
+    struct wah_file wf = init_wahbm_file(in);
+
+    uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+
+    uint32_t i_0_s, i_1_s, i_2_s;
+    uint32_t *i_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *i_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+
+    uint32_t j_0_s, j_1_s, j_2_s;
+    uint32_t *j_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *j_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+
+    uint32_t x_0_s, x_1_s, x_2_s;
+    uint32_t *x_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *x_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+
+
+    uint32_t x_0_sc, x_1_sc, x_2_sc;
+    uint32_t *x_1_c = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *x_2_c = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+
+    uint32_t t_s;
+    uint32_t *t = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+
+    uint32_t i,j,k,l, i_to_j_d;
+    uint32_t leading_zeros, v;
+
+    for (i = 0; i < wf.num_records; ++i) {
+        //load in the ith record
+
+        i_1_s = get_wah_bitmap_in_place(wf, i, 1, &i_1);
+        i_2_s = get_wah_bitmap_in_place(wf, i, 2, &i_2);
+
+        memset(x_1_c, 0, sizeof(uint32_t)*max_wah_size);
+        memset(x_2_c, 0, sizeof(uint32_t)*max_wah_size);
+
+        x_1_sc = wah_in_place_or(x_1_c, max_wah_size, i_1, i_1_s);
+        x_2_sc = wah_in_place_or(x_2_c, max_wah_size, i_2, i_2_s);
+        
+        for (j = i+1; j < wf.num_records; ++j) {
+            memcpy(x_1, x_1_c, x_1_sc * sizeof(uint32_t));
+            memcpy(x_2, x_2_c, x_2_sc * sizeof(uint32_t));
+            x_1_s = x_1_sc;
+            x_2_s = x_2_sc;
+
+            memset(j_1, 0, sizeof(uint32_t)*max_wah_size);
+            memset(j_2, 0, sizeof(uint32_t)*max_wah_size);
+            //load in the jth record
+            j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
+            j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
+            //find the xor of all 4
+            
+            x_1_s =  wah_in_place_and(x_1, x_1_s, j_1, j_1_s);
+            x_2_s =  wah_in_place_and(x_2, x_2_s, j_2, j_2_s);
+            x_2_s =  wah_in_place_or(x_2, x_2_s, x_1, x_1_s);
+
+            if (j != i+1)
+                printf("\t");
+
+            double score = 0.0;
+            uint32_t num_hits = 0;
+            for (k = 0; k < x_2_s; k++) {
+#if 0
+                if ( x_2[k] != 0 ) { 
+                     score += __builtin_popcount(x_2[k]);
+                }
+#endif 
+#if 1
+                if ( x_2[k] != 0 ) { // this one has some number of hits
+                    v = x_2[k];
+                    //printf(" v%u:p%u:", v,__builtin_popcount(v));
+                    for (l = 0; l < __builtin_popcount(v); ++l) {
+                        leading_zeros = __builtin_clz(v);
+                        //printf(" %u ", leading_zeros);
+                        score = score + 
+                            pow((((double)(k*31 + leading_zeros))/
+                            ((double)wf.num_fields)),2);
+                        //printf("L%u:", leading_zeros);
+                        v &= ~(1 << (32 - leading_zeros - 1));
+                        num_hits += 1;
+                        if (num_hits == num_matches)
+                            break;
+                    }
+                    if (num_hits == num_matches)
+                        break;
+                }
+#endif
+            }
+#if 1
+            if (num_hits == 0)
+                printf("%f", 0.0);
+            else
+                printf("%f",score);
+#endif
+#if 0
+                printf("%f",score);
+#endif
+        }
+        printf("\n");
+    }
 
     return 0;
 }

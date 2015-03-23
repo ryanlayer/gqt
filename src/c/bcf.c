@@ -226,11 +226,11 @@ void push_bcf_gt_md(pri_queue *q,
                 else if ((bcf_gt_allele(gt_i[0]) == 0 ) &&
                          (bcf_gt_allele(gt_i[1]) == 0 ))
                     gt = 0;
-                else if (bcf_gt_allele(gt_i[0]) == bcf_gt_allele(gt_i[1]))
-                    gt = 2;
-                else if (bcf_gt_allele(gt_i[0]) != bcf_gt_allele(gt_i[1]))
+                else if ((bcf_gt_allele(gt_i[0]) == 0 ) ||
+                         (bcf_gt_allele(gt_i[1]) == 0 ))
                     gt = 1;
-
+                else 
+                    gt = 2;
             }
                 
             packed_ints[int_i] += gt << (30 - 2*two_bit_i);

@@ -44,6 +44,172 @@ struct wah_file init_wah_file(char *file_name)
 }
 //}}}
 
+//{{{ uint32_t  wah_or_b(uint32_t *R,
+uint32_t wah_or_b(uint32_t *R,
+                  uint32_t *X,
+                  uint32_t len_X,
+                  uint32_t *Y,
+                  uint32_t len_Y)
+{
+    uint32_t R_i = 0, X_i = 0, Y_i = 0;
+    uint32_t x, y, x_size, y_size, r_size;
+
+    x = X[X_i];
+    y = Y[X_i];
+    if (x >= 0x80000000)
+        x_size = x & 0x3fffffff;
+    else
+        x_size = 1;
+
+    if (y >= 0x80000000)
+        y_size = y & 0x3fffffff;
+    else
+        y_size = 1;
+
+    while (1) {
+        r_size = MIN(x_size, y_size);
+
+        R[R_i] = x || y;
+
+        if (r_size > 1)
+            R[R_i] = (1<<31) + 
+                    ((x & 0x40000000) | (y & 0x40000000)) +
+                    r_size;
+        else {
+            if (x_size > 1)
+                R[R_i] = ((x >> 30)&1)?0x7fffffff:y;
+            else if (y_size > 1)
+                R[R_i] = ((y >> 30)&1)?0x7fffffff:x;
+            else
+                R[R_i] = x | y;
+
+        }
+
+
+        x_size -= r_size;
+        y_size -= r_size;
+        R_i += 1;
+
+        if (x_size == 0) {
+            X_i += 1;
+            if (X_i == len_X)
+                break;
+            x = X[X_i];
+            if (x >= 0x80000000)
+                x_size = x & 0x3fffffff;
+            else
+                x_size = 1;
+        }
+
+        if (y_size == 0) {
+            Y_i += 1;
+            if (Y_i == len_Y)
+                break;
+            y = Y[Y_i];
+            if (y >= 0x80000000)
+                y_size = y & 0x3fffffff;
+            else
+                y_size = 1;
+        }
+    } 
+
+    return R_i;
+
+#if 0
+    struct wah_run x = init_wah_run(X, len_X);
+    struct wah_run y = init_wah_run(Y, len_Y);
+
+    struct wah_active_word a;
+    uint32_t num_words;
+    uint32_t R_len = 0;
+
+    //xrun.it = x.vec.begin(); xrun.decode();
+    wah_run_decode(&x);
+    //yrun.it = y.vec.begin(); yrun.decode();
+    wah_run_decode(&y);
+
+    // WHILE (x.vec and y.vec are not exhausted) 
+    while ( (x.word_i < x.len) && (y.word_i < y.len) ){
+        // IF (xrun.nWords == 0) ++xrun.it, xrun.decode();
+        if (x.num_words == 0) {
+            x.word_i += 1;
+            if (x.word_i < x.len)
+                wah_run_decode(&x);
+        }
+
+        // IF (yrun.nWords == 0) ++yrun.it, yrun.decode();
+        if (y.num_words == 0) {
+            y.word_i += 1;
+            if (y.word_i < y.len)
+                wah_run_decode(&y);
+        }
+
+        if ( (x.word_i >= x.len) && (y.word_i >= y.len) )
+            break;
+        else if (x.word_i >= x.len) {
+            fprintf(stderr, "X ended before Y\n");
+            abort();
+        } else if (y.word_i >= y.len) {
+            fprintf(stderr, "Y ended before X\n");
+            abort();
+        }
+
+        //   IF (xrun.isFill)
+        if (x.is_fill == 1) {
+            // IF (yrun.isFill)
+            if (y.is_fill == 1) {
+                //fprintf(stderr,"X Fill\tY Fill\n");
+                //nWords = min(xrun.nWords, yrun.nWords)
+                //z.appendFill(nWords, (*(xrun.it) ◦ *(yrun.it))),
+                //xrun.nWords -= nWords, yrun.nWords -= nWords;
+                num_words = MIN(x.num_words, y.num_words);
+
+                R_len = append_fill_word_b(R,
+                                           R_len,
+                                          (x.fill_bit | y.fill_bit),
+                                          num_words);
+                x.num_words -= num_words;
+                y.num_words -= num_words;
+            // ELSE
+            } else {
+                //fprintf(stderr,"X Fill\tY Litt\n");
+                //z.active.value = xrun.fill ◦ *yrun.it
+                //z.appendLiteral(),
+                //-- xrun.nWords, yrun.nWords = 0;
+                a.nbits = 31;
+                a.value = y.words[y.word_i] | x.fill;
+                R_len = append_active_word_b(R, R_len, a.value);
+                x.num_words -= 1;
+                y.num_words = 0;
+            }
+        //ELSEIF (yrun.isFill)
+        } else if (y.is_fill == 1) {
+            //fprintf(stderr,"X Litt\tY Fill\n");
+            //z.active.value = yrun.fill ◦ *xrun.it,
+            //z.appendLiteral(),
+            //-- yrun.nWords, xrun.nWords = 0;
+            a.nbits = 31;
+            a.value = x.words[x.word_i] | y.fill;
+
+            R_len = append_active_word_b(R, R_len, a.value);
+            y.num_words -= 1;
+            x.num_words = 0;
+        //ELSE
+        } else {
+            //fprintf(stderr,"X Litt\tY Litt\n");
+            a.nbits = 31;
+            a.value = x.words[x.word_i] | y.words[y.word_i];
+            R_len = append_active_word_b(R, R_len, a.value);
+            y.num_words = 0;
+            x.num_words = 0;
+        }
+    }
+
+    return R_len;
+#endif
+}
+//}}}
+
 // operate
 //{{{ void wah_or(struct wah_run *x,
 uint32_t  wah_or(struct wah_run *x,
@@ -663,6 +829,75 @@ int append_fill_word(struct wah_ll **A_head,
     }
     
     return -1;
+} 
+//}}}
+
+
+//{{{ int append_active_word_b(uint32_t *R,
+int append_active_word_b(uint32_t *R,
+                         uint32_t R_len,
+                         uint32_t value)
+{
+    if (R_len == 0) {
+        R[0] = value;
+        return R_len + 1;
+    } else if (value == 0) {
+        // The value on the tail is a litteral with all zeros
+        if (R[R_len - 1] == 0) {
+            R[R_len - 1] = 0x80000002;
+            return R_len;
+        // The value on the tail is a fill of all zeros that is not full
+        } else if ((R[R_len - 1] >= 0x80000000) && 
+                   (R[R_len - 1] < 0xC0000000) ) {
+            R[R_len - 1] += 1;
+            return R_len;
+        } else { // the zeros cannot be added to the last active word
+            R[R_len] = 0;
+            return R_len + 1;
+        }
+    } else if (value == 0x7FFFFFFF) { // all ones
+        if ( R[R_len - 1] == value ) {
+            R[R_len - 1] = 0xC0000002;
+            return R_len;
+        } else if (( R[R_len - 1] >= 0xC0000000 ) &&
+                   ( R[R_len - 1] < 0xffffffff) ) {
+            R[R_len - 1] += 1;
+            return R_len;
+        } else {
+            R[R_len] = 0x7FFFFFFF;
+            return R_len + 1;
+        }
+    } else {
+        R[R_len] = value;
+        return R_len + 1;
+    }
+}
+//}}}
+
+//{{{
+/*
+ * The fill_size is the number of words / 31*fill_size number of bits
+ */
+uint32_t append_fill_word_b(uint32_t *R,
+                            uint32_t R_len,
+                            int fill_bit,
+                            uint32_t fill_size)
+{
+    // if it is a fill, the bit matches, and there is room 
+    if ((R_len > 0) &&
+        (R[R_len - 1] >> 30 == 2 + fill_bit) &&//fill & bit match
+        ((R[R_len - 1]>> 2) + fill_size < 0x3fffffff) ) {//room
+        R[R_len - 1] += fill_size;
+        return R_len;
+    } else {
+        if (fill_size > 1) {
+            R[R_len] = ((2 + fill_bit) << 30) + fill_size;
+            return R_len + 1;
+        } else {
+            R[R_len] = (fill_bit?0x7FFFFFFF:0);
+            return R_len + 1;
+        }
+    }
 } 
 //}}}
 

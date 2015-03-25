@@ -89,6 +89,7 @@ int convert(int argc, char **argv)
     } 
 
     if (strcmp(type, "bcf") == 0) {
+#if 0
         if (f_is_set == 0) {
             // TODO auto detect from BCF index
             printf("Number of fields is not set\n");
@@ -99,6 +100,50 @@ int convert(int argc, char **argv)
             printf("Number of records is not set\n");
             return convert_help();
         }
+#endif
+
+        if ( (f_is_set == 0) && (r_is_set == 0) ) {
+            //Try and auto detect the sizes, need the index
+            tbx_t *tbx = NULL;
+            hts_idx_t *idx = NULL;
+            htsFile *fp    = hts_open(in,"rb");
+            if ( !fp ) {
+                fprintf(stderr,"Could not read %s\n", fname);
+                return 1;
+            }
+
+            bcf_hdr_t *hdr = bcf_hdr_read(fp);
+            if ( !hdr ) {
+                fprintf(stderr,"Could not read the header: %s\n", fname);
+                return 1;
+            }
+
+            if ( hts_get_format(fp)->format==bcf ) {
+                idx = bcf_index_load(fname);
+                if ( !idx ) {
+                    fprintf(stderr,"Could not load CSI index: %s\n", fname);
+                    return 1;
+                }
+            }
+
+            num_fields = hdr->n[BCF_DT_SAMPLE];
+
+            num_records = 0;
+            const char **seq;
+            int nseq;
+            seq = bcf_index_seqnames(idx, hdr, &nseq);
+
+            int i;
+            uint32_t sum = 0;
+            for (i = 0; i < nseq; ++i) {
+                uint64_t records, v;
+                hts_idx_get_stat(tbx ? tbx->idx : idx, i, &records, &v);
+                num_records += records;
+            }
+
+        }
+
+
         if (o_is_set == 0) {
             out  = (char*)malloc(strlen(in) + 5); // 5 for ext and \0
             strcpy(out,in);

@@ -89,39 +89,27 @@ int convert(int argc, char **argv)
     } 
 
     if (strcmp(type, "bcf") == 0) {
-#if 0
-        if (f_is_set == 0) {
-            // TODO auto detect from BCF index
-            printf("Number of fields is not set\n");
-            return convert_help();
-        }
-        if (r_is_set == 0) {
-            // TODO auto detect from BCF index
-            printf("Number of records is not set\n");
-            return convert_help();
-        }
-#endif
-
-        if ( (f_is_set == 0) && (r_is_set == 0) ) {
+        if ( (f_is_set == 0) || (r_is_set == 0) ) {
+            fprintf(stderr,"Attempting to autodetect num of records "
+                    "and fields from %s\n", in);
             //Try and auto detect the sizes, need the index
-            tbx_t *tbx = NULL;
             hts_idx_t *idx = NULL;
             htsFile *fp    = hts_open(in,"rb");
             if ( !fp ) {
-                fprintf(stderr,"Could not read %s\n", fname);
+                fprintf(stderr,"Could not read %s\n", in);
                 return 1;
             }
 
             bcf_hdr_t *hdr = bcf_hdr_read(fp);
             if ( !hdr ) {
-                fprintf(stderr,"Could not read the header: %s\n", fname);
+                fprintf(stderr,"Could not read the header: %s\n", in);
                 return 1;
             }
 
             if ( hts_get_format(fp)->format==bcf ) {
-                idx = bcf_index_load(fname);
+                idx = bcf_index_load(in);
                 if ( !idx ) {
-                    fprintf(stderr,"Could not load CSI index: %s\n", fname);
+                    fprintf(stderr,"Could not load CSI index: %s\n", in);
                     return 1;
                 }
             }
@@ -137,10 +125,16 @@ int convert(int argc, char **argv)
             uint32_t sum = 0;
             for (i = 0; i < nseq; ++i) {
                 uint64_t records, v;
-                hts_idx_get_stat(tbx ? tbx->idx : idx, i, &records, &v);
+                hts_idx_get_stat(idx, i, &records, &v);
                 num_records += records;
             }
 
+            fprintf(stderr, "Number of records:%u\tNumber of fields:%u\n",
+                    num_records, num_fields);
+            free(seq);
+            hts_close(fp);
+            bcf_hdr_destroy(hdr);
+            hts_idx_destroy(idx);
         }
 
 

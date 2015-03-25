@@ -238,6 +238,31 @@ rm -f \
     .tmp.bcf.sort.ind.gqtbm \
     .tmp.bcf.sort.ind.gqt
 
+rm -f ../data/10.1e4.var.bcf.csi
+
+$GQT_PATH/gqt convert bcf \
+    -i ../data/10.1e4.var.bcf 
+
+if [ $? -eq 1 ]
+then
+    echo "SUCCESS($LINENO): Fail to autodetect number records fields without index"
+else
+    echo "ERROR($LINENO): Did not fail to autodetect number records fields without index"
+fi
+
+
+bcftools index ../data/10.1e4.var.bcf
+
+$GQT_PATH/gqt convert bcf \
+    -i ../data/10.1e4.var.bcf 
+
+if [ $? -eq 0 ]
+then
+    echo "SUCCESS($LINENO): Autodetect number records fields with index"
+else
+    echo "ERROR($LINENO): Fail to autodetect number records fields with index"
+fi
+
 $GQT_PATH/gqt convert bcf \
     -r 43 \
     -f 10 \
@@ -588,6 +613,8 @@ then
 else
     echo "ERROR($LINENO): GQT count does not matche PLINK count. $GQT_COUNT vs $PLINK_COUNT"
 fi
+
+
 
 rm plink.out.frq    plink.out.log   plink.out.nosex
 rm .tmp.*

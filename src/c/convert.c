@@ -93,6 +93,7 @@ int convert(int argc, char **argv)
             fprintf(stderr,"Attempting to autodetect num of records "
                     "and fields from %s\n", in);
             //Try and auto detect the sizes, need the index
+            tbx_t *tbx = NULL;
             hts_idx_t *idx = NULL;
             htsFile *fp    = hts_open(in,"rb");
             if ( !fp ) {
@@ -106,12 +107,23 @@ int convert(int argc, char **argv)
                 return 1;
             }
 
-            if ( hts_get_format(fp)->format==bcf ) {
+            if (hts_get_format(fp)->format==vcf) {
+                tbx = tbx_index_load(in);
+                if ( !tbx ) { 
+                    fprintf(stderr,"Could not load TBI index: %s\n", in);
+                    return 1;
+                }
+            } else if ( hts_get_format(fp)->format==bcf ) {
                 idx = bcf_index_load(in);
                 if ( !idx ) {
                     fprintf(stderr,"Could not load CSI index: %s\n", in);
                     return 1;
                 }
+            } else {
+                fprintf(stderr,
+                        "Could not detect the file type as VCF or BCF: %s\n",
+                        in);
+                return 1;
             }
 
             num_fields = hdr->n[BCF_DT_SAMPLE];
@@ -119,13 +131,13 @@ int convert(int argc, char **argv)
             num_records = 0;
             const char **seq;
             int nseq;
-            seq = bcf_index_seqnames(idx, hdr, &nseq);
-
+            seq = tbx ? tbx_seqnames(tbx, &nseq) : 
+                    bcf_index_seqnames(idx, hdr, &nseq);
             int i;
             uint32_t sum = 0;
             for (i = 0; i < nseq; ++i) {
                 uint64_t records, v;
-                hts_idx_get_stat(idx, i, &records, &v);
+                hts_idx_get_stat(tbx ? tbx->idx: idx, i, &records, &v);
                 num_records += records;
             }
 
@@ -134,7 +146,10 @@ int convert(int argc, char **argv)
             free(seq);
             hts_close(fp);
             bcf_hdr_destroy(hdr);
-            hts_idx_destroy(idx);
+            if (idx)
+                hts_idx_destroy(idx);
+            if (tbx)
+                tbx_destroy(tbx);
         }
 
 

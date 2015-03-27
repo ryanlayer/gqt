@@ -3,6 +3,7 @@
 
 #include <htslib/hts.h>
 #include <htslib/vcf.h>
+#include <htslib/tbx.h>
 #include <htslib/kstring.h>
 #include "genotq.h"
 

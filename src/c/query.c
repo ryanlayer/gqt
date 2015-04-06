@@ -265,6 +265,7 @@ int query(int argc, char **argv)
     struct gqt_query q[100];
     uint32_t *gt_mask[100];
     uint32_t *counts[100];
+    uint32_t *mapped_counts[100];
     uint32_t id_lens[100];
 
     int r, i, j, k;
@@ -276,7 +277,19 @@ int query(int argc, char **argv)
         }
     }
 
+    // open WAH/GQT file
     struct wah_file wf = init_wahbm_file(wahbm_file_name);
+
+    // open VID file
+    FILE *vid_f = fopen(vid_file_name, "rb");
+    if (vid_f == NULL) {
+        fprintf(stderr, "Could not read VIDE file: %s\n", vid_file_name);
+        return 1;
+    }
+    uint32_t *vids = (uint32_t *) malloc(wf.num_fields*sizeof(uint32_t));
+    r = fread(vids, sizeof(uint32_t), wf.num_fields, vid_f);
+    fclose(vid_f);
+
     uint32_t num_ints = (wf.num_fields + 32 - 1)/ 32;
     uint32_t len_ints;
 
@@ -373,6 +386,14 @@ int query(int argc, char **argv)
                                                            &(counts[i]));
 #endif
 
+            /* Since the variants are in allele freq order, we need to copy
+             * the resulting value to an array that is back in the original
+             * order
+             */
+            mapped_counts[i] = (uint32_t *)calloc(len_count_R,
+                                                  sizeof(uint32_t));
+            for ( j = 0; j < len_count_R; ++j)
+                mapped_counts[i][vids[j]] = counts[i][j];
 
             gt_mask[i] = (uint32_t *) malloc(num_ints * sizeof(uint32_t));
 
@@ -426,15 +447,6 @@ int query(int argc, char **argv)
             free(gt_R);
         }
         free(R);
-
-        /*
-        fprintf(stderr,"mask[%u]:", j);
-        for (j = 0; j < num_ints; ++j)
-            fprintf(stderr,"\t%u", gt_mask[i][j]);
-        fprintf(stderr,"\n");
-        */
-                
-
     }
 
     uint32_t *final_mask = (uint32_t *) calloc(num_ints,sizeof(uint32_t));
@@ -445,14 +457,6 @@ int query(int argc, char **argv)
         for (j = 0; j < gt_q_count; ++j)
             final_mask[i] &= gt_mask[j][i];
     }
-
-    /*
-    fprintf(stderr,"final_mask[%u]:", j);
-    for (j = 0; j < num_ints; ++j)
-        fprintf(stderr,"\t%u", final_mask[j]);
-    fprintf(stderr,"\n");
-    */
-
 
     if (c_is_set == 1) {
         uint32_t masked_vid_count = 0;
@@ -478,15 +482,6 @@ int query(int argc, char **argv)
                              bcf_output);
     } else if (b_is_set == 1){
 
-        FILE *vid_f = fopen(vid_file_name, "rb");
-        uint32_t *vids = (uint32_t *) malloc(wf.num_fields*sizeof(uint32_t));
-        int r = fread(vids, sizeof(uint32_t), wf.num_fields, vid_f);
-        fclose(vid_f);
-
-        for (i = 0; i < wf.num_fields; ++i)
-            printf("%u\n", vids[i]);
-
-
         uint32_t *mapped_mask = (uint32_t *) calloc(num_ints,sizeof(uint32_t));
 
         uint32_t v,p,leading_zeros, hit;
@@ -502,9 +497,6 @@ int query(int argc, char **argv)
 
                     hit = vids[leading_zeros + i*32];
 
-                    printf("%u\t%u\t%u\t%u\n", leading_zeros + i*32, hit,
-                            hit/32, 31-hit%32);
-
                     mapped_mask[hit/32] |= 1 << (31-hit%32);
                     v &= ~(1 << (32 - leading_zeros - 1));
                 }
@@ -517,7 +509,7 @@ int query(int argc, char **argv)
                            num_ints,
                            vids,
                            q,
-                           counts,
+                           mapped_counts,
                            id_lens,
                            gt_q_count,
                            wf.num_fields,

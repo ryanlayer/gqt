@@ -317,13 +317,6 @@ int query(int argc, char **argv)
             return 1;
         }
 
-        /*
-        fprintf(stderr, "id_query_list:");
-        for (j = 0; j < id_lens[i]; ++j)
-            fprintf(stderr, "\t%u", R[j]);
-        fprintf(stderr, "\n");
-        */
-
         uint32_t low_v, high_v;
 
         /*

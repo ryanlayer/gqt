@@ -7,6 +7,7 @@
 
 "count"             return p_count;
 "pct"               return p_pct;
+"maf"               return p_maf;
 "=="                return p_equal;
 "!="                return p_not_equal;
 "<"                 return p_less_than;

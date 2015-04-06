@@ -266,12 +266,5 @@ uint32_t gt_records_compressed_in_place_wahbm(struct wah_file wf,
                                        uint32_t test_value,
                                        uint32_t **R);
 
-uint32_t avx_sum_range_records_in_place_wahbm(
-            struct wah_file wf,
-            uint32_t *record_ids,
-            uint32_t num_r,
-            uint32_t start_test_value,
-            uint32_t end_test_value,
-            uint32_t **R);
 
 #endif

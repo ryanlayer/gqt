@@ -276,18 +276,18 @@ uint32_t gt_records_in_place_wahbm(struct wah_file wf,
  * @endcode
  */
 uint32_t sum_range_records_in_place_wahbm(struct wah_file wf,
-                                              uint32_t *record_ids,
-                                              uint32_t num_r,
-                                              uint32_t start_test_value,
-                                              uint32_t end_test_value,
-                                              uint32_t **R);
+                                          uint32_t *record_ids,
+                                          uint32_t num_r,
+                                          uint32_t start_test_value,
+                                          uint32_t end_test_value,
+                                          uint32_t **R);
 
 
 uint32_t gt_sum_records_in_place_wahbm(struct wah_file wf,
-                                             uint32_t *record_ids,
-                                             uint32_t num_r,
-                                             uint32_t test_value,
-                                             uint32_t **R);
+                                       uint32_t *record_ids,
+                                       uint32_t num_r,
+                                       uint32_t test_value,
+                                       uint32_t **R);
 /**
  * @breif Read in all 4 bitmaps at once
  */
@@ -311,6 +311,15 @@ uint32_t avx_count_range_records_in_place_wahbm(
             uint32_t start_test_value,
             uint32_t end_test_value,
             uint32_t **R);
+#endif
+
+#ifdef __AVX2__
+uint32_t avx_sum_range_records_in_place_wahbm(struct wah_file wf,
+                                              uint32_t *record_ids,
+                                              uint32_t num_r,
+                                              uint32_t start_test_value,
+                                              uint32_t end_test_value,
+                                              uint32_t **R);
 #endif
 
 

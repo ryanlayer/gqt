@@ -30,7 +30,6 @@ LIB= timer.o \
      pthread_pool.o \
      genotq.o \
      convert.o \
-     gt.o \
      plt.o \
      wah.o \
      wahbm.o \
@@ -40,7 +39,6 @@ LIB= timer.o \
      view.o \
      sort.o \
      count.o \
-     sum.o \
      sandbox.o
 
 .SUFFIXES:

@@ -12,7 +12,7 @@ int view(int argc, char **argv);
 int gt(int argc, char **argv);
 int sort(int argc, char **argv);
 int count(int argc, char **argv);
-int sum(int argc, char **argv);
+//int sum(int argc, char **argv);
 int query(int argc, char **argv);
 int sandbox(int argc, char **argv);
 int misc(int argc, char **argv);
@@ -24,11 +24,11 @@ int main(int argc, char **argv)
     char *cmd = argv[1];
 
     if (strcmp(cmd,"convert") == 0) return convert(argc-2, argv+2);
-    else if (strcmp(cmd,"view") == 0) return view(argc-2, argv+2);
-    else if (strcmp(cmd,"gt") == 0) return gt(argc-2, argv+2);
-    else if (strcmp(cmd,"sort") == 0) return sort(argc-2, argv+2);
-    else if (strcmp(cmd,"count") == 0) return count(argc-2, argv+2);
-    else if (strcmp(cmd,"sum") == 0) return sum(argc-2, argv+2);
+    //else if (strcmp(cmd,"view") == 0) return view(argc-2, argv+2);
+    //else if (strcmp(cmd,"gt") == 0) return gt(argc-2, argv+2);
+    //else if (strcmp(cmd,"sort") == 0) return sort(argc-2, argv+2);
+    //else if (strcmp(cmd,"count") == 0) return count(argc-2, argv+2);
+    //else if (strcmp(cmd,"sum") == 0) return sum(argc-2, argv+2);
     else if (strcmp(cmd,"query") == 0) return query(argc-1, argv+1);
     else if (strcmp(cmd,"sandbox") == 0) return sandbox(argc-2, argv+2);
     else if (strcmp(cmd,"misc") == 0) return misc(argc-2, argv+2);
@@ -43,14 +43,7 @@ int gqt_help(int argc, char **argv)
     printf("%s, v%s\n"
            "usage:   %s <command> [options]\n"
            "         convert   Convert between file types\n"
-           "         query     Query the index\n"
-           "         view      Display files contents\n"
-           "         gt        Test for records with fields greater than\n"
-           "                   a give value\n"
-           "         sort      Reorder files\n"
-           "         count     For each fields, count the number of records"
-           "                   that meet a condition\n"
-           "         sum       For each fields, sum the values\n",
+           "         query     Query the index\n",
             PROGRAM_NAME, VERSION,
             PROGRAM_NAME);
     return 0;

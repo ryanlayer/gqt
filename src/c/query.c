@@ -323,23 +323,28 @@ int query(int argc, char **argv)
          * q holds the parameters of each query, first determin the range of 
          * bitmaps to pull
          */
-        if ( q[i].genotype_condition[0] == 1)
-            low_v = 0;
-        else if ( q[i].genotype_condition[1] == 1)
+        if ( q[i].variant_op == p_maf ) {
             low_v = 1;
-        else if ( q[i].genotype_condition[2] == 1)
-            low_v = 2;
-        else if ( q[i].genotype_condition[3] == 1)
-            low_v = 3;
-
-        if ( q[i].genotype_condition[3] == 1)
-            high_v = 4;
-        else if ( q[i].genotype_condition[2] == 1)
             high_v = 3;
-        else if ( q[i].genotype_condition[1] == 1)
-            high_v = 2;
-        else if ( q[i].genotype_condition[0] == 1)
-            high_v = 1;
+        } else {
+            if ( q[i].genotype_condition[0] == 1)
+                low_v = 0;
+            else if ( q[i].genotype_condition[1] == 1)
+                low_v = 1;
+            else if ( q[i].genotype_condition[2] == 1)
+                low_v = 2;
+            else if ( q[i].genotype_condition[3] == 1)
+                low_v = 3;
+
+            if ( q[i].genotype_condition[3] == 1)
+                high_v = 4;
+            else if ( q[i].genotype_condition[2] == 1)
+                high_v = 3;
+            else if ( q[i].genotype_condition[1] == 1)
+                high_v = 2;
+            else if ( q[i].genotype_condition[0] == 1)
+                high_v = 1;
+        }
 
         /*
          * The set of variants that are printed is stored in a mask for each
@@ -359,10 +364,12 @@ int query(int argc, char **argv)
          *
          */
 
-        /* User asks for a count of percent */
-        if ( ( q[i].variant_op == p_count ) || ( q[i].variant_op == p_pct ) ) {
+        /* User asks for a count, percent, or maf */
+        if ( ( q[i].variant_op == p_count ) || 
+             ( q[i].variant_op == p_pct ) ||
+             ( q[i].variant_op == p_maf ) ) {
 
-
+            if (q[i].variant_op == p_maf) {
 #ifdef __AVX2__
             len_count_R = avx_sum_range_records_in_place_wahbm(wf,
                                                                R,
@@ -377,7 +384,27 @@ int query(int argc, char **argv)
                                                            low_v,
                                                            high_v,
                                                            &(counts[i]));
+                                                           
 #endif
+            } else {
+#ifdef __AVX2__
+                len_count_R = 
+                    avx_count_range_records_in_place_wahbm(wf,
+                                                           R,
+                                                           id_lens[i],
+                                                           low_v,
+                                                           high_v,
+                                                           &(counts[i]));
+#else
+                len_count_R = 
+                    count_range_records_in_place_wahbm(wf,
+                                                       R,
+                                                       id_lens[i],
+                                                       low_v,
+                                                       high_v,
+                                                       &(counts[i]));
+#endif
+            }
 
             /* Since the variants are in allele freq order, we need to copy
              * the resulting value to an array that is back in the original
@@ -398,7 +425,7 @@ int query(int argc, char **argv)
                  * percent condition
                  */
                 float condition_value = q[i].condition_value;
-                if ( q[i].variant_op == p_pct )
+                if ( (q[i].variant_op == p_pct) || (q[i].variant_op == p_maf))
                     condition_value *= id_lens[i];
 
 
@@ -511,7 +538,9 @@ int query(int argc, char **argv)
 
     for (j = 0; j < gt_q_count; ++j) {
         free(gt_mask[j]);
-        if ( ( q[j].variant_op == p_count ) || ( q[j].variant_op == p_pct ) )
+        if ( (q[j].variant_op == p_count) || 
+             (q[j].variant_op == p_pct) ||
+             (q[j].variant_op == p_maf) )
             free(counts[j]);
     }
 
@@ -635,14 +664,20 @@ void print_query_result(uint32_t *mask,
                               "%u\">\n",
                               k, k);
             append_out_buf(&outbuf, info_s, strlen(info_s));
-        }
-        else if ( q[k].variant_op == p_pct ) {
+        } else if ( q[k].variant_op == p_pct ) {
             asprintf(&info_s, "##INFO=<ID=GTQ_%u,Number=1,Type=Float,"
                               "Description=\"GQT percent result from query "
                               "%u\">\n",
                               k, k);
             append_out_buf(&outbuf, info_s, strlen(info_s));
+        } else if ( q[k].variant_op == p_maf ) {
+            asprintf(&info_s, "##INFO=<ID=GTQ_%u,Number=1,Type=Float,"
+                              "Description=\"GQT maf result from query "
+                              "%u\">\n",
+                              k, k);
+            append_out_buf(&outbuf, info_s, strlen(info_s));
         }
+
     }
 
     char last_header_line[]="#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n";
@@ -668,13 +703,20 @@ void print_query_result(uint32_t *mask,
                                 //counts[k][vids[line_idx]]);
                         append_out_buf(&outbuf, info_s, strlen(info_s));
 
-                    } else if ( q[k].variant_op == p_pct ) {
+                    } else if (q[k].variant_op == p_pct) {
                         asprintf(&info_s, ";GTQ_%u=%f", k,
                                 //((float)counts[k][vids[line_idx]])/
                                 ((float)counts[k][line_idx])/
                                 ((float) id_lens[k]));
                         append_out_buf(&outbuf, info_s, strlen(info_s));
+                    } else if (q[k].variant_op == p_maf) {
+                        asprintf(&info_s, ";GTQ_%u=%f", k,
+                                //((float)counts[k][vids[line_idx]])/
+                                ((float)counts[k][line_idx])/
+                                (((float) id_lens[k])*2.0));
+                        append_out_buf(&outbuf, info_s, strlen(info_s));
                     }
+
                 }
                 
 	        append_out_buf(&outbuf,"\n",1);

@@ -16,6 +16,7 @@
 #define     p_r_paren 13
 #define     p_l_paren 14
 #define     p_number 15
+#define     p_maf 16
 
 
 /* state tracks the expression 

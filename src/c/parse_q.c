@@ -27,7 +27,8 @@ char *names[] = {NULL,
                  "UNKNOWN",
                  "(",
                  ")",
-                 "p_number"};
+                 "p_number",
+                 "maf"};
 
 //{{{ int set_gt(int ntoken, struct gqt_query *q, int *state)
 int set_gt(int ntoken, struct gqt_query *q, int *state)
@@ -85,7 +86,7 @@ int set_op_cond(int ntoken, struct gqt_query *q, int *state)
 {
     if ((*state & OP_SET_END) != OP_SET_END) {
         fprintf(stderr, "SYNTAX ERROR: "
-                        "Opperation (cont,pct) expected prior to '%s' ",
+                        "Opperation (count,pct,maf) expected prior to '%s' ",
                         names[ntoken]);
         return 1;
     }
@@ -103,8 +104,8 @@ int set_cond_value(char *yytext, struct gqt_query *q, int *state)
 {
     if ((*state & COND_SET) != COND_SET) {
         fprintf(stderr, "SYNTAX ERROR:"
-                        "Opperation (cont,pct) and condition (==,!=,<, etc.) "
-                        "expected prior to '%s' ",
+                        "Opperation (count,pct,maf) and condition "
+                        "(==,!=,<, etc.) expected prior to '%s' ",
                         yytext);
         return 1;
     }
@@ -138,6 +139,7 @@ int parse_q(char *q_text, struct gqt_query *q_props)
 
     while (ntoken) {
         switch (ntoken) {
+            case p_maf:
             case p_count:
             case p_pct:
                 if (set_op(ntoken, q_props, &state))
@@ -161,19 +163,33 @@ int parse_q(char *q_text, struct gqt_query *q_props)
                 break;
             case p_r_paren:
                 fprintf(stderr, "SYNTAX ERROR: "
-                            "Opperation (cont,pct) expected "
+                            "Opperation (count,pct,maf) expected "
                             "prior to '%s' ",
                             names[ntoken]);
                     return 1;
             case p_l_paren:
-                if ( state != (OP_SET_START | GT_SET_START )) {
+
+
+
+                if ( ((q_props->variant_op == p_count) ||
+                      (q_props->variant_op == p_pct))  &&
+                     (state != (OP_SET_START | GT_SET_START) ) ) {
                     fprintf(stderr, "SYNTAX ERROR: "
-                            "Opperation (cont,pct) and "
+                            "Opperation (count,pct) and "
                             "genotype (HOMO_REF,HET,HOMO_ALT,UNKNONW) expected "
                             "prior to '%s' ",
                             names[ntoken]);
                     return 1;
+                } else if ( (q_props->variant_op == p_maf) &&
+                            (state != OP_SET_START ) ) {
+                    fprintf(stderr, "SYNTAX ERROR: "
+                            "Opperation (maf) does not expect "
+                            "genotype (HOMO_REF,HET,HOMO_ALT,UNKNONW) "
+                            "prior to '%s' ",
+                            names[ntoken]);
+                    return 1;
                 }
+
                 state |= OP_SET_END;
                 state |= GT_SET_END;
                 break;

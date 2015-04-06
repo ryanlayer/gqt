@@ -425,8 +425,10 @@ int query(int argc, char **argv)
                  * percent condition
                  */
                 float condition_value = q[i].condition_value;
-                if ( (q[i].variant_op == p_pct) || (q[i].variant_op == p_maf))
+                if (q[i].variant_op == p_pct) 
                     condition_value *= id_lens[i];
+                else if (q[i].variant_op == p_maf)
+                    condition_value *= id_lens[i]*2;
 
 
                 /* Test to see if each count meets the condition */

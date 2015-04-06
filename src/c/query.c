@@ -14,6 +14,7 @@ int query_help();
 
 void print_query_result(uint32_t *mask,
                         uint32_t mask_len,
+                        uint32_t *vids,
                         struct gqt_query *q,
                         uint32_t **counts,
                         uint32_t *id_lens,
@@ -168,16 +169,32 @@ int query(int argc, char **argv)
         }
     }
 
-
-    // Try to auto-detect file names based on BCF
-    if ( (i_is_set == 0) &&
-         (v_is_set == 0) &&
-         (b_is_set == 0) &&
-         (s_is_set == 1)) {
+    if ( (i_is_set == 1) && (v_is_set == 0)) {
 
         int auto_vid_file_name_size = asprintf(&vid_file_name,
-                                               "%s.vid",
-                                               src_bcf_file_name);
+                                               "%s",
+                                               wahbm_file_name);
+        strcpy(vid_file_name + strlen(vid_file_name) - 3, "vid");
+
+        if ( access( vid_file_name, F_OK) != -1 ) {
+            v_is_set = 1;
+        } else {
+            printf("Auto detect failure: VID file %s not found\n",
+                   vid_file_name);
+            return query_help();
+        }
+    }
+
+
+#if 0
+    // Try to auto-detect file names based on GQT
+    if ( (v_is_set == 0) && (i_is_set == 1)) {
+
+        int auto_vid_file_name_size = asprintf(&vid_file_name,
+                                               "%s",
+                                               wahbm_file_name);
+
+        strcpy(vid_file_name + strlen(vid_file_name) - 3, "vid");
 
         if ( access( vid_file_name, F_OK) != -1 ) {
             v_is_set = 1;
@@ -199,7 +216,9 @@ int query(int argc, char **argv)
             return query_help();
         }
     }
+#endif
 
+#if 0
     if (((v_is_set == 1) && (s_is_set == 0)) ||
         ((v_is_set == 0) && (s_is_set == 1)) ) {
         printf("Either BOTH VID and source BCF must be set, or neither.\n");
@@ -215,10 +234,20 @@ int query(int argc, char **argv)
         printf("Must set EITHER VID/soruce BCF or bim.\n");
         return query_help();
     } 
-   
+#endif
 
     if (i_is_set == 0) {
-        printf("WAHBM file is not set\n");
+        printf("GQT file is not set\n");
+        return query_help();
+    }
+
+    if (v_is_set == 0) {
+        printf("VID file is not set\n");
+        return query_help();
+    }
+
+    if (b_is_set == 0) {
+        printf("BIM file is not set\n");
         return query_help();
     }
 
@@ -236,6 +265,7 @@ int query(int argc, char **argv)
     struct gqt_query q[100];
     uint32_t *gt_mask[100];
     uint32_t *counts[100];
+    uint32_t *mapped_counts[100];
     uint32_t id_lens[100];
 
     int r, i, j, k;
@@ -247,7 +277,19 @@ int query(int argc, char **argv)
         }
     }
 
+    // open WAH/GQT file
     struct wah_file wf = init_wahbm_file(wahbm_file_name);
+
+    // open VID file
+    FILE *vid_f = fopen(vid_file_name, "rb");
+    if (vid_f == NULL) {
+        fprintf(stderr, "Could not read VIDE file: %s\n", vid_file_name);
+        return 1;
+    }
+    uint32_t *vids = (uint32_t *) malloc(wf.num_fields*sizeof(uint32_t));
+    r = fread(vids, sizeof(uint32_t), wf.num_fields, vid_f);
+    fclose(vid_f);
+
     uint32_t num_ints = (wf.num_fields + 32 - 1)/ 32;
     uint32_t len_ints;
 
@@ -274,13 +316,6 @@ int query(int argc, char **argv)
                     wf.num_records);
             return 1;
         }
-
-        /*
-        fprintf(stderr, "id_query_list:");
-        for (j = 0; j < id_lens[i]; ++j)
-            fprintf(stderr, "\t%u", R[j]);
-        fprintf(stderr, "\n");
-        */
 
         uint32_t low_v, high_v;
 
@@ -344,6 +379,14 @@ int query(int argc, char **argv)
                                                            &(counts[i]));
 #endif
 
+            /* Since the variants are in allele freq order, we need to copy
+             * the resulting value to an array that is back in the original
+             * order
+             */
+            mapped_counts[i] = (uint32_t *)calloc(len_count_R,
+                                                  sizeof(uint32_t));
+            for ( j = 0; j < len_count_R; ++j)
+                mapped_counts[i][vids[j]] = counts[i][j];
 
             gt_mask[i] = (uint32_t *) malloc(num_ints * sizeof(uint32_t));
 
@@ -397,15 +440,6 @@ int query(int argc, char **argv)
             free(gt_R);
         }
         free(R);
-
-        /*
-        fprintf(stderr,"mask[%u]:", j);
-        for (j = 0; j < num_ints; ++j)
-            fprintf(stderr,"\t%u", gt_mask[i][j]);
-        fprintf(stderr,"\n");
-        */
-                
-
     }
 
     uint32_t *final_mask = (uint32_t *) calloc(num_ints,sizeof(uint32_t));
@@ -416,14 +450,6 @@ int query(int argc, char **argv)
         for (j = 0; j < gt_q_count; ++j)
             final_mask[i] &= gt_mask[j][i];
     }
-
-    /*
-    fprintf(stderr,"final_mask[%u]:", j);
-    for (j = 0; j < num_ints; ++j)
-        fprintf(stderr,"\t%u", final_mask[j]);
-    fprintf(stderr,"\n");
-    */
-
 
     if (c_is_set == 1) {
         uint32_t masked_vid_count = 0;
@@ -448,14 +474,39 @@ int query(int argc, char **argv)
                              src_bcf_file_name,
                              bcf_output);
     } else if (b_is_set == 1){
-        print_query_result(final_mask,
-                        num_ints,
-                        q,
-                        counts,
-                        id_lens,
-                        gt_q_count,
-                        wf.num_fields,
-                        bim_file_name);
+
+        uint32_t *mapped_mask = (uint32_t *) calloc(num_ints,sizeof(uint32_t));
+
+        uint32_t v,p,leading_zeros, hit;
+        for (i = 0; i < num_ints; ++i) {
+            if (final_mask[i] != 0) {
+                v = final_mask[i];
+                p = popcount(v);
+                for (j = 0; j < p; ++j) {
+                    leading_zeros = __builtin_clz(v);
+
+                    if (i*32 + leading_zeros + 1 > wf.num_fields)
+                        break;
+
+                    hit = vids[leading_zeros + i*32];
+
+                    mapped_mask[hit/32] |= 1 << (31-hit%32);
+                    v &= ~(1 << (32 - leading_zeros - 1));
+                }
+            }
+            if (i*32 + leading_zeros + 1 > wf.num_fields)
+                break;
+        }
+
+        print_query_result(mapped_mask,
+                           num_ints,
+                           vids,
+                           q,
+                           mapped_counts,
+                           id_lens,
+                           gt_q_count,
+                           wf.num_fields,
+                           bim_file_name);
     }
 
     for (j = 0; j < gt_q_count; ++j) {
@@ -553,6 +604,7 @@ void get_bcf_query_result(uint32_t *mask,
 //{{{ void print_query_result(uint32_t *mask,
 void print_query_result(uint32_t *mask,
                         uint32_t mask_len,
+                        uint32_t *vids,
                         struct gqt_query *q,
                         uint32_t **counts,
                         uint32_t *id_lens,
@@ -611,11 +663,14 @@ void print_query_result(uint32_t *mask,
                                qfile.line_lens[line_idx]-1);
                 for (k=0; k < num_qs; k++) {
                     if ( q[k].variant_op == p_count ) {
-                        asprintf(&info_s, ";GTQ_%u=%u", k,counts[k][line_idx]);
+                        asprintf(&info_s, ";GTQ_%u=%u", k,
+                                counts[k][line_idx]);
+                                //counts[k][vids[line_idx]]);
                         append_out_buf(&outbuf, info_s, strlen(info_s));
 
                     } else if ( q[k].variant_op == p_pct ) {
                         asprintf(&info_s, ";GTQ_%u=%f", k,
+                                //((float)counts[k][vids[line_idx]])/
                                 ((float)counts[k][line_idx])/
                                 ((float) id_lens[k]));
                         append_out_buf(&outbuf, info_s, strlen(info_s));

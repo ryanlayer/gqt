@@ -102,10 +102,17 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                md_s_of_name,
                vid_out);
 
+    /*
     compress_md(&bcf_f,
                 md_s_of_name,
                 bim_out,
                 md_s_index,
+                num_vars);
+    */
+    compress_md(&bcf_f,
+                md_of_name,
+                bim_out,
+                md_index,
                 num_vars);
 
     rotate_gt(num_inds,
@@ -334,11 +341,11 @@ void sort_gt_md(pri_queue *q,
                 char *vid_out)
 {
     // unsorted metadata
-    FILE *md_of = fopen(md_of_name,"r");
+    //FILE *md_of = fopen(md_of_name,"r");
     // unsorted genotypes
     FILE *gt_of = fopen(gt_of_name,"rb");
     // sorted genotypes
-    FILE *md_out = fopen(md_s_of_name,"w");
+    //FILE *md_out = fopen(md_s_of_name,"w");
     // sorted variant row #s
     FILE *v_out = fopen(vid_out,"wb");
     // sorted genotypes
@@ -365,8 +372,10 @@ void sort_gt_md(pri_queue *q,
         // get the data (line num) from the top element
         int *d = priq_pop(*q, &p);
 
-        // get start offset of metadata
         uint64_t start = 0;
+        int r;
+#if 0
+        // get start offset of metadata
         if (*d != 0)
             start = md_index[*d - 1];
 
@@ -383,7 +392,7 @@ void sort_gt_md(pri_queue *q,
 
         cumul_len += strlen(buf);
         md_s_index[var_i] = cumul_len;
-
+#endif
         // jump to the sport in the genotypes, read and write
         start = num_ind_ints*sizeof(uint32_t);
         start = (*d)*start;
@@ -402,9 +411,9 @@ void sort_gt_md(pri_queue *q,
 
     free(packed_ints);
 
-    fclose(md_out);
+    //fclose(md_out);
     fclose(v_out);
-    fclose(md_of);
+    //fclose(md_of);
     fclose(gt_of);
     fclose(s_gt_of);
 }

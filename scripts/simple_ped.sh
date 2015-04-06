@@ -16,6 +16,7 @@ usage: $0 OPTIONS
 OPTIONS can be:
     -h      Show this message
     -f      BCF/VCF/compressed VCF file
+    -o      output file
 
 EOF
 }
@@ -29,9 +30,10 @@ fi
 
 VERBOSE=
 FILENAME=
+OUT=''
 
 # Check options passed in.
-while getopts "h f:" OPTION
+while getopts "h f:o:" OPTION
 do
     case $OPTION in
         h)
@@ -41,6 +43,9 @@ do
         f)
             FILENAME=$OPTARG
             ;;
+        o)
+            OUT=$OPTARG
+            ;;
         ?)
             usage
             exit
@@ -48,9 +53,19 @@ do
     esac
 done
 
-echo "Sample Name"
 
-bcftools view -h $FILENAME \
-    | grep "^#CHROM" \
-    | cut -f 10- \
-    | tr '\t' '\n' 
+if [ -z "$OUT" ]
+then
+    echo "Sample Name"
+    bcftools view -h $FILENAME \
+        | grep "^#CHROM" \
+        | cut -f 10- \
+        | tr '\t' '\n' 
+else
+    echo "Sample Name" > $OUT
+    bcftools view -h $FILENAME \
+        | grep "^#CHROM" \
+        | cut -f 10- \
+        | tr '\t' '\n' \
+    >> $OUT
+fi

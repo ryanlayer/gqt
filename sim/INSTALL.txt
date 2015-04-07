@@ -1,5 +1,0 @@
-cd ~/src/
-wget https://macs.googlecode.com/files/macs-0.5d.tar.gz
-tar zxvf macs-0.5d.tar.gz
-cd macs
-make

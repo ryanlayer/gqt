@@ -1,5 +1,5 @@
-BIN=../../bin
-OBJ=../../obj
+BIN=../bin
+OBJ=../obj
 HTS_ROOT=$(HOME)/src/htslib
 #HDF5_ROOT=$(HOME)/src/hdf5-1.8.7-mac-intel-x86_64-static
 #CFLAGS=-g -D_FILE_OFFSET_BITS=64

@@ -2,13 +2,10 @@ BIN=bin
 OBJ=obj
 
 all: 
-	@touch src/c/parse_q.yy.c
+	@touch src/parse_q.yy.c
 	@mkdir -p $(OBJ)
 	@mkdir -p $(BIN)
-	cd src/c; make
-
-test:
-	cd src/test; make
+	cd src; make
 
 clean:
 	rm -rf $(BIN)/*

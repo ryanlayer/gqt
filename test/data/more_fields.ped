@@ -1,0 +1,11 @@
+Family ID	Individual ID	Paternal ID	Maternal ID	Gender	Phenotype	Population	Relationship	Siblings	Second Order	Third Order	Children	Other Comments
+Y025	I0	0	0	2	0	YRI	mother	0	0	0	NA19252	0
+NG108	I1	HG03518	HG03517	1	0	ESN	child	0	0	0	0	0
+m027	I2	0	0	2	0	MXL	mother	0	0	0	NA19760	0
+IT060	I3	0	0	1	0	ITU	father	0	0	0	0	0
+NA18634	I4	0	0	2	0	CHB	unrel	0	0	0	0	0
+GB117	I5	0	0	2	0	GWD	mother	0	0	0	HG03251	0
+NA17968	I6	0	0	2	0	CHD	unrel	0	0	0	0	0
+IT032	I7	0	0	2	0	ITU	mother	0	0	0	0	0
+BB37	I8	0	0	1	0	ACB	father	0	0	0	HG02428	0
+NG77	I9	0	0	1	0	ESN	father	0	0	0	HG03308	0

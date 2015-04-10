@@ -24,7 +24,7 @@ int main(int argc, char **argv)
     char *cmd = argv[1];
 
     if (strcmp(cmd,"convert") == 0) return convert(argc-2, argv+2);
-    //else if (strcmp(cmd,"view") == 0) return view(argc-2, argv+2);
+    else if (strcmp(cmd,"view") == 0) return view(argc-2, argv+2);
     //else if (strcmp(cmd,"gt") == 0) return gt(argc-2, argv+2);
     //else if (strcmp(cmd,"sort") == 0) return sort(argc-2, argv+2);
     //else if (strcmp(cmd,"count") == 0) return count(argc-2, argv+2);

@@ -213,6 +213,12 @@ void push_bcf_gt_md(pri_queue *q,
         int32_t *gt_i = gt_p;
 
         
+        if (num_gts_per_sample != 2) {
+            fprintf(stderr, "num_gts_per_sample:%u\t%u:%u\n",
+                            num_gts_per_sample,
+                            i,
+                            num_vars);
+        }
         // Pack genotypes
         for (j = 0; j < num_inds; ++j) {
             uint32_t gt = 0;
@@ -220,7 +226,8 @@ void push_bcf_gt_md(pri_queue *q,
             assert(num_gts_per_sample <= 2);
             assert(num_gts_per_sample > 0);
 
-            if (num_gts_per_sample == 1) {
+            if ( (num_gts_per_sample == 1) || 
+                 (gt_i[1] == bcf_int32_vector_end) ){
                 if (bcf_gt_is_missing(gt_i[0]))
                     gt = 3;
                 else if (bcf_gt_allele(gt_i[k]) == 0)

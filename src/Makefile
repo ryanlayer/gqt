@@ -1,9 +1,8 @@
 BIN=../bin
 OBJ=../obj
-HTS_ROOT=$(HOME)/src/htslib
-#HDF5_ROOT=$(HOME)/src/hdf5-1.8.7-mac-intel-x86_64-static
+HTS_ROOT=../../htslib
 #CFLAGS=-g -D_FILE_OFFSET_BITS=64
-CFLAGS=-O3 -D_FILE_OFFSET_BITS=64
+CFLAGS=-O1 -D_FILE_OFFSET_BITS=64  -fgnu89-inline
 #CFLAGS=-Wall -O0 -g -fno-inline -fkeep-inline-functions -D_FILE_OFFSET_BITS=64 -fPIC -DDEBUG -D_DEBUG
 #CFLAGS+=-mavx -mavx2
 #CFLAGS+=-Dtime_wahbm_pca_by_name
@@ -12,8 +11,7 @@ CFLAGS=-O3 -D_FILE_OFFSET_BITS=64
 #CFLAGS+=-Dtime_sum_range_records_in_place_wahbm
 #CFLAGS+=-Dtime_convert_file_by_name_bcf_to_wahbm_bim
 #CFLAGS+=-Dtime_sort_rotate_gt_md
-GRABIX_ROOT=$(HOME)/src/grabix
-SQLITE_ROOT=$(HOME)/src/sqlite-amalgamation-3080701
+SQLITE_ROOT=../../sqlite-amalgamation-3080701
 CC=gcc
 LEX=flex
 

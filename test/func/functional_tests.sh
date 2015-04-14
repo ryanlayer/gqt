@@ -31,6 +31,7 @@ clean_up()
     ls $DATA_PATH/* \
         | grep -v "^$BCF$" \
         | grep -v "^$DATA_PATH/more_fields.ped$" \
+        | grep -v "^$DATA_PATH/too_many_fields.ped$" \
         | xargs rm
 }
 
@@ -118,22 +119,10 @@ else
     echo "ERROR($LINENO): Auto output GQT does not match specified GQT"
 fi
 
-$GQT_PATH/scripts/simple_ped.sh \
-    -f $BCF \
-    -o $BCF.ped
-
-if [ `cat $BCF.ped | wc -l` -eq 11 ]
-then
-    echo "SUCCESS($LINENO): Simple PED created"
-else
-    echo "ERROR($LINENO): Simple PED not created"
-fi
-
-
 $GQT convert ped \
-    -i $BCF.ped
+    -i $BCF 2>/dev/null
 
-if [ -e "$BCF.ped.db" ]
+if [ -e "$BCF.db" ]
 then
     echo "SUCCESS($LINENO): Auto output file on ped convert correct"
 else
@@ -143,27 +132,28 @@ fi
 rm -f tmp.ped.db
 
 $GQT convert ped \
-    -i $BCF.ped \
-    -o tmp.bcf.ped.db
+    -i $BCF \
+    -o tmp.bcf.db \
+    2> /dev/null
 
-if [ -e "tmp.bcf.ped.db" ]
+if [ -e "tmp.bcf.db" ]
 then
     echo "SUCCESS($LINENO): Specified output file on ped convert correct"
 else
     echo "ERRROR: Specified output file on ped convert not correct"
 fi
 
-if [ `md5 -q tmp.bcf.ped.db` == `md5 -q $BCF.ped.db` ]
+if [ `md5 -q tmp.bcf.db` == `md5 -q $BCF.db` ]
 then
     echo "SUCCESS($LINENO): Auto output PED DB matches specified PED DB"
-    rm tmp.bcf.ped.db
+    rm tmp.bcf.db
 else
     echo "ERROR($LINENO): Auto output PED DB does not match specified BED DB"
 fi
 
 if [[ -f "`which $SQLITE`" ]]
 then
-    ROWS=`$SQLITE $BCF.ped.db "select * from ped;" | wc -l`
+    ROWS=`$SQLITE $BCF.db "select * from ped;" | wc -l`
 
     if [ $ROWS -eq 10 ]
     then
@@ -176,13 +166,48 @@ else
 fi
 
 $GQT convert ped \
-    -i $DATA_PATH/more_fields.ped
+    -i $BCF \
+    -p $DATA_PATH/more_fields.ped \
+    2> /dev/null
 
 if [ -e "$DATA_PATH/more_fields.ped.db" ]
 then
     echo "SUCCESS($LINENO): Specified output file on ped convert correct"
 else
     echo "ERRROR: Specified output file on ped convert not correct"
+fi
+
+if [[ -f "`which $SQLITE`" ]]
+then
+    ROWS=`$SQLITE $DATA_PATH/more_fields.ped.db "select * from ped WHERE Sample_Id == Individual_ID;" | wc -l`
+
+    if [ $ROWS -eq 10 ]
+    then
+        echo "SUCCESS($LINENO): Correct number of rows in PED db"
+    else
+        echo "ERROR($LINENO): 10 rows expect in PED db. $ROWS found."
+        $SQLITE $DATA_PATH/more_fields.ped.db "select * from ped"
+    fi 
+else
+    echo "SKIP($LINENO): SQLITE3 not set"
+fi
+
+$GQT convert ped \
+    -i $BCF \
+    -p $DATA_PATH/too_many_fields.ped \
+    2> /dev/null
+
+if [[ -f "`which $SQLITE`" ]]
+then
+    ROWS=`$SQLITE $DATA_PATH/too_many_fields.ped.db "select * from ped;" | wc -l`
+    if [ $ROWS -eq 10 ]
+    then
+        echo "SUCCESS($LINENO): Correct number of rows in PED db when PED has extra rows"
+    else
+        echo "ERROR($LINENO): 10 rows expect in PED db. $ROWS found."
+    fi 
+else
+    echo "SKIP($LINENO): SQLITE3 not set"
 fi
 
 
@@ -368,44 +393,44 @@ fi
 rm tmp.bcf.gqt
 
 
-rm -f tmp.ped
-echo -ne "Family ID\tIndividual ID\tPaternal ID\tMaternal ID\tGender\tPhenotyp\n" > tmp.ped
-echo -ne "Y025\tNA18907\t0\t0\t2\t0\n" >> tmp.ped
-echo -ne "NG108\tHG03519\tHG03518\tHG03517\t1\t0\n" >> tmp.ped
-echo -ne "m027\tNA19758\t0\t0\t2\t0\n" >> tmp.ped
-echo -ne "IT060\tHG04015\t0\t0\t1\t0\n" >> tmp.ped
-echo -ne "test space here\tand here\there too\tone more\t1\t0\n" >> tmp.ped
-
-if [[ -f "`which $SQLITE`" ]]
-then
-    $GQT convert ped \
-    -i tmp.ped
-
-    SPACE_R0=`$SQLITE tmp.ped.db "select Ind_ID from ped where Family_ID = 'test space here';"`
-    SPACE_R1=`$SQLITE tmp.ped.db "select Ind_ID from ped where Individual_ID = 'and here';"`
-    SPACE_R2=`$SQLITE tmp.ped.db "select Ind_ID from ped where Paternal_ID = 'here too';"`
-    SPACE_R3=`$SQLITE tmp.ped.db "select Ind_ID from ped where Maternal_ID = 'one more';"`
-
-    if [ $SPACE_R0 -eq $SPACE_R1 ]
-    then
-    if [ $SPACE_R0 -eq $SPACE_R2 ]
-    then
-        if [ $SPACE_R0 -eq $SPACE_R3 ]
-        then
-            echo "SUCCESS($LINENO): Spaces acceped in cell values"
-            rm tmp.ped tmp.ped.db
-        else
-            echo "ERROR($LINENO): Spaces not acceped in cell values"
-        fi
-    else
-        echo "ERROR($LINENO): Spaces not acceped in cell values"
-    fi
-    else
-    echo "ERROR($LINENO): Spaces not acceped in cell values"
-    fi
-else
-    echo "SKIP($LINENO): SQLITE3 not set"
-fi
+#rm -f tmp.ped
+#echo -ne "Family ID\tIndividual ID\tPaternal ID\tMaternal ID\tGender\tPhenotyp\n" > tmp.ped
+#echo -ne "Y025\tNA18907\t0\t0\t2\t0\n" >> tmp.ped
+#echo -ne "NG108\tHG03519\tHG03518\tHG03517\t1\t0\n" >> tmp.ped
+#echo -ne "m027\tNA19758\t0\t0\t2\t0\n" >> tmp.ped
+#echo -ne "IT060\tHG04015\t0\t0\t1\t0\n" >> tmp.ped
+#echo -ne "test space here\tand here\there too\tone more\t1\t0\n" >> tmp.ped
+#
+#if [[ -f "`which $SQLITE`" ]]
+#then
+#    $GQT convert ped \
+#    -i tmp.ped
+#
+#    SPACE_R0=`$SQLITE tmp.ped.db "select Ind_ID from ped where Family_ID = 'test space here';"`
+#    SPACE_R1=`$SQLITE tmp.ped.db "select Ind_ID from ped where Individual_ID = 'and here';"`
+#    SPACE_R2=`$SQLITE tmp.ped.db "select Ind_ID from ped where Paternal_ID = 'here too';"`
+#    SPACE_R3=`$SQLITE tmp.ped.db "select Ind_ID from ped where Maternal_ID = 'one more';"`
+#
+#    if [ $SPACE_R0 -eq $SPACE_R1 ]
+#    then
+#    if [ $SPACE_R0 -eq $SPACE_R2 ]
+#    then
+#        if [ $SPACE_R0 -eq $SPACE_R3 ]
+#        then
+#            echo "SUCCESS($LINENO): Spaces acceped in cell values"
+#            rm tmp.ped tmp.ped.db
+#        else
+#            echo "ERROR($LINENO): Spaces not acceped in cell values"
+#        fi
+#    else
+#        echo "ERROR($LINENO): Spaces not acceped in cell values"
+#    fi
+#    else
+#    echo "ERROR($LINENO): Spaces not acceped in cell values"
+#    fi
+#else
+#    echo "SKIP($LINENO): SQLITE3 not set"
+#fi
 
 if [[ -f "`which $PLINK`" ]]
 then

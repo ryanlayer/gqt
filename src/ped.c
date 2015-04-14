@@ -32,117 +32,135 @@ static int callback(void *ll_p,
 }
 //}}}
 
-//{{{ uint32_t convert_file_by_name_ped_to_db(char *ped_file_name, char
-uint32_t convert_file_by_name_ped_to_db(char *ped_file_name, char *db_name)
+//{{{ 
+/*
+ * Every sample DB will have Sample_ID and Ind_ID fields that are defined by
+ * the BCF. Extra fields can be included by the ped_file_name.
+ *
+ */
+uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
+                                        char *ped_file_name,
+                                        uint32_t col,
+                                        char *db_name)
 {
-    // remove the db if it is already there, replace this later
-    struct stat buffer;   
-    int r = stat(db_name, &buffer);
 
-    if (r == 0)
-        remove(db_name);
+    char **ped_field_names;
+    int *ped_field_types;
+    uint32_t i, j, num_ped_fields = 0;
 
-
-    FILE *ped_f = fopen(ped_file_name, "r");
-    if (ped_f == NULL)
-        exit(EXIT_FAILURE);
-
-
-    char *line = NULL, *tmp_line;
-    size_t len = 0;
-
-    ssize_t read = getline(&line, &len, ped_f);
-    if (line[strlen(line) - 1] == '\n')
-        line[strlen(line) - 1] = '\0';
-
-    char *word;
-    uint32_t num_fields = 0;
-
-    tmp_line = (char *) malloc(strlen(line) * sizeof(char));
-    strcpy(tmp_line, line);
-
-    word = strtok(tmp_line, "\t");
-    while (word != NULL) {
-        num_fields += 1;
-        word = strtok(NULL, "\t");
-    }
-
-    num_fields += 1; // one more field for the ind_id
-
-    char **field_name = (char **) malloc (num_fields * sizeof(char *));
-
-    strcpy(tmp_line, line);
-
-    word = strtok(tmp_line, "\t");
-    uint32_t i = 0, j;
-    while (word != NULL) {
-        char *name = (char *) malloc(strlen(word)*sizeof(char));
-        strcpy(name, word);
-        for (j = 0; j < strlen(name); ++j) {
-            if (name[j] == ' ')
-                name[j] = '_';
+    // Figure out which fields will be in the DB
+    if (ped_file_name != NULL) {
+        FILE *ped_f = fopen(ped_file_name, "r");
+        if (ped_f == NULL) {
+            fprintf(stderr, "Could not open %s\n", ped_file_name);
+            exit(EXIT_FAILURE);
         }
-        field_name[i] = name;
-        i += 1;
-        word = strtok(NULL, "\t");
-    }
 
-    char *ind_id_name = "Ind_ID";
-    field_name[i] = ind_id_name;
+        fprintf(stderr, "Adding the following fields from %s\n",
+                ped_file_name);
 
-    int *field_type = (int *) malloc(num_fields * sizeof(int));
-    for (i = 0; i < num_fields; ++i) 
-        field_type[i] = 1;
+        char *line = NULL, *tmp_line;
+        size_t len = 0;
 
-    while ( (read = getline(&line, &len, ped_f)) != -1) {
+        ssize_t read = getline(&line, &len, ped_f);
         if (line[strlen(line) - 1] == '\n')
             line[strlen(line) - 1] = '\0';
 
-        uint32_t j;
-        word = strtok(line, "\t");
-        for (i = 0; i < num_fields - 1; ++i) { // skip added last ind_id field
-            for (j = 0; j < strlen(word); ++j) 
-                field_type[i] &= isdigit((int)word[j]);
+        char *word;
+        tmp_line = (char *) malloc(strlen(line) * sizeof(char));
+        strcpy(tmp_line, line);
+
+        word = strtok(tmp_line, "\t");
+        while (word != NULL) {
+            num_ped_fields += 1;
             word = strtok(NULL, "\t");
         }
-    }
-    fclose(ped_f);
 
-    char *q_create_table, *q_create_table_tmp;
-    r = asprintf(&q_create_table, "CREATE TABLE ped(");
-    for (i = 0; i < num_fields; ++i) {
-        if (i != 0) {
-            r = asprintf(&q_create_table_tmp, "%s ", q_create_table);
-            free(q_create_table);
-            q_create_table = q_create_table_tmp;
+        if (num_ped_fields > 0) {
+            ped_field_names = (char **) malloc(num_ped_fields * sizeof(char *));
+            strcpy(tmp_line, line);
+
+            // Set field names
+            ped_field_names[0] = strtok(tmp_line, "\t");
+            for (i = 1; i < num_ped_fields; ++i) 
+                ped_field_names[i] = strtok(NULL, "\t");
+
+            // Convert " " to "_"
+            for (i = 0; i < num_ped_fields; ++i) {
+                for (j = 0; j < strlen(ped_field_names[i]); ++j) {
+                    if (ped_field_names[i][j] == ' ')
+                        ped_field_names[i][j] = '_';
+                }
+            }
+
+            // Set field types
+            ped_field_types = (int *) malloc(num_ped_fields * sizeof(int));
+            for (i = 0; i < num_ped_fields; ++i) 
+                ped_field_types[i] = 1;
+
+            while ( (read = getline(&line, &len, ped_f)) != -1) {
+                if (line[strlen(line) - 1] == '\n')
+                    line[strlen(line) - 1] = '\0';
+
+                uint32_t j;
+                word = strtok(line, "\t");
+                for (i = 0; i < num_ped_fields; ++i) {
+                    for (j = 0; j < strlen(word); ++j) 
+                        ped_field_types[i] &= isdigit((int)word[j]);
+                    word = strtok(NULL, "\t");
+                }
+            }
         }
+        fclose(ped_f);
+    }
 
-        if (field_type[i] == 1)
+    for (i = 0; i < num_ped_fields; ++i)
+        fprintf(stderr,
+                "%s\t%s\n",
+                ped_field_names[i],
+                ped_field_types[i] ? "INT" : "TEXT");
+
+
+    fprintf(stderr, "Adding the following fields from %s\n",
+                bcf_file_name);
+    fprintf(stderr, "Ind_ID\tINT\nSample_ID\tTEXT\n");
+
+
+    // Add the minimum fields
+    char *q_create_table, *q_create_table_tmp;
+    int r = asprintf(&q_create_table, 
+                     "CREATE TABLE ped(Ind_ID INTEGER, Sample_ID TEXT");
+
+    // Add fields from PED
+    for (i = 0; i < num_ped_fields; ++i) {
+        if (ped_field_types[i] == 1)
             r = asprintf(&q_create_table_tmp, 
-                         "%s %s INTEGER",
+                         "%s, %s INTEGER",
                          q_create_table,
-                         field_name[i]);
+                         ped_field_names[i]);
                          
         else
             r = asprintf(&q_create_table_tmp,
-                         "%s %s TEXT",
+                         "%s, %s TEXT",
                          q_create_table,
-                         field_name[i]);
+                         ped_field_names[i]);
+
         free(q_create_table);
         q_create_table = q_create_table_tmp;
-
-        if (i < (num_fields - 1)) {
-            r = asprintf(&q_create_table_tmp, "%s,", q_create_table);
-            free(q_create_table);
-            q_create_table = q_create_table_tmp;
-        }
     }
 
     r = asprintf(&q_create_table_tmp, "%s);", q_create_table);
     free(q_create_table);
     q_create_table = q_create_table_tmp;
 
+    // removed DB if it is there
+    struct stat buffer;   
+    r = stat(db_name, &buffer);
 
+    if (r == 0)
+        remove(db_name);
+
+    // create the table
     sqlite3 *db;
     char *err_msg;
     int rc = sqlite3_open(db_name, &db);
@@ -158,68 +176,115 @@ uint32_t convert_file_by_name_ped_to_db(char *ped_file_name, char *db_name)
         sqlite3_free(err_msg);
     }
 
-    char *i_pre_text, *i_pre_tmp;
-    r = asprintf(&i_pre_text, "INSERT INTO ped(");
-    for (i = 0; i < num_fields; ++i) {
-        if (i != 0) {
-            r = asprintf(&i_pre_tmp, "%s,", i_pre_text);
-            free(i_pre_text);
-            i_pre_text = i_pre_tmp;
-        }
-        r = asprintf(&i_pre_tmp, "%s%s", i_pre_text, field_name[i]);
-        free(i_pre_text);
-        i_pre_text = i_pre_tmp;
+
+    // open BCF
+    htsFile *fp    = hts_open(bcf_file_name,"rb");
+    if ( !fp ) {
+        fprintf(stderr,"Could not read %s\n", bcf_file_name);
+        return 1;
     }
-    r = asprintf(&i_pre_tmp, "%s)", i_pre_text);
-    free(i_pre_text);
-    i_pre_text = i_pre_tmp;
 
+    bcf_hdr_t *hdr = bcf_hdr_read(fp);
+    if ( !hdr ) {
+        fprintf(stderr,"Could not read the header: %s\n", bcf_file_name);
+        return 1;
+    }
 
-    ped_f = fopen(ped_file_name, "r");
-    if (ped_f == NULL)
-        exit(EXIT_FAILURE);
+    // Add the sample names and location from the BCF file
+    char *q;
+    for (i = 0; i < hdr->n[BCF_DT_SAMPLE]; ++i) {
+        r = asprintf(&q, 
+                     "INSERT INTO ped(Ind_ID, Sample_ID)"
+                     "VALUES (%u, '%s');",
+                     i,
+                     hdr->samples[i]);
 
-    // get rid of the header line
-    read = getline(&line, &len, ped_f);
-
-    char *q_insert, *q_insert_tmp;
-    uint32_t ind_id = 0;
-    while ( (read = getline(&line, &len, ped_f)) != -1) {
-        if (line[strlen(line) - 1] == '\n')
-            line[strlen(line) - 1] = '\0';
-
-        r = asprintf(&q_insert, "%s VALUES(", i_pre_text);
-
-        word = strtok(line, "\t");
-        for (i = 0; i < num_fields - 1; ++i) { // skip last ind_id field
-            if ( i != 0 ) {
-                r = asprintf(&q_insert_tmp, "%s,", q_insert);
-                free(q_insert);
-                q_insert = q_insert_tmp;
-            }
-            if (field_type[i] == 1)
-                r = asprintf(&q_insert_tmp, "%s %s", q_insert, word);
-            else
-                r = asprintf(&q_insert_tmp, "%s '%s'", q_insert, word);
-            free(q_insert);
-            q_insert = q_insert_tmp;
-            word = strtok(NULL, "\t");
-        }
-        r = asprintf(&q_insert_tmp, "%s,%d);", q_insert, ind_id);
-        free(q_insert);
-        q_insert = q_insert_tmp;
-
-        rc = sqlite3_exec(db, q_insert, NULL, 0, &err_msg);
+        rc = sqlite3_exec(db, q, NULL, 0, &err_msg);
         if( rc != SQLITE_OK ){
             fprintf(stderr, "SQL error: %s\n", err_msg);
-            fprintf(stderr, "%s\n", q_insert);
+            fprintf(stderr, "%s\n", q);
             sqlite3_free(err_msg);
         }
-
-        ind_id += 1;
-        free(q_insert);
     }
-    fclose(ped_f);
+    bcf_hdr_destroy(hdr);
+    hts_close(fp);
+
+    if (num_ped_fields > 0) {
+
+        fprintf(stderr,
+                "Joining values based on Sample_ID in %s and %s in %s.\n",
+                bcf_file_name,
+                ped_field_names[col - 1],
+                ped_file_name);
+
+        FILE *ped_f = fopen(ped_file_name, "r");
+        if (ped_f == NULL) {
+            fprintf(stderr, "Could not open %s\n", ped_file_name);
+            exit(EXIT_FAILURE);
+        }
+
+        char *line = NULL;
+        size_t len = 0;
+
+        ssize_t read = getline(&line, &len, ped_f); // skip header
+        char **ped_values = (char **) malloc(num_ped_fields *sizeof(char *));
+        char *tmp_q;
+
+        while ( (read = getline(&line, &len, ped_f)) != -1) {
+            if (line[strlen(line) - 1] == '\n')
+                line[strlen(line) - 1] = '\0';
+
+
+            ped_values[0] = strtok(line, "\t");
+            for (i = 1; i < num_ped_fields; ++i)
+                ped_values[i] = strtok(NULL, "\t");
+
+            r = asprintf(&q, "UPDATE ped SET");
+
+            int first = 0;
+            for (i = 0; i < num_ped_fields; ++i) {
+                if (first != 0) {
+                    r = asprintf(&tmp_q, "%s,", q);
+                    free(q);
+                    q = tmp_q;
+                }
+
+                if (ped_field_types[i] == 1)
+                    r = asprintf(&tmp_q,
+                                 "%s %s=%s",
+                                 q, 
+                                ped_field_names[i],
+                                ped_values[i]);
+                else
+                     r = asprintf(&tmp_q,
+                                 "%s %s='%s'",
+                                 q, 
+                                ped_field_names[i],
+                                ped_values[i]);
+
+                free(q);
+                q = tmp_q;
+                first = 1;
+            }
+
+            r = asprintf(&tmp_q,
+                         "%s WHERE Sample_ID == '%s';",
+                         q,
+                         ped_values[col - 1]);;
+            free(q);
+            q = tmp_q;
+
+            rc = sqlite3_exec(db, q, NULL, 0, &err_msg);
+            if( rc != SQLITE_OK ){
+                fprintf(stderr, "SQL error: %s\n", err_msg);
+                fprintf(stderr, "%s\n", q);
+                sqlite3_free(err_msg);
+            }
+        }
+
+        fclose(ped_f);
+    }
+
     sqlite3_close(db);
 
     return 0;

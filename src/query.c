@@ -185,56 +185,22 @@ int query(int argc, char **argv)
         }
     }
 
+    ///////////////////////////////
+    if ( (i_is_set == 1) && (d_is_set == 0)) {
 
-#if 0
-    // Try to auto-detect file names based on GQT
-    if ( (v_is_set == 0) && (i_is_set == 1)) {
+        int auto_db_file_name_size = asprintf(&db_file_name,
+                                              "%s",
+                                              wahbm_file_name);
+        strcpy(db_file_name + strlen(db_file_name) - 3, "db\0");
 
-        int auto_vid_file_name_size = asprintf(&vid_file_name,
-                                               "%s",
-                                               wahbm_file_name);
-
-        strcpy(vid_file_name + strlen(vid_file_name) - 3, "vid");
-
-        if ( access( vid_file_name, F_OK) != -1 ) {
-            v_is_set = 1;
+        if ( access( db_file_name, F_OK) != -1 ) {
+            d_is_set = 1;
         } else {
-            printf("Auto detect failure: VID file %s not found\n",
-                    vid_file_name);
-            return query_help();
-        }
-
-        int auto_wahbm_file_name_size = asprintf(&wahbm_file_name,
-                                                 "%s.gqt",
-                                                 src_bcf_file_name);
-
-        if ( access( wahbm_file_name, F_OK) != -1 ) {
-            i_is_set = 1;
-        } else {
-            printf("Auto detect failure: WAH file %s not found\n",
-                   wahbm_file_name);
+            printf("Auto detect failure: PED DB file %s not found\n",
+                   db_file_name);
             return query_help();
         }
     }
-#endif
-
-#if 0
-    if (((v_is_set == 1) && (s_is_set == 0)) ||
-        ((v_is_set == 0) && (s_is_set == 1)) ) {
-        printf("Either BOTH VID and source BCF must be set, or neither.\n");
-        return query_help();
-    }
-
-    if (((v_is_set == 1) && (s_is_set == 1)) && (b_is_set == 1)) {
-        printf("Set EITHER VID/soruce BCF or bim, not BOTH.\n");
-        return query_help();
-    } 
- 
-    if (((v_is_set == 0) && (s_is_set == 0)) && (b_is_set == 0)) {
-        printf("Must set EITHER VID/soruce BCF or bim.\n");
-        return query_help();
-    } 
-#endif
 
     if (i_is_set == 0) {
         printf("GQT file is not set\n");

@@ -13,25 +13,33 @@ int bcf_wahbm(char *in,
               char *tmp_dir,
               uint32_t num_fields,
               uint32_t num_records);
-int ped_db(char *in, char *out);
+int ped_ped(char *in, char *ped, uint32_t col, char *out);
 
 int convert(int argc, char **argv)
 {
     if (argc < 2) return convert_help();
 
     int c;
-    char *in=NULL, *out=NULL, *bim=NULL, *vid=NULL, *tmp_dir=NULL;
-    uint32_t num_fields, num_records;
+    char *in=NULL, *out=NULL, *bim=NULL, *vid=NULL, *tmp_dir=NULL, *ped=NULL;
+    uint32_t num_fields, num_records, col = 2;
     int i_is_set = 0, 
         o_is_set = 0, 
         f_is_set = 0, 
         b_is_set = 0, 
         v_is_set = 0, 
         t_is_set = 0, 
+        p_is_set = 0, 
         r_is_set = 0; 
 
-    while((c = getopt (argc, argv, "hi:o:f:r:b:v:t:")) != -1) {
+    while((c = getopt (argc, argv, "hi:o:f:r:b:v:t:p:c:")) != -1) {
         switch (c) {
+            case 'c':
+                col = atoi(optarg);
+                break;
+            case 'p':
+                p_is_set = 1;
+                ped = optarg;
+                break;
             case 't':
                 t_is_set = 1;
                 tmp_dir = optarg;
@@ -68,6 +76,9 @@ int convert(int argc, char **argv)
                      (optopt == 'f') ||
                      (optopt == 'r') ||
                      (optopt == 't') ||
+                     (optopt == 's') ||
+                     (optopt == 'p') ||
+                     (optopt == 'c') ||
                      (optopt == 'o') )
                     fprintf (stderr, "Option -%c requires an argument.\n",
                             optopt);
@@ -90,6 +101,7 @@ int convert(int argc, char **argv)
 
     if (strcmp(type, "bcf") == 0) {
         if ( (f_is_set == 0) || (r_is_set == 0) ) {
+
             fprintf(stderr,"Attempting to autodetect num of records "
                     "and fields from %s\n", in);
             //Try and auto detect the sizes, need the index
@@ -175,44 +187,42 @@ int convert(int argc, char **argv)
 
         int r = bcf_wahbm(in, out, bim, vid, tmp_dir, num_fields, num_records);
 
-        /*
-        if (vid != NULL)
-            free(vid);
-        if (bim != NULL)
-            free(bim);
-        if (out != NULL)
-            free(out);
-        */
-
-
         return r;
     } 
 
     if (strcmp(type, "ped") == 0)  {
-      if (o_is_set == 0) {
-            out  = (char*)malloc(strlen(in) + 4); // 4 for ext and \0
-            strcpy(out,in);
-            strcat(out, ".db");
+        if (o_is_set == 0) {
+            if (p_is_set == 1) {
+                out  = (char*)malloc(strlen(ped) + 4); // 4 for ext and \0
+                strcpy(out,ped);
+                strcat(out, ".db");
+            } else {
+                out  = (char*)malloc(strlen(in) + 4); // 4 for ext and \0
+                strcpy(out,in);
+                strcat(out, ".db");
+            }
       }
-      return ped_db(in, out);
-    
+
+      fprintf(stderr, "Creating sample database %s\n", out);
+      return ped_ped(in, ped, col, out);
     }
     return convert_help();
-
 }
 
 int convert_help()
 {
-    printf("usage:   gqt convert <type> -i <input file>\n"
+    printf("usage:   gqt convert <type> -i <input VCF/VCF.GZ/BCF file>\n"
            "     types:\n"
-           "         bcf         create a WAH index of a VCF/VCF.gz/BCF\n"
-           "         ped         create SQLite3 database of a PED file\n\n"
+           "         bcf         create a GQT index\n"
+           "         ped         create sample phenotype database\n\n"
            "     options:\n"
-           "         -o           Output file name\n"
+           "         -p           PED file name (opt.)\n"
+           "         -c           Sample name column in PED (Default 2)\n"
+           "         -o           Output file name (opt.)\n"
            "         -v           VID output file name (opt.)\n"
            "         -b           BIM output file name (opt.)\n"
-           "         -r           Number of variants (req. for bcf)\n"
-           "         -f           Number of samples (req. for bcf)\n"
+           "         -r           Number of variants (opt. with index)\n"
+           "         -f           Number of samples (opt. with index)\n"
            "         -t           Tmp working directory(./ by defualt)\n"
            );
 
@@ -220,9 +230,9 @@ int convert_help()
 }
 
 
-int ped_db(char *in, char *out)
+int ped_ped(char *in, char *ped, uint32_t col, char *out)
 {
-    return convert_file_by_name_ped_to_db(in, out);
+    return convert_file_by_name_ped_to_db(in, ped, col, out);
 }
 
 int bcf_wahbm(char *in,

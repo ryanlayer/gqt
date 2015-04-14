@@ -230,7 +230,7 @@ void push_bcf_gt_md(pri_queue *q,
                  (gt_i[1] == bcf_int32_vector_end) ){
                 if (bcf_gt_is_missing(gt_i[0]))
                     gt = 3;
-                else if (bcf_gt_allele(gt_i[k]) == 0)
+                else if (bcf_gt_allele(gt_i[0]) == 0)
                     gt = 0;
                 else
                     gt = 1;

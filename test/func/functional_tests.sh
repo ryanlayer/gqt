@@ -2,8 +2,7 @@
 
 BCFTOOLS=bcftools
 PLINK=plink
-GQT=gqt
-GQT_PATH=src/gqt
+GQT=../../bin/gqt
 SQLITE=sqlite3
 DATA_PATH=../data
 

@@ -47,7 +47,7 @@ make install
 ```
 
 *Step 4*. Get GQT source then modify the GQT Makefile by setting the
-`HTS\_ROOT` and `SQLITE\_ROOT` variable in `src/Makfile` to reflect their
+`HTS_ROOT` and `SQLITE_ROOT` variable in `src/Makfile` to reflect their
 locations.  Compile and test.
 ```
 git clone https://github.com/ryanlayer/gqt.git
@@ -230,17 +230,17 @@ index, and are composed of a set of predefined values, functions, and binary
 relations:
 
 * values
-  * `HOMO\_REF`
+  * `HOMO_REF`
   * `HET`
-  * `HOMO\_ALT`
+  * `HOMO_ALT`
 * functions
   * `count(HET)` The number of samples that are heterozygous
-  * `pct(HET HOMO\_ALT)` The percent of samples that are either heterozygous or
+  * `pct(HET HOMO_ALT)` The percent of samples that are either heterozygous or
     homozygous alternate 
   * `maf()` The minor allele frequency
 * and binary relations 
   * `count(HET) => 1` at least one sample is heterozygous
-  * `pct(HET HOMO\_ALT) < 0.1` less that 10% of individuals are either
+  * `pct(HET HOMO_ALT) < 0.1` less that 10% of individuals are either
     heterozygous or homozygous alternate
 
 #### Output
@@ -260,6 +260,6 @@ Then the header will include two results, one for the count and one for the perc
 ```
 
 And each line will have two corresponding values in the INFO field.  For example
-`GTQ\_0=2;GTQ\_1=0.010753` indication that 2 individuals from the GBR
+`GTQ_0=2;GTQ_1=0.010753` indication that 2 individuals from the GBR
 population and 0.01075 percent of the FIN population had a non-ref allele for
 that variant.

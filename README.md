@@ -68,7 +68,7 @@ wget --trust-server-names http://bit.ly/gqt_bcf
 
 To index the BCF, GQT needs to know the number of columns and rows in the BCF.
 This information can be either supplied with command line parameters or GQT can
-extract this info from the index.
+extract this info from the CSI index produced by bcftools.
 ```
 bcftools index chr11.11q14.3.bcf
 ```

@@ -3,7 +3,7 @@
 BCFTOOLS=bcftools
 PLINK=plink
 GQT=gqt
-GQT_PATH=$HOME/src/gqt
+GQT_PATH=src/gqt
 SQLITE=sqlite3
 DATA_PATH=../data
 
@@ -95,7 +95,7 @@ $GQT convert bcf \
     -o tmp.bcf.gqt \
     2> /dev/null
 
-if [ `md5 -q tmp.bcf.bim` == `md5 -q $BCF.bim` ]
+if diff tmp.bcf.bim $BCF.bim > /dev/null
 then
     echo "SUCCESS($LINENO): Auto output BIM matches specified BIM"
     rm tmp.bcf.bim 
@@ -103,7 +103,7 @@ else
     echo "ERROR($LINENO): Auto output BIM does not match specified BIM"
 fi
 
-if [ `md5 -q tmp.bcf.vid` == `md5 -q $BCF.vid` ]
+if diff tmp.bcf.vid $BCF.vid > /dev/null
 then
     echo "SUCCESS($LINENO): Auto output VID matches specified VID"
     rm tmp.bcf.vid 
@@ -111,7 +111,7 @@ else
     echo "ERROR($LINENO): Auto output VID does not match specified VID"
 fi
 
-if [ `md5 -q tmp.bcf.gqt` == `md5 -q $BCF.gqt` ]
+if diff tmp.bcf.gqt $BCF.gqt > /dev/null
 then
     echo "SUCCESS($LINENO): Auto output GQT matches specified GQT"
     rm tmp.bcf.gqt 
@@ -143,7 +143,7 @@ else
     echo "ERRROR: Specified output file on ped convert not correct"
 fi
 
-if [ `md5 -q tmp.bcf.db` == `md5 -q $BCF.db` ]
+if diff tmp.bcf.db $BCF.db > /dev/null
 then
     echo "SUCCESS($LINENO): Auto output PED DB matches specified PED DB"
     rm tmp.bcf.db
@@ -313,7 +313,7 @@ $GQT query \
     | cut -f1-3 \
     > tmp.gqt
 
-if [ `md5 -q tmp.bcf` == `md5 -q tmp.gqt` ]
+if diff tmp.bcf tmp.gqt > /dev/null
  then 
     echo "SUCCESS($LINENO): BCFTOOLS nref count does not match GQT maf"
     rm tmp.gqt tmp.bcf
@@ -359,7 +359,7 @@ $GQT query \
     | cut -f1-3 \
     > tmp.vcf.gqt
 
-if [ `md5 -q tmp.bcf.gqt` == `md5 -q tmp.vcf.gqt` ]
+if diff tmp.bcf.gqt tmp.vcf.gqt > /dev/null
  then 
     echo "SUCCESS($LINENO): BCF-based GQT matches VCF-based GQT"
     rm tmp.vcf.gqt
@@ -379,7 +379,7 @@ $GQT query \
     | cut -f1-3 \
     > tmp.vcf.gz.gqt
 
-if [ `md5 -q tmp.bcf.gqt` == `md5 -q tmp.vcf.gz.gqt` ]
+if diff tmp.bcf.gqt tmp.vcf.gz.gqt > /dev/null
  then 
     echo "SUCCESS($LINENO): BCF-based GQT matches VCF.GZ-based GQT"
     rm tmp.vcf.gz.gqt

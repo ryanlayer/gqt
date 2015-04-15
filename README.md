@@ -96,7 +96,9 @@ gqt convert ped -i chr11.11q14.3.bcf
 ```
 This creates a database named `chr11.11q14.3.bcf.db`
 
-When a PED file is available it can be included 
+When a PED file is available it can be included, thus allowing more 
+sophisticated queries based on the phenotypes, ancestries, and 
+relationships of the samples. More on this below.
 ```
 wget --trust-server-names http://bit.ly/gqt_ped
 gqt convert ped -i chr11.11q14.3.bcf -p 1kg.phase3.ped
@@ -105,7 +107,7 @@ This creates a database named `1kg.phase3.ped.db`
 
 #### Query the GQT index
 When the database is based only on the BCF file (`chr11.11q14.3.bcf.db`),
-queries can be based on the sample names.  For example, you can find the
+queries can be based on the sample names. For example, you can find the
 variants where at least one of the three listed individuals is heterozygous.
 ```
 gqt/bin/gqt query \

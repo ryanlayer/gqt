@@ -216,7 +216,7 @@ GQT_BOTH_NUM=`$GQT query \
     -i $BCF.gqt \
     -d $DATA_PATH/more_fields.ped.db \
     -p "Population ='ESN'" \
-    -g "HOMO_REF" \
+    -g "HOM_REF" \
     | grep -v "#" \
     | wc -l`
 
@@ -232,9 +232,9 @@ VCF_BOTH_NUM=`$BCFTOOLS view -s "$S" $BCF \
 
 if [ "$GQT_BOTH_NUM" -eq "$VCF_BOTH_NUM" ]
 then
-    echo "SUCCESS($LINENO): Number of HOMO_REF in both ESN match in VCF and GQT"
+    echo "SUCCESS($LINENO): Number of HOM_REF in both ESN match in VCF and GQT"
 else
-    echo "ERROR($LINENO): Number of HOMO_REF in both ESN do not match in VCF($VCF_BOTH_NUM)  and GQT($GQT_BOTH_NUM)"
+    echo "ERROR($LINENO): Number of HOM_REF in both ESN do not match in VCF($VCF_BOTH_NUM)  and GQT($GQT_BOTH_NUM)"
 fi 
 
 
@@ -242,7 +242,7 @@ $GQT query \
     -i $BCF.gqt \
     -d $DATA_PATH/more_fields.ped.db \
     -p "" \
-    -g "pct(HOMO_REF)" \
+    -g "pct(HOM_REF)" \
     | grep -v "^#" \
     | cut -d"=" -f3 \
     > tmp.pct
@@ -251,7 +251,7 @@ $GQT query \
     -i $BCF.gqt \
     -d $DATA_PATH/more_fields.ped.db \
     -p "" \
-    -g "count(HOMO_REF)" \
+    -g "count(HOM_REF)" \
     | grep -v "^#" \
     | cut -d"=" -f3 \
     > tmp.count
@@ -271,9 +271,9 @@ $GQT query \
     -i $BCF.gqt \
     -d $DATA_PATH/more_fields.ped.db \
     -p "" \
-    -g "pct(HOMO_REF)" \
+    -g "pct(HOM_REF)" \
     -p "" \
-    -g "count(HOMO_REF)" \
+    -g "count(HOM_REF)" \
     > tmp.gqt
 
 cat tmp.gqt \
@@ -499,7 +499,7 @@ ALT_COUNT=`$GQT query \
     -i $BCF.gqt \
     -d $DATA_PATH/more_fields.ped.db \
     -p "" \
-    -g "count(HOMO_ALT)" \
+    -g "count(HOM_ALT)" \
     | grep -v "#" \
     | cut -d "=" -f3 \
     | awk '{s+=$1*2} END {print s}'`

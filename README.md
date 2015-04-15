@@ -232,17 +232,17 @@ index, and are composed of a set of predefined values, functions, and binary
 relations:
 
 * values
-  * `HOMO_REF`
+  * `HOM_REF`
   * `HET`
-  * `HOMO_ALT`
+  * `HOM_ALT`
 * functions
   * `count(HET)` The number of samples that are heterozygous
-  * `pct(HET HOMO_ALT)` The percent of samples that are either heterozygous or
+  * `pct(HET HOM_ALT)` The percent of samples that are either heterozygous or
     homozygous alternate 
   * `maf()` The minor allele frequency
 * and binary relations 
   * `count(HET) => 1` at least one sample is heterozygous
-  * `pct(HET HOMO_ALT) < 0.1` less that 10% of individuals are either
+  * `pct(HET HOM_ALT) < 0.1` less that 10% of individuals are either
     heterozygous or homozygous alternate
 
 #### Output
@@ -250,8 +250,8 @@ The default output of GQT queries is VCF.  An extra line is added to the header
 and to each line that gives the results of the query.  For example, a query
 that include two queries
 ```
--p "Population=='GBR'" -g "count(HET HOMO_ALT)" 
--p "Population=='FIN'" -g "pct(HET HOMO_ALT)"
+-p "Population=='GBR'" -g "count(HET HOM_ALT)" 
+-p "Population=='FIN'" -g "pct(HET HOM_ALT)"
 ```
 
 Then the header will include two results, one for the count and one for the percent:

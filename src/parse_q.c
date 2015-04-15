@@ -22,8 +22,8 @@ char *names[] = {NULL,
                  "<=",
                  ">=",
                  "HET",
-                 "HOMO_REF",
-                 "HOMO_ALT",
+                 "HOM_REF",
+                 "HOM_ALT",
                  "UNKNOWN",
                  "(",
                  ")",
@@ -176,7 +176,7 @@ int parse_q(char *q_text, struct gqt_query *q_props)
                      (state != (OP_SET_START | GT_SET_START) ) ) {
                     fprintf(stderr, "SYNTAX ERROR: "
                             "Opperation (count,pct) and "
-                            "genotype (HOMO_REF,HET,HOMO_ALT,UNKNONW) expected "
+                            "genotype (HOM_REF,HET,HOM_ALT,UNKNONW) expected "
                             "prior to '%s' ",
                             names[ntoken]);
                     return 1;
@@ -184,7 +184,7 @@ int parse_q(char *q_text, struct gqt_query *q_props)
                             (state != OP_SET_START ) ) {
                     fprintf(stderr, "SYNTAX ERROR: "
                             "Opperation (maf) does not expect "
-                            "genotype (HOMO_REF,HET,HOMO_ALT,UNKNONW) "
+                            "genotype (HOM_REF,HET,HOM_ALT,UNKNONW) "
                             "prior to '%s' ",
                             names[ntoken]);
                     return 1;

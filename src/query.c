@@ -731,7 +731,7 @@ int query_help()
 "in the TSI population the two query pairs would be:\n"
 "\n"
 "\t-p \"Population = 'GBR'\" -g \"count(HET) >= 10\" \\\n"
-"\t-p \"Population = 'GBR'\" -g \"HOMO_REF\"\n"
+"\t-p \"Population = 'GBR'\" -g \"HOM_REF\"\n"
 "\n"
 "Population queries are based on the PED file that is associated with the\n"
 "genotypes, and any column in that PED file can be part of the query.  For\n"
@@ -749,14 +749,14 @@ int query_help()
 "Or to get the variants that are either heterozygous or homozygous alternate\n"
 "in every member the query would be:\n"
 "\n"
-"\t-g \"HET HOMO_ALT\"\n"
+"\t-g \"HET HOM_ALT\"\n"
 "\n"
 "Count based filters used the \"count()\" operator that takes a genotype \n"
 "list as a parameter followed by some condition.  For example, to find the\n"
 "variants that are either heterozygous or homozygous alternate in no more\n"
 "than 10 individuals the query would be\n"
 "\n"
-"\t-g \"count(HET HOMO_ALT) < 10\"\n");
+"\t-g \"count(HET HOM_ALT) < 10\"\n");
     return 1;
 }
 //}}}

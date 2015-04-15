@@ -14,7 +14,7 @@ interactive-speed queries to data sets with millions of individuals.
 2. [Extra detail] (#extra-detail)
 
 ## Installation
-GQT depends on htslib, sqlit3, and lex (flex).
+GQT depends on htslib, sqlite3, and lex (flex).
 
 *Step 1*. Install htslib.
 ```
@@ -35,7 +35,7 @@ lex -V
 flex -V
 ```
 
-If both fail then install, otherwise skip to step 4 
+If both fail then install from source, otherwise skip to step 4 
 ```
 wget http://downloads.sourceforge.net/project/flex/flex-2.5.39.tar.bz2
 bunzip2 flex-2.5.39.tar.bz2

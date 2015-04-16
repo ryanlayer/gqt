@@ -8,6 +8,9 @@ computational burden by orders of magnitude. This index can significantly
 expand the capabilities of population-scale analyses by providing
 interactive-speed queries to data sets with millions of individuals. 
 
+[![Install and Demo Video](http://img.youtube.com/vi/floxSA2OoM8/0.jpg)](http://www.youtube.com/watch?v=floxSA2OoM8)
+
+
 ## Table of Contents
 1. [Installation] (#installation)
 2. [Example work flow] (#example-workflow)

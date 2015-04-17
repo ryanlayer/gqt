@@ -408,5 +408,7 @@ uint32_t wahbm_speed_check(char *in);
 uint32_t wahbm_top_n_matches_by_name(char *in, uint32_t n);
 
 uint32_t wahbm_hamm_dist_by_name(char *in, char *out);
+
+uint32_t wahbm_shared_by_name(char *in, char *out);
 ////////////END//////////////////////////////////////////////////////
 #endif

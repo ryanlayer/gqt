@@ -32,7 +32,7 @@ static int callback(void *ll_p,
 }
 //}}}
 
-//{{{ 
+//{{{ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
 /*
  * Every sample DB will have Sample_ID and Ind_ID fields that are defined by
  * the BCF. Extra fields can be included by the ped_file_name.
@@ -98,17 +98,28 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
             for (i = 0; i < num_ped_fields; ++i) 
                 ped_field_types[i] = 1;
 
+            uint32_t line_no = 2;
             while ( (read = getline(&line, &len, ped_f)) != -1) {
                 if (line[strlen(line) - 1] == '\n')
                     line[strlen(line) - 1] = '\0';
 
                 uint32_t j;
+                fprintf(stderr, "%s\n", line);
                 word = strtok(line, "\t");
                 for (i = 0; i < num_ped_fields; ++i) {
+                    fprintf(stderr, "%s\n", word);
+                    if (word == NULL) {
+                        fprintf(stderr,
+                                "ERROR: Missing field in file %s on line %u\n",
+                                ped_file_name,
+                                line_no);
+                        exit(1);
+                    }
                     for (j = 0; j < strlen(word); ++j) 
                         ped_field_types[i] &= isdigit((int)word[j]);
                     word = strtok(NULL, "\t");
                 }
+                line_no += 1;
             }
         }
         fclose(ped_f);

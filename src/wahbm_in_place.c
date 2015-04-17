@@ -20,9 +20,9 @@
 // wahbm in place
 //{{{ uint32_t wah_in_place_or(uint32_t *r_wah,
 uint32_t wah_in_place_or(uint32_t *r_wah,
-                              uint32_t r_wah_size,
-                              uint32_t *wah,
-                              uint32_t wah_size)
+                         uint32_t r_wah_size,
+                         uint32_t *wah,
+                         uint32_t wah_size)
 {
 
     uint32_t r_wah_i = 0, wah_c = 0;

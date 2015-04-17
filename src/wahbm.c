@@ -607,6 +607,78 @@ uint32_t wahbm_hamm_dist_by_name(char *in, char *out)
 }
 //}}}
 
+//{{{ uint32_t wahbm_shared_by_name(char *in, char *out)
+uint32_t wahbm_shared_by_name(char *in, char *out)
+{
+
+    FILE *f = fopen(out, "w");
+    if (f == NULL) {
+        fprintf(stderr, "Could not open %s\n", out);
+        exit(1);
+    }
+
+    struct wah_file wf = init_wahbm_file(in);
+
+    uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+
+    uint32_t i_1_s, i_2_s, i_a_s, i_a_c_s;
+    uint32_t *i_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *i_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+
+    uint32_t *i_a = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *i_a_c = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+
+    uint32_t j_1_s, j_2_s, j_a_s;
+    uint32_t *j_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *j_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    uint32_t *j_a = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+
+    uint32_t i,j,k, i_to_j_d;
+
+    for (i = 0; i < wf.num_records; ++i) {
+        //load in the ith record
+        i_1_s = get_wah_bitmap_in_place(wf, i, 1, &i_1);
+        i_2_s = get_wah_bitmap_in_place(wf, i, 2, &i_2);
+
+        memset(i_a, 0, sizeof(uint32_t)*max_wah_size);
+        i_a_s = wah_in_place_or(i_a, max_wah_size, i_1, i_1_s);
+        i_a_s = wah_in_place_or(i_a, max_wah_size, i_2, i_2_s);
+
+        for (j = i+1; j < wf.num_records; ++j) {
+            //load in the jth record
+            j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
+            j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
+
+            memset(j_a,   0, sizeof(uint32_t)*max_wah_size);
+
+            j_a_s = wah_in_place_or(j_a, max_wah_size, j_1, j_1_s);
+            j_a_s = wah_in_place_or(j_a, max_wah_size, j_2, j_2_s);
+
+            j_a_s = wah_in_place_and(j_a, max_wah_size, i_a, i_a_s);
+
+            i_to_j_d = 0;
+
+            uint64_t *l_j_a = (uint64_t *)j_a;
+
+            for (k = 0; k < j_a_s/2; k++) 
+                i_to_j_d += __builtin_popcountll(l_j_a[k]);
+
+            if (k*2 < j_a_s) 
+                i_to_j_d += __builtin_popcount(j_a[k*2]);
+
+            if (j!=i+1)
+                fprintf(f,"\t");
+            fprintf(f,"%u", i_to_j_d);
+        }
+        fprintf(f,"\n");
+    }
+
+    fclose(f);
+
+    return 0;
+}
+//}}}
+
 //{{{ uint32_t wahbm_top_n_matches_by_name(char *in, uint32_t n)
 uint32_t wahbm_top_n_matches_by_name(char *in, uint32_t num_matches)
 {

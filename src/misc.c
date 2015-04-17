@@ -19,6 +19,7 @@ int vcf_plt(char *in,
 int plt_invert(char *in, char *out);
 int plt_invert_ubin(char *in, char *out);
 int wahbm_pca(char *in, char *out);
+int wahbm_hamm(char *in, char *out);
 //int top_n_matches(char *in, char *db, uint32_t num_matches);
 int top_n_matches(char *in, uint32_t num_matches);
 int speed_check(char *in);
@@ -155,6 +156,7 @@ int misc(int argc, char **argv)
     if (strcmp(type, "ubin-wahbm16") == 0) return ubin_wahbm16(in, out);
     if (strcmp(type, "ubin-wah") == 0) return ubin_wah(in, out);
     if (strcmp(type, "pca") == 0) return wahbm_pca(in, out);
+    if (strcmp(type, "hamm") == 0) return wahbm_hamm(in, out);
     if (strcmp(type, "top-n") == 0) return wahbm_pca(in, out);
     if (strcmp(type, "speed-check") == 0) return speed_check(in);
 
@@ -178,6 +180,7 @@ int misc_help()
            "         ped-db            PED to SQLite3 database\n"
            "         rotate-hlubin     Rotate a ubin w/o a header to one w/\n"
            "         pca               Run PCA/\n"
+           "         hamm              Get pair-wise hamming distance/\n"
            "         speed-check       Test ops/\n"
            "         top-n             Find the top n matching hets/\n"
            "         -v                VID output file name"
@@ -247,6 +250,13 @@ int wahbm_pca(char *in,
 {
     return wahbm_pca_by_name(in, out);
 }
+
+int wahbm_hamm(char *in,
+               char *out)
+{
+    return wahbm_hamm_dist_by_name(in, out);
+}
+
 
 int speed_check(char *in)
 {

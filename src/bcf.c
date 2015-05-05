@@ -185,7 +185,7 @@ void push_bcf_gt_md(pri_queue *q,
     priority p;
 
     uint32_t tenth_num_var = num_vars / 10;
-    fprintf(stderr,"Extracting genotyes and metadata");
+    fprintf(stderr,"Extracting genotypes and metadata");
 
     for (i = 0; i < num_vars; ++i) {
         if ((tenth_num_var ==0) || (i % tenth_num_var == 0))

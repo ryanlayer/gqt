@@ -102,8 +102,8 @@ int convert(int argc, char **argv)
     if (strcmp(type, "bcf") == 0) {
         if ( (f_is_set == 0) || (r_is_set == 0) ) {
 
-            fprintf(stderr,"Attempting to autodetect num of records "
-                    "and fields from %s\n", in);
+            fprintf(stderr,"Attempting to autodetect number of variants "
+                    "and samples from %s\n", in);
             //Try and auto detect the sizes, need the index
             tbx_t *tbx = NULL;
             hts_idx_t *idx = NULL;
@@ -153,7 +153,7 @@ int convert(int argc, char **argv)
                 num_records += records;
             }
 
-            fprintf(stderr, "Number of records:%u\tNumber of fields:%u\n",
+            fprintf(stderr, "Number of variants:%u\tNumber of samples:%u\n",
                     num_records, num_fields);
             free(seq);
             hts_close(fp);

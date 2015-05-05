@@ -104,10 +104,10 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
                     line[strlen(line) - 1] = '\0';
 
                 uint32_t j;
-                fprintf(stderr, "%s\n", line);
+                //fprintf(stderr, "%s\n", line);
                 word = strtok(line, "\t");
                 for (i = 0; i < num_ped_fields; ++i) {
-                    fprintf(stderr, "%s\n", word);
+                    //fprintf(stderr, "%s\n", word);
                     if (word == NULL) {
                         fprintf(stderr,
                                 "ERROR: Missing field in file %s on line %u\n",

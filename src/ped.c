@@ -34,7 +34,7 @@ static int callback(void *ll_p,
 
 //{{{ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
 /*
- * Every sample DB will have Sample_ID and Ind_ID fields that are defined by
+ * Every sample DB will have BCF_Sample and BCF_ID fields that are defined by
  * the BCF. Extra fields can be included by the ped_file_name.
  *
  */
@@ -134,13 +134,13 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
 
     fprintf(stderr, "Adding the following fields from %s\n",
                 bcf_file_name);
-    fprintf(stderr, "Ind_ID\tINT\nSample_ID\tTEXT\n");
+    fprintf(stderr, "BCF_ID\tINT\nBCF_Sample\tTEXT\n");
 
 
     // Add the minimum fields
     char *q_create_table, *q_create_table_tmp;
     int r = asprintf(&q_create_table, 
-                     "CREATE TABLE ped(Ind_ID INTEGER, Sample_ID TEXT");
+                     "CREATE TABLE ped(BCF_ID INTEGER, BCF_Sample TEXT");
 
     // Add fields from PED
     for (i = 0; i < num_ped_fields; ++i) {
@@ -205,7 +205,7 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
     char *q;
     for (i = 0; i < hdr->n[BCF_DT_SAMPLE]; ++i) {
         r = asprintf(&q, 
-                     "INSERT INTO ped(Ind_ID, Sample_ID)"
+                     "INSERT INTO ped(BCF_ID, BCF_Sample)"
                      "VALUES (%u, '%s');",
                      i,
                      hdr->samples[i]);
@@ -223,7 +223,7 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
     if (num_ped_fields > 0) {
 
         fprintf(stderr,
-                "Joining values based on Sample_ID in %s and %s in %s.\n",
+                "Joining values based on BCF_Sample in %s and %s in %s.\n",
                 bcf_file_name,
                 ped_field_names[col - 1],
                 ped_file_name);
@@ -279,7 +279,7 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
             }
 
             r = asprintf(&tmp_q,
-                         "%s WHERE Sample_ID == '%s';",
+                         "%s WHERE BCF_Sample == '%s';",
                          q,
                          ped_values[col - 1]);;
             free(q);
@@ -317,9 +317,9 @@ uint32_t resolve_ind_query(uint32_t **R, char *query, char *ped_db_file)
     char *test_q;
     int r;
     if (strlen(query) == 0)
-        r = asprintf(&test_q, "SELECT Ind_ID FROM ped");
+        r = asprintf(&test_q, "SELECT BCF_ID FROM ped");
     else
-        r = asprintf(&test_q, "SELECT Ind_ID FROM ped WHERE %s;", query);
+        r = asprintf(&test_q, "SELECT BCF_ID FROM ped WHERE %s;", query);
 
     struct uint32_t_ll ll;
     ll.head = NULL;

@@ -627,19 +627,19 @@ void print_query_result(uint32_t *mask,
     char *info_s;
     for (k=0; k < num_qs; k++) {
         if ( q[k].variant_op == p_count ) {
-            asprintf(&info_s, "##INFO=<ID=GTQ_%u,Number=1,Type=Integer,"
+            asprintf(&info_s, "##INFO=<ID=GQT_%u,Number=1,Type=Integer,"
                               "Description=\"GQT count result from query "
                               "%u\">\n",
                               k, k);
             append_out_buf(&outbuf, info_s, strlen(info_s));
         } else if ( q[k].variant_op == p_pct ) {
-            asprintf(&info_s, "##INFO=<ID=GTQ_%u,Number=1,Type=Float,"
+            asprintf(&info_s, "##INFO=<ID=GQT_%u,Number=1,Type=Float,"
                               "Description=\"GQT percent result from query "
                               "%u\">\n",
                               k, k);
             append_out_buf(&outbuf, info_s, strlen(info_s));
         } else if ( q[k].variant_op == p_maf ) {
-            asprintf(&info_s, "##INFO=<ID=GTQ_%u,Number=1,Type=Float,"
+            asprintf(&info_s, "##INFO=<ID=GQT_%u,Number=1,Type=Float,"
                               "Description=\"GQT maf result from query "
                               "%u\">\n",
                               k, k);
@@ -666,19 +666,19 @@ void print_query_result(uint32_t *mask,
                                qfile.line_lens[line_idx]-1);
                 for (k=0; k < num_qs; k++) {
                     if ( q[k].variant_op == p_count ) {
-                        asprintf(&info_s, ";GTQ_%u=%u", k,
+                        asprintf(&info_s, ";GQT_%u=%u", k,
                                 counts[k][line_idx]);
                                 //counts[k][vids[line_idx]]);
                         append_out_buf(&outbuf, info_s, strlen(info_s));
 
                     } else if (q[k].variant_op == p_pct) {
-                        asprintf(&info_s, ";GTQ_%u=%f", k,
+                        asprintf(&info_s, ";GQT_%u=%f", k,
                                 //((float)counts[k][vids[line_idx]])/
                                 ((float)counts[k][line_idx])/
                                 ((float) id_lens[k]));
                         append_out_buf(&outbuf, info_s, strlen(info_s));
                     } else if (q[k].variant_op == p_maf) {
-                        asprintf(&info_s, ";GTQ_%u=%f", k,
+                        asprintf(&info_s, ";GQT_%u=%f", k,
                                 //((float)counts[k][vids[line_idx]])/
                                 ((float)counts[k][line_idx])/
                                 (((float) id_lens[k])*2.0));

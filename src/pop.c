@@ -545,9 +545,9 @@ void print_pop_result(char *op,
     char *info_s;
 
     asprintf(&info_s,
-             "##INFO=<ID=GTQ_0,Number=1,Type=Float,"
+             "##INFO=<ID=GQT_%s,Number=1,Type=Float,"
              "Description=\"GQT %s\">\n",
-             op);
+             op,op);
     append_out_buf(&outbuf, info_s, strlen(info_s));
 
     char last_header_line[]="#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n";
@@ -559,7 +559,7 @@ void print_pop_result(char *op,
                        qfile.lines[i],
                        qfile.line_lens[i]-1);
         asprintf(&info_s,
-                 ";GTQ_%s=%f",
+                 ";GQT_%s=%f",
                  op,
                  R[i]);
         append_out_buf(&outbuf, info_s, strlen(info_s));

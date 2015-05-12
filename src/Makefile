@@ -18,6 +18,7 @@ LEX=flex
 LIB= timer.o \
      misc.o \
      query.o \
+     pop.o \
      parse_q.yy.o \
      parse_q.o \
      ped.o \

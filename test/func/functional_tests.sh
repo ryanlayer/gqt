@@ -1,6 +1,7 @@
 #!/bin/bash
 
 BCFTOOLS=bcftools
+VCFTOOLS=vcftools
 PLINK=plink
 GQT=../../bin/gqt
 SQLITE=sqlite3
@@ -178,7 +179,7 @@ fi
 
 if [[ -f "`which $SQLITE`" ]]
 then
-    ROWS=`$SQLITE $DATA_PATH/more_fields.ped.db "select * from ped WHERE Sample_Id == Individual_ID;" | wc -l`
+    ROWS=`$SQLITE $DATA_PATH/more_fields.ped.db "select * from ped WHERE BCF_Sample == Individual_ID;" | wc -l`
 
     if [ $ROWS -eq 10 ]
     then
@@ -510,6 +511,57 @@ then
     echo "SUCCESS($LINENO): GQT count matches BCFTOOLS count"
 else
     echo "ERROR($LINENO): GQT count does not matche BCFTOOLS count. $GQT_COUNT vs $BCFTOOLS_COUNT"
+fi
+
+if [[ -f "`which $VCFTOOLS`" ]]
+then
+    if [[ -f "`which $BCFTOOLS`" ]]
+    then
+        BCFTOOLS view $BCF > $DATA_PATH/10.1e4.var.vcf
+        echo -e "I0\nI1\nI2\nI3\nI4" > $DATA_PATH/A.txt
+        echo -e "I5\nI6\nI7\nI8\nI9" > $DATA_PATH/B.txt
+        $VCFTOOLS \
+            --vcf $DATA_PATH/10.1e4.var.vcf \
+            --weir-fst-pop $DATA_PATH/A.txt \
+            --weir-fst-pop $DATA_PATH/B.txt \
+            --out $DATA_PATH/A_vs_B \
+        2> /dev/null > /dev/null
+        tail -n+2 $DATA_PATH/A_vs_B.weir.fst | cut -f 3 > vcftools.fst.tmp
+        $GQT fst \
+            -i $BCF.gqt \
+            -d $BCF.db \
+            -p "BCF_Sample in ( 'I0', 'I1', 'I2', 'I3', 'I4')"\
+            -p "BCF_Sample in ( 'I5', 'I6', 'I7', 'I8', 'I9')" \
+        > $DATA_PATH/gqt.fst.vcf
+
+        cat $DATA_PATH/gqt.fst.vcf \
+        | grep -v "^#" \
+        | cut -f 8 | cut -d ";" -f 2 | cut -d "=" -f2 \
+        > gqt.fst.tmp
+
+        MISSES=`paste vcftools.fst.tmp gqt.fst.tmp \
+        | awk -F'\t' \
+            'function abs(x){
+                return ((x < 0.0) ? -x : x)
+            } 
+            {
+                if (abs($1-$2) > 1e-05) print abs($0)
+            }' \
+        | wc -l`
+
+        if [ $MISSES -eq 0 ]
+        then
+            echo "SUCCESS($LINENO): GQT Fst matches VCFTOOLS fst"
+        else
+            echo "ERROR($LINENO): GQT Fst does not match VCFTOOLS fst"
+            cat $DATA_PATH/A_vs_B.weir.fst
+            cat $DATA_PATH/gqt.fst.vcf
+        fi
+        rm $DATA_PATH/A_vs_B.weir.fst \
+            $DATA_PATH/gqt.fst.vcf \
+            gqt.fst.tmp \
+            vcftools.fst.tmp
+    fi
 fi
 
 clean_up

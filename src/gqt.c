@@ -3,7 +3,7 @@
 #include <string.h>
 
 #define PROGRAM_NAME  "gqt"
-#define VERSION "0.2"
+#define VERSION "0.2.1"
 
 
 int gqt_help(int argc, char **argv);

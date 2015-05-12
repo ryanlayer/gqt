@@ -238,8 +238,6 @@ int pop(char *op, int argc, char **argv)
         pop_help("fst|gst");
     }
 
-    fclose(wf.file);
-
     print_pop_result(op, R, wf.num_fields, bim_file_name);
 
     fclose(wf.file);

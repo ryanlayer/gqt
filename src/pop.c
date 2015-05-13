@@ -243,6 +243,7 @@ int pop(char *op, int argc, char **argv)
     fclose(wf.file);
     return 0;
 }
+//}}}
 
 //{{{int gst(uint32_t id_q_count,
 uint32_t gst(struct wah_file *wf,
@@ -591,7 +592,12 @@ int pop_help(char *func)
 "example, a PED file that includes the \"Paternal_ID\" and \"Gender\" fields\n"
 "(where male = 1 and female = 2) could be queried by:\n"
 "\n"
-"\t-p \"Paternal_ID = 'NA12878' AND Gender = 2\"\n", func);
+"\t-p \"Paternal_ID = 'NA12878' AND Gender = 2\"\n"
+"\n"
+"NOTE: gst and fst assume that variants are biallelic.  If your data\n"
+"contains multiallelic sites, we recommend decomposing your VCF \n"
+"(see A. Tan, Bioinformatics 2015) prior to indexing.\n",
+func);
     return 1;
 }
 //}}}

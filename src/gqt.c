@@ -32,6 +32,7 @@ int main(int argc, char **argv)
     //else if (strcmp(cmd,"sum") == 0) return sum(argc-2, argv+2);
     else if (strcmp(cmd,"gst") == 0) return pop("gst", argc-1, argv+1);
     else if (strcmp(cmd,"fst") == 0) return pop("fst", argc-1, argv+1);
+    else if (strcmp(cmd,"calpha") == 0) return pop("calpha", argc-1, argv+1);
     else if (strcmp(cmd,"query") == 0) return query(argc-1, argv+1);
     else if (strcmp(cmd,"sandbox") == 0) return sandbox(argc-2, argv+2);
     else if (strcmp(cmd,"misc") == 0) return misc(argc-2, argv+2);
@@ -47,6 +48,7 @@ int gqt_help(int argc, char **argv)
            "usage:   %s <command> [options]\n"
            "         convert   Convert between file types\n"
            "         query     Query the index\n"
+           "         calpha    Calculate C-alpha paramters (Neal 2011)\n" 
            "         gst       Calculate Gst statistic (Neil 1973)\n"
            "         fst       Calculate Fst statistic " 
                                 "(Weir and Cockerham 1984)\n",

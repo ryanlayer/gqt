@@ -14,6 +14,12 @@
 
 void permute(uint32_t *R, uint32_t len_R);
 
+void map_and_write(uint32_t *vids,
+                   uint32_t *vals,
+                   uint32_t *mapped_vals,
+                   uint32_t num_variants,
+                   FILE *f);
+
 int pop_help(char *op);
 
 
@@ -235,12 +241,15 @@ int pop(char *op, int argc, char **argv)
                        &n_ctrls,
                        N);
 
+        /*
         print_calpha_result(R,
                             n_cases,
                             n_ctrls,
                             N,
                             wf.num_fields,
                             bim_file_name);
+        */
+        //free(R);
         /*
         uint32_t i,j;
         for (i = 0; i < len_R; ++i) {
@@ -386,11 +395,13 @@ uint32_t calpha(struct wah_file *wf,
                 uint32_t *n_ctrls,
                 uint32_t N) {
 
-    uint32_t **case_ctrl_counts = 
-            (uint32_t **)malloc((N*2 + 2)* sizeof(uint32_t *));
+    FILE *tmp_out = fopen(".calpha.tmp", "wb");
+
+    //uint32_t **case_ctrl_counts = 
+            //(uint32_t **)malloc((N*2 + 2)* sizeof(uint32_t *));
 
     uint32_t i,j;
-    uint32_t *sums[id_q_count];
+    //uint32_t *sums[id_q_count];
 
     uint32_t num_variants = wf->num_fields;
     uint32_t num_samples = wf->num_records;
@@ -419,7 +430,11 @@ uint32_t calpha(struct wah_file *wf,
     low_v = 1;
     high_v = 3;
 
-    uint32_t *sum_cases;
+    //uint32_t *sum_cases;
+    uint32_t *sums = NULL;
+
+    uint32_t *tmp_mapped_vals = (uint32_t *)
+            malloc(num_variants*sizeof(uint32_t));
 
 #ifdef __AVX2__
     uint32_t len_sum_cases = avx_sum_range_records_in_place_wahbm(*wf,
@@ -427,18 +442,23 @@ uint32_t calpha(struct wah_file *wf,
                                                                   num_cases,
                                                                   low_v,
                                                                   high_v,
-                                                                  &sum_cases);
+                                                                  &sums);
+                                                                  //&sum_cases);
 #else
     uint32_t len_sum_cases = sum_range_records_in_place_wahbm(*wf,
                                                              case_ids,
                                                              num_cases,
                                                              low_v,
                                                              high_v,
-                                                             &sum_cases);
+                                                             &sums);
+                                                             //&sum_cases);
 #endif
-    case_ctrl_counts[0] = sum_cases;
+    //case_ctrl_counts[0] = sum_cases;
+    map_and_write(vids, sums, tmp_mapped_vals, num_variants, tmp_out);
+    free(sums);
 
-    uint32_t *sum_ctrls;
+
+    //uint32_t *sum_ctrls;
 
 #ifdef __AVX2__
     uint32_t len_sum_ctrls = avx_sum_range_records_in_place_wahbm(*wf,
@@ -446,18 +466,22 @@ uint32_t calpha(struct wah_file *wf,
                                                                   num_ctrls,
                                                                   low_v,
                                                                   high_v,
-                                                                  &sum_ctrls);
+                                                                  &sums);
+                                                                  //&sum_ctrls);
 #else
     uint32_t len_sum_ctrls = sum_range_records_in_place_wahbm(*wf,
                                                               ctrl_ids,
                                                               num_ctrls,
                                                               low_v,
                                                               high_v,
-                                                              &sum_ctrls);
+                                                              &sums);
+                                                              //&sum_ctrls);
 #endif
 
 
-    case_ctrl_counts[1] = sum_ctrls;
+    //case_ctrl_counts[1] = sum_ctrls;
+    map_and_write(vids, sums, tmp_mapped_vals, num_variants, tmp_out);
+    free(sums);
 
     //srand(time(NULL));
     srand(1);
@@ -472,7 +496,7 @@ uint32_t calpha(struct wah_file *wf,
     for ( i = 0; i < N; ++i) {
         permute(P_all_ids, num_all);
 
-        uint32_t *P_sum_cases;
+        //uint32_t *P_sum_cases;
 
 #ifdef __AVX2__
         uint32_t P_len_sum_cases = 
@@ -481,7 +505,8 @@ uint32_t calpha(struct wah_file *wf,
                                                 num_cases,
                                                 low_v,
                                                 high_v,
-                                                &P_sum_cases);
+                                                &sums);
+                                                //&P_sum_cases);
 #else
         uint32_t P_len_sum_cases = 
                 sum_range_records_in_place_wahbm(*wf,
@@ -489,13 +514,16 @@ uint32_t calpha(struct wah_file *wf,
                                                 num_cases,
                                                 low_v,
                                                 high_v,
-                                                &P_sum_cases);
+                                                &sums);
+                                                //&P_sum_cases);
 #endif
 
-        case_ctrl_counts[ccc_i] = P_sum_cases;
-        ccc_i += 1;
+        //case_ctrl_counts[ccc_i] = P_sum_cases;
+        //ccc_i += 1;
+        map_and_write(vids, sums, tmp_mapped_vals, num_variants, tmp_out);
+        free(sums);
 
-        uint32_t *P_sum_ctrls;
+        //uint32_t *P_sum_ctrls;
 
 #ifdef __AVX2__
         uint32_t P_len_sum_ctrls = 
@@ -504,7 +532,8 @@ uint32_t calpha(struct wah_file *wf,
                                                      num_ctrls,
                                                      low_v,
                                                      high_v,
-                                                     &P_sum_ctrls);
+                                                     &sums);
+                                                     //&P_sum_ctrls);
 #else
         uint32_t P_len_sum_ctrls = 
                 sum_range_records_in_place_wahbm(*wf,
@@ -512,19 +541,21 @@ uint32_t calpha(struct wah_file *wf,
                                                  num_ctrls,
                                                  low_v,
                                                  high_v,
-                                                 &P_sum_ctrls);
+                                                 &sums);
+                                                 //&P_sum_ctrls);
 #endif
 
-        case_ctrl_counts[ccc_i] = P_sum_ctrls;
-        ccc_i += 1;
+        //case_ctrl_counts[ccc_i] = P_sum_ctrls;
+        //ccc_i += 1;
+        map_and_write(vids, sums, tmp_mapped_vals, num_variants, tmp_out);
+        free(sums);
     }
 
+    free(P_all_ids);
+    free(all_ids);
 
-    /*
-    uint32_t **mapped_case_ctrl_counts = 
-            (uint32_t **)malloc((N*2 + 2)* sizeof(uint32_t *));
-    */
 
+#if 0
     /* 
      * at this point we are going to realign the data so that 
      * the values associate with each variant are grouped together
@@ -568,10 +599,25 @@ uint32_t calpha(struct wah_file *wf,
     }
     fprintf(stderr, "\n");
     */
-
+#endif
+    fclose(tmp_out);
     return num_variants;
 }
 //}}}
+
+void map_and_write(uint32_t *vids,
+                   uint32_t *vals,
+                   uint32_t *mapped_vals,
+                   uint32_t num_variants,
+                   FILE *f)
+{
+    uint32_t i;
+    for ( i = 0; i < num_variants; ++i)
+        mapped_vals[vids[i]] = vals[i];
+
+    fwrite(mapped_vals, sizeof(uint32_t), num_variants, f);
+}
+
 
 //{{{void permute(uint32_t *R, uint32_t len_R)
 void permute(uint32_t *R, uint32_t len_R)
@@ -920,6 +966,9 @@ void print_calpha_result(uint32_t *R,
                 P_csv);
         append_out_buf(&outbuf, info_s, strlen(info_s));
     }
+
+    free(info_s);
+    free(P_csv);
 
     quick_file_delete(&qfile);
     free_out_buf(&outbuf);

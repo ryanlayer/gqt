@@ -1,14 +1,18 @@
 #include <immintrin.h>
 #include <stdio.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
 #include <inttypes.h>
+#include <time.h>
 #include "genotq.h"
 #include "timer.h"
 #include "quick_file.h"
 #include "output_buffer.h"
+
+void permute(uint32_t *R, uint32_t len_R);
 
 int pop_help(char *op);
 
@@ -27,58 +31,27 @@ uint32_t gst(struct wah_file *wf,
              char *db_file_name,
              double **mapped_gst);
 
+uint32_t calpha(struct wah_file *wf,
+                char **id_query_list,
+                uint32_t id_q_count,
+                uint32_t *vids,
+                char *db_file_name,
+                uint32_t **case_ctrl_counts,
+                uint32_t *n_cases,
+                uint32_t *n_ctrls,
+                uint32_t N);
+
+void print_calpha_result(uint32_t *R,
+                         uint32_t n_cases,
+                         uint32_t n_ctrls,
+                         uint32_t N,
+                         uint32_t num_variants,
+                         char *bim);
+
 void print_pop_result(char *op,
                       double *R,
                       uint32_t num_variants,
                       char *bim);
-
-#if 0
-void print_query_result(uint32_t *mask,
-                        uint32_t mask_len,
-                        uint32_t *vids,
-                        struct gqt_query *q,
-                        uint32_t **counts,
-                        uint32_t *id_lens,
-                        uint32_t num_qs,
-                        uint32_t num_fields,
-                        char *bim);
-int query_cmp(uint32_t value,
-              int op_condition,
-              int condition_value);
-
-int compare_uint32_t (const void *a, const void *b);
-
-//{{{ int compare_uint32_t (const void *a, const void *b)
-int compare_uint32_t (const void *a, const void *b)
-{
-    return ( *(uint32_t*)a - *(uint32_t*)b );
-}
-//}}}
-
-//{{{int query_cmp(uint32_t value,
-int query_cmp(uint32_t value,
-              int op_condition,
-              int condition_value)
-{
-    switch(op_condition) {
-        case p_equal:
-            return value == condition_value;
-        case p_not_equal:
-            return value != condition_value;
-        case p_less_than:
-            return value < condition_value;
-        case p_greater_than:
-            return value > condition_value;
-        case p_less_than_equal:
-            return value <= condition_value;
-        case p_greater_than_equal:
-            return value >= condition_value;
-        default:
-            return -1;
-    }
-}
-//}}}
-#endif
 
 //{{{ int pop(char *op, int argc, char **argv)
 int pop(char *op, int argc, char **argv)
@@ -95,13 +68,19 @@ int pop(char *op, int argc, char **argv)
         id_q_count = 0,
         d_is_set = 0,
         v_is_set = 0,
+        N_is_set = 0,
         b_is_set = 0;
+    uint32_t N;
 
     char *id_query_list[100];
 
     //{{{ parse cmd line opts
-    while ((c = getopt (argc, argv, "hi:p:d:b:v:")) != -1) {
+    while ((c = getopt (argc, argv, "hi:p:d:b:v:n:")) != -1) {
         switch (c) {
+        case 'n':
+            N_is_set = 1;
+            N = atoi(optarg);
+            break;
         case 'i':
             i_is_set = 1;
             wahbm_file_name = optarg;
@@ -226,19 +205,56 @@ int pop(char *op, int argc, char **argv)
     uint32_t num_ints = (wf.num_fields + 32 - 1)/ 32;
     uint32_t len_ints;
 
-    double *R;
     uint32_t len_R;
 
     if (strcmp("fst",op) == 0) {
+        double *R;
         len_R = fst(&wf, id_query_list, id_q_count, vids, db_file_name, &R);
+        print_pop_result(op, R, wf.num_fields, bim_file_name);
     } else if (strcmp("gst",op) == 0) {
+        double *R;
         len_R = gst(&wf, id_query_list, id_q_count, vids, db_file_name, &R);
+        print_pop_result(op, R, wf.num_fields, bim_file_name);
+    } else if (strcmp("calpha",op) == 0) {
+        if (N_is_set == 0) {
+            printf("Number of permutations is not set\n");
+            return pop_help(op);
+        }
+
+        uint32_t n_cases, n_ctrls;
+        // The first two arrays hold the observed case/control counts, and
+        // the remaining hold the permutation results
+        uint32_t *R;
+
+        len_R = calpha(&wf,
+                       id_query_list,
+                       id_q_count, vids,
+                       db_file_name, 
+                       &R,
+                       &n_cases,
+                       &n_ctrls,
+                       N);
+
+        print_calpha_result(R,
+                            n_cases,
+                            n_ctrls,
+                            N,
+                            wf.num_fields,
+                            bim_file_name);
+        /*
+        uint32_t i,j;
+        for (i = 0; i < len_R; ++i) {
+            for (j = 0; j < (N*2 + 2); ++j)
+                fprintf(stderr, "%u\t", R[i*(N*2+2) + j]);
+            fprintf(stderr, "\n");
+        }
+        */
+
     } else {
         fprintf(stderr, "ERROR: Unknown opperation %s", op);
         pop_help("fst|gst");
     }
 
-    print_pop_result(op, R, wf.num_fields, bim_file_name);
 
     fclose(wf.file);
     return 0;
@@ -345,6 +361,228 @@ uint32_t gst(struct wah_file *wf,
         free(sums[i]);
 
     return num_variants;
+}
+//}}}
+
+//{{{ uint32_t calpha(struct wah_file *wf,
+/*
+ * case_ctrl_counts is an array of arrays the following values:
+ * there is one array per variants
+ * each of those arrays has the vaules:
+ * 2: observed # of variants in cases
+ * 3: observed # of variants in controls
+ * 4: observed # of variants in cases
+ * 5: observed # of variants in controls
+ * ...
+ *
+ */
+uint32_t calpha(struct wah_file *wf,
+                char **id_query_list,
+                uint32_t id_q_count,
+                uint32_t *vids,
+                char *db_file_name,
+                uint32_t **mapped_case_ctrl_counts,
+                uint32_t *n_cases,
+                uint32_t *n_ctrls,
+                uint32_t N) {
+
+    uint32_t **case_ctrl_counts = 
+            (uint32_t **)malloc((N*2 + 2)* sizeof(uint32_t *));
+
+    uint32_t i,j;
+    uint32_t *sums[id_q_count];
+
+    uint32_t num_variants = wf->num_fields;
+    uint32_t num_samples = wf->num_records;
+
+
+    uint32_t *case_ids;
+    uint32_t num_cases = resolve_ind_query(&case_ids,
+                                           id_query_list[0],
+                                           db_file_name);
+
+    uint32_t *ctrl_ids;
+    uint32_t num_ctrls = resolve_ind_query(&ctrl_ids,
+                                           id_query_list[1],
+                                           db_file_name);
+
+    uint32_t num_all = num_cases + num_ctrls;
+    uint32_t *all_ids = (uint32_t *)malloc(num_all * sizeof(uint32_t));
+
+    for (i = 0; i < num_cases; ++i) 
+        all_ids[i] = case_ids[i];
+
+    for (i = 0; i < num_ctrls; ++i)
+        all_ids[i+num_cases] = ctrl_ids[i];
+
+    uint32_t low_v, high_v;
+    low_v = 1;
+    high_v = 3;
+
+    uint32_t *sum_cases;
+
+#ifdef __AVX2__
+    uint32_t len_sum_cases = avx_sum_range_records_in_place_wahbm(*wf,
+                                                                  case_ids,
+                                                                  num_cases,
+                                                                  low_v,
+                                                                  high_v,
+                                                                  &sum_cases);
+#else
+    uint32_t len_sum_cases = sum_range_records_in_place_wahbm(*wf,
+                                                             case_ids,
+                                                             num_cases,
+                                                             low_v,
+                                                             high_v,
+                                                             &sum_cases);
+#endif
+    case_ctrl_counts[0] = sum_cases;
+
+    uint32_t *sum_ctrls;
+
+#ifdef __AVX2__
+    uint32_t len_sum_ctrls = avx_sum_range_records_in_place_wahbm(*wf,
+                                                                  ctrl_ids,
+                                                                  num_ctrls,
+                                                                  low_v,
+                                                                  high_v,
+                                                                  &sum_ctrls);
+#else
+    uint32_t len_sum_ctrls = sum_range_records_in_place_wahbm(*wf,
+                                                              ctrl_ids,
+                                                              num_ctrls,
+                                                              low_v,
+                                                              high_v,
+                                                              &sum_ctrls);
+#endif
+
+
+    case_ctrl_counts[1] = sum_ctrls;
+
+    //srand(time(NULL));
+    srand(1);
+    uint32_t *P_all_ids = (uint32_t *)malloc(num_all*sizeof(uint32_t));
+    memcpy(P_all_ids, all_ids, num_all*sizeof(uint32_t));
+    uint32_t *P_case_ids, *P_ctrl_ids;    
+    P_case_ids = P_all_ids;
+    P_ctrl_ids = P_all_ids + num_cases;
+
+    uint32_t ccc_i = 2;
+
+    for ( i = 0; i < N; ++i) {
+        permute(P_all_ids, num_all);
+
+        uint32_t *P_sum_cases;
+
+#ifdef __AVX2__
+        uint32_t P_len_sum_cases = 
+                avx_sum_range_records_in_place_wahbm(*wf,
+                                                P_case_ids,
+                                                num_cases,
+                                                low_v,
+                                                high_v,
+                                                &P_sum_cases);
+#else
+        uint32_t P_len_sum_cases = 
+                sum_range_records_in_place_wahbm(*wf,
+                                                P_case_ids,
+                                                num_cases,
+                                                low_v,
+                                                high_v,
+                                                &P_sum_cases);
+#endif
+
+        case_ctrl_counts[ccc_i] = P_sum_cases;
+        ccc_i += 1;
+
+        uint32_t *P_sum_ctrls;
+
+#ifdef __AVX2__
+        uint32_t P_len_sum_ctrls = 
+                avx_sum_range_records_in_place_wahbm(*wf,
+                                                     P_ctrl_ids,
+                                                     num_ctrls,
+                                                     low_v,
+                                                     high_v,
+                                                     &P_sum_ctrls);
+#else
+        uint32_t P_len_sum_ctrls = 
+                sum_range_records_in_place_wahbm(*wf,
+                                                 P_ctrl_ids,
+                                                 num_ctrls,
+                                                 low_v,
+                                                 high_v,
+                                                 &P_sum_ctrls);
+#endif
+
+        case_ctrl_counts[ccc_i] = P_sum_ctrls;
+        ccc_i += 1;
+    }
+
+
+    /*
+    uint32_t **mapped_case_ctrl_counts = 
+            (uint32_t **)malloc((N*2 + 2)* sizeof(uint32_t *));
+    */
+
+    /* 
+     * at this point we are going to realign the data so that 
+     * the values associate with each variant are grouped together
+     * mapped_case_ctrl_counts will have num_variants rows
+     * and each row is (N*2 + 2) widde
+     *
+     * case_ctrl_counts has (N*2 + 2) arrarys, each num_variants long
+     * 
+     * case_ctrl_counts[i][j]
+     * will refere to the ith observation for variant j 
+     * which corresponds to 
+     * mapped_case_ctrl_counts[j*(N*2 + 2) + i]
+     *
+     */
+    *mapped_case_ctrl_counts = 
+            (uint32_t *)malloc((num_variants)*(N*2 + 2)* sizeof(uint32_t *));
+
+    for ( i = 0; i < (N*2 + 2); ++i) {
+        for ( j = 0; j < num_variants; ++j) {
+
+            // i * (N*2+2) will get us to the right row
+            // and vids[j] to the right col
+            (*mapped_case_ctrl_counts)[vids[j]*(N*2+2) + i] =
+                case_ctrl_counts[i][j];
+        }
+
+        free(case_ctrl_counts[i]);
+    }
+    free(case_ctrl_counts);
+
+    *n_cases = num_cases;
+    *n_ctrls = num_ctrls;
+
+    /*
+    for (i = 0; i < num_variants; ++i) {
+        for (j = 0; j < (N*2 + 2); ++j)
+            fprintf(stderr,
+                    "%u\t",
+                    (*mapped_case_ctrl_counts)[i*(N*2 +2) + j]);
+        fprintf(stderr, "\n");
+    }
+    fprintf(stderr, "\n");
+    */
+
+    return num_variants;
+}
+//}}}
+
+//{{{void permute(uint32_t *R, uint32_t len_R)
+void permute(uint32_t *R, uint32_t len_R)
+{
+    uint32_t k;
+    for (k = len_R-1; k > 0; k--) {
+        int j = rand() % (k+1);
+        int temp = R[j];
+        R[j] = R[k];
+        R[k] = temp;
+    }
 }
 //}}}
 
@@ -572,11 +810,128 @@ void print_pop_result(char *op,
 }
 //}}}
 
+//{{{ void print_calpha_result(uint32_t *R,
+void print_calpha_result(uint32_t *R,
+                         uint32_t n_cases,
+                         uint32_t n_ctrls,
+                         uint32_t N,
+                         uint32_t num_variants,
+                         char *bim)
+{
+
+
+
+    uint32_t i,j;
+    uint32_t max_int = 0;
+
+    // To reuse the same char* for each of the variants, we need to make sure
+    // to allocate enough space to hold all the digits and commas 
+    for (i = 0; i < (num_variants * (N*2 +2)); ++i) {
+        if (max_int < R[i])
+            max_int = R[i];
+    }
+
+    uint32_t max_int_len = (max_int ==0) ? 1 : (int)log10(max_int) + 1;
+
+    uint32_t P_csv_len = (max_int_len + N*2);
+    char *P_csv = (char *)malloc(P_csv_len*sizeof(char));
+    uint32_t P_csv_i;
+
+    int l;
+
+    struct quick_file_info qfile;
+    struct output_buffer outbuf;
+    char pct[50];
+
+    init_out_buf(&outbuf, NULL);
+    quick_file_init(bim, &qfile);
+
+    append_out_buf(&outbuf,
+                   qfile.main_buf,
+                   qfile.header_len);
+
+    char *info_s;
+
+    asprintf(&info_s,
+             "##INFO=<ID=N_CASE,Number=1,Type=Integer,"
+             "Description=\"Number of cases\">\n");
+    append_out_buf(&outbuf, info_s, strlen(info_s));
+
+    asprintf(&info_s,
+             "##INFO=<ID=N_CTRL,Number=1,Type=Integer,"
+             "Description=\"Number of controls\">\n");
+    append_out_buf(&outbuf, info_s, strlen(info_s));
+
+    asprintf(&info_s,
+             "##INFO=<ID=O_CASE,Number=1,Type=Integer,"
+             "Description=\"Number of variants observed in cases\">\n");
+    append_out_buf(&outbuf, info_s, strlen(info_s));
+
+    asprintf(&info_s,
+             "##INFO=<ID=O_CTRL,Number=1,Type=Integer,"
+             "Description=\"Number of variants observed in controls\">\n");
+    append_out_buf(&outbuf, info_s, strlen(info_s));
+
+    asprintf(&info_s,
+             "##INFO=<ID=P_CASE_CTRL,Number=%u,Type=Integer,"
+             "Description=\"Number of variants in permuted cases "
+             "and controls where i is the case and i+1 is the control\">\n",
+             N*2);
+    append_out_buf(&outbuf, info_s, strlen(info_s));
+
+
+    char last_header_line[]="#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n";
+
+    append_out_buf(&outbuf, last_header_line, strlen(last_header_line));
+
+    for (i=0; i < num_variants; ++i) {
+
+        append_out_buf(&outbuf,
+                       qfile.lines[i],
+                       qfile.line_lens[i]-1);
+
+        P_csv_i = 0;
+        // The first two values for R are the observations, the rest are 
+        // permutation case/ctrl pairs
+        for (j = 2; j < N*2 + 2; j+=2) {
+            if (j == 2)
+                l = sprintf(P_csv + P_csv_i,
+                            "%d,%d",
+                            R[i*(N*2 + 2) + j],
+                            R[i*(N*2 + 2) + j+1]);
+            else
+                l = sprintf(P_csv + P_csv_i,
+                            ",%d,%d",
+                            R[i*(N*2 + 2) + j],
+                            R[i*(N*2 + 2) + j+1]);
+            P_csv_i += l;
+        }
+
+        asprintf(&info_s,
+                ";N_CASE=%u;"
+                "N_CTRL=%u;"
+                "O_CASE=%u;"
+                "O_CTRL=%u;"
+                "P_CASE_CTRL=%s\n",
+                n_cases,
+                n_ctrls,
+                R[i*(N*2+2) + 0],
+                R[i*(N*2+2) + 1],
+                P_csv);
+        append_out_buf(&outbuf, info_s, strlen(info_s));
+    }
+
+    quick_file_delete(&qfile);
+    free_out_buf(&outbuf);
+}
+//}}}
+
 //{{{int pop_help(char *func)
 int pop_help(char *func)
 {
     printf(
 "usage:   gqt %s -i <gqt file> \\\n"
+"                   -N <number of permutations> \\\n"
 "                   -p <population query 1> \\\n"
 "                   -p <population query 2> \\\n"
 "                   ... \\\n"
@@ -601,3 +956,4 @@ func);
     return 1;
 }
 //}}}
+

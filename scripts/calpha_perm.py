@@ -1,38 +1,8 @@
 #!/usr/bin/env python
 import sys
-import math
 import numpy as np
 
 from optparse import OptionParser
-
-def choose(n, k):
-    """
-    A fast way to calculate binomial coefficients by Andrew Dalke (contrib).
-    """
-    if 0 <= k <= n:
-        ntok = 1
-        ktok = 1
-        for t in xrange(1, min(k, n - k) + 1):
-            ntok *= n
-            ktok *= t
-            n -= 1
-        return ntok // ktok
-    else:
-        return 0
-
-def Ta(y_i, n_i, p):
-    return (y_i - n_i*p)**2 - (n_i * p * (1 - p))
-
-def C(n_distro, p):
-    c = 0
-    for n in n_distro:
-        s = 0
-        for u in range(n):
-            s += (((u - n*p)**2 - n*p*(1-p))**2 ) * \
-                    choose(n, u) * (p**u) * ((1-p)**(n-u))
-        c += n_distro[n] * s
-
-    return c
 
 def to_map(s):
     m = {}
@@ -43,6 +13,11 @@ def to_map(s):
         else:
             m[A[0]] = None
     return m
+
+def Ta(o_case, o_ctrl, p):
+    y_i = o_case
+    n_i = o_case + o_ctrl
+    return (y_i - n_i*p)**2 - (n_i * p * (1 - p))
 
 def prog():
     parser = OptionParser()
@@ -56,6 +31,7 @@ def prog():
         "--bed",
         dest="bed",
         help="BED file defining regions, genes, groups, etc.")
+
 
     (options, args) = parser.parse_args()
 
@@ -75,11 +51,11 @@ def prog():
     f = open(options.vcf,'r')
 
     T_alpha = 0
-    n_distro = {}
+    P_alpha = []
+    n_perms = -1
 
     curr_Region = -1
     in_region = 0
-    p = -1 
 
     for l in f:
         if l[0] != '#':
@@ -95,21 +71,23 @@ def prog():
                     in_region = 1
                     curr_Region += 1
                     T_alpha = 0
-                    n_distro = {}
+                    P_alpha = []
 
             elif in_region == 1: #currently in
                 # see if we left
                 if (Regions[curr_Region][0] != A[0]) or \
                         (int(A[1]) >= Regions[curr_Region][2]):
 
-                    print '\t'.join([Regions[curr_Region][0],  \
-                                    str(Regions[curr_Region][1]), \
-                                    str(Regions[curr_Region][2]), \
-                                    'T:' + \
-                                    str(T_alpha), \
-                                    'Z:' + \
-                                    str(T_alpha / np.sqrt(C(n_distro, p)))])
-                                        
+                    #print 'out', A[0], A[1]
+
+                    P_alpha = np.array(P_alpha)**2
+                    print   '\t'.join([Regions[curr_Region][0],  \
+                                        str(Regions[curr_Region][1]), \
+                                        str(Regions[curr_Region][2]), \
+                                        'T:' + \
+                                        str(T_alpha), \
+                                        'p:' + \
+                                        str((1 + (P_alpha > (T_alpha **2)).sum()) / float(n_perms + 1))])
                     in_region = 0
                 #else:
                     #print 'still in', A[0], A[1]
@@ -125,7 +103,7 @@ def prog():
                         (int(A[1]) >= Regions[curr_Region+1][1]) and \
                         (int(A[1]) < Regions[curr_Region+1][2]):
                     T_alpha = 0
-                    n_distro = {}
+                    P_alpha = []
                     in_region = 1
                     curr_Region += 1
 
@@ -133,30 +111,32 @@ def prog():
                 continue
 
             m = to_map(A[7])
+            n_case = int(m['N_CASE'])
+            n_ctrl = int(m['N_CTRL'])
+            p = n_case / float(n_case + n_ctrl)
 
-            if p == -1:
-                n_case = int(m['N_CASE'])
-                n_ctrl = int(m['N_CTRL'])
-                p = n_case / float(n_case + n_ctrl)
+            T_alpha += Ta(int(m['O_CASE']), int(m['O_CTRL']), p)
 
-            y = int(m['O_CASE'])
-            n = y + int(m['O_CTRL'])
+            perms = [int(x) for x in m['P_CASE_CTRL'].split(',')]
 
-            T_alpha += Ta(y, n, p)
+            if n_perms == -1:
+                n_perms = len(perms)/2
 
-            if (n) not in n_distro:
-                n_distro[n] = 1
-            else:
-                n_distro[n] += 1
+            if len(P_alpha) == 0:
+                P_alpha = [0] * n_perms
+
+            for i in range(n_perms):
+                P_alpha[i] += Ta( perms[i*2], perms[i*2+1], p)
 
     if in_region == 1:
+        P_alpha = np.array(P_alpha)**2
         print   '\t'.join([Regions[curr_Region][0],  \
                 str(Regions[curr_Region][1]), \
                 str(Regions[curr_Region][2]), \
                 'T:' + \
                 str(T_alpha), \
-                'Z:' + \
-                str(T_alpha / np.sqrt(C(n_distro, p)))])
+                'p:' + \
+                str((1 + (P_alpha > (T_alpha **2)).sum()) / float(n_perms + 1))])
 
 
     f.close()

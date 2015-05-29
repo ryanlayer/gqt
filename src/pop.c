@@ -14,12 +14,6 @@
 
 void permute(uint32_t *R, uint32_t len_R);
 
-void map_and_write(uint32_t *vids,
-                   uint32_t *vals,
-                   uint32_t *mapped_vals,
-                   uint32_t num_variants,
-                   FILE *f);
-
 int pop_help(char *op);
 
 
@@ -74,19 +68,14 @@ int pop(char *op, int argc, char **argv)
         id_q_count = 0,
         d_is_set = 0,
         v_is_set = 0,
-        N_is_set = 0,
         b_is_set = 0;
     uint32_t N;
 
     char *id_query_list[100];
 
     //{{{ parse cmd line opts
-    while ((c = getopt (argc, argv, "hi:p:d:b:v:n:")) != -1) {
+    while ((c = getopt (argc, argv, "hi:p:d:b:v:")) != -1) {
         switch (c) {
-        case 'n':
-            N_is_set = 1;
-            N = atoi(optarg);
-            break;
         case 'i':
             i_is_set = 1;
             wahbm_file_name = optarg;
@@ -222,10 +211,12 @@ int pop(char *op, int argc, char **argv)
         len_R = gst(&wf, id_query_list, id_q_count, vids, db_file_name, &R);
         print_pop_result(op, R, wf.num_fields, bim_file_name);
     } else if (strcmp("calpha",op) == 0) {
+        /*
         if (N_is_set == 0) {
             printf("Number of permutations is not set\n");
             return pop_help(op);
         }
+        */
 
         uint32_t n_cases, n_ctrls;
         // The first two arrays hold the observed case/control counts, and
@@ -239,17 +230,14 @@ int pop(char *op, int argc, char **argv)
                        &R,
                        &n_cases,
                        &n_ctrls,
-                       N);
+                       0);
 
-        /*
         print_calpha_result(R,
                             n_cases,
                             n_ctrls,
-                            N,
+                            0,
                             wf.num_fields,
                             bim_file_name);
-        */
-        //free(R);
         /*
         uint32_t i,j;
         for (i = 0; i < len_R; ++i) {
@@ -258,6 +246,8 @@ int pop(char *op, int argc, char **argv)
             fprintf(stderr, "\n");
         }
         */
+
+        free(R);
 
     } else {
         fprintf(stderr, "ERROR: Unknown opperation %s", op);
@@ -395,13 +385,11 @@ uint32_t calpha(struct wah_file *wf,
                 uint32_t *n_ctrls,
                 uint32_t N) {
 
-    FILE *tmp_out = fopen(".calpha.tmp", "wb");
-
-    //uint32_t **case_ctrl_counts = 
-            //(uint32_t **)malloc((N*2 + 2)* sizeof(uint32_t *));
+    uint32_t **case_ctrl_counts = 
+            (uint32_t **)malloc((N*2 + 2)* sizeof(uint32_t *));
 
     uint32_t i,j;
-    //uint32_t *sums[id_q_count];
+    uint32_t *sums[id_q_count];
 
     uint32_t num_variants = wf->num_fields;
     uint32_t num_samples = wf->num_records;
@@ -430,11 +418,7 @@ uint32_t calpha(struct wah_file *wf,
     low_v = 1;
     high_v = 3;
 
-    //uint32_t *sum_cases;
-    uint32_t *sums = NULL;
-
-    uint32_t *tmp_mapped_vals = (uint32_t *)
-            malloc(num_variants*sizeof(uint32_t));
+    uint32_t *sum_cases;
 
 #ifdef __AVX2__
     uint32_t len_sum_cases = avx_sum_range_records_in_place_wahbm(*wf,
@@ -442,23 +426,18 @@ uint32_t calpha(struct wah_file *wf,
                                                                   num_cases,
                                                                   low_v,
                                                                   high_v,
-                                                                  &sums);
-                                                                  //&sum_cases);
+                                                                  &sum_cases);
 #else
     uint32_t len_sum_cases = sum_range_records_in_place_wahbm(*wf,
                                                              case_ids,
                                                              num_cases,
                                                              low_v,
                                                              high_v,
-                                                             &sums);
-                                                             //&sum_cases);
+                                                             &sum_cases);
 #endif
-    //case_ctrl_counts[0] = sum_cases;
-    map_and_write(vids, sums, tmp_mapped_vals, num_variants, tmp_out);
-    free(sums);
+    case_ctrl_counts[0] = sum_cases;
 
-
-    //uint32_t *sum_ctrls;
+    uint32_t *sum_ctrls;
 
 #ifdef __AVX2__
     uint32_t len_sum_ctrls = avx_sum_range_records_in_place_wahbm(*wf,
@@ -466,22 +445,18 @@ uint32_t calpha(struct wah_file *wf,
                                                                   num_ctrls,
                                                                   low_v,
                                                                   high_v,
-                                                                  &sums);
-                                                                  //&sum_ctrls);
+                                                                  &sum_ctrls);
 #else
     uint32_t len_sum_ctrls = sum_range_records_in_place_wahbm(*wf,
                                                               ctrl_ids,
                                                               num_ctrls,
                                                               low_v,
                                                               high_v,
-                                                              &sums);
-                                                              //&sum_ctrls);
+                                                              &sum_ctrls);
 #endif
 
 
-    //case_ctrl_counts[1] = sum_ctrls;
-    map_and_write(vids, sums, tmp_mapped_vals, num_variants, tmp_out);
-    free(sums);
+    case_ctrl_counts[1] = sum_ctrls;
 
     //srand(time(NULL));
     srand(1);
@@ -496,7 +471,7 @@ uint32_t calpha(struct wah_file *wf,
     for ( i = 0; i < N; ++i) {
         permute(P_all_ids, num_all);
 
-        //uint32_t *P_sum_cases;
+        uint32_t *P_sum_cases;
 
 #ifdef __AVX2__
         uint32_t P_len_sum_cases = 
@@ -505,8 +480,7 @@ uint32_t calpha(struct wah_file *wf,
                                                 num_cases,
                                                 low_v,
                                                 high_v,
-                                                &sums);
-                                                //&P_sum_cases);
+                                                &P_sum_cases);
 #else
         uint32_t P_len_sum_cases = 
                 sum_range_records_in_place_wahbm(*wf,
@@ -514,16 +488,13 @@ uint32_t calpha(struct wah_file *wf,
                                                 num_cases,
                                                 low_v,
                                                 high_v,
-                                                &sums);
-                                                //&P_sum_cases);
+                                                &P_sum_cases);
 #endif
 
-        //case_ctrl_counts[ccc_i] = P_sum_cases;
-        //ccc_i += 1;
-        map_and_write(vids, sums, tmp_mapped_vals, num_variants, tmp_out);
-        free(sums);
+        case_ctrl_counts[ccc_i] = P_sum_cases;
+        ccc_i += 1;
 
-        //uint32_t *P_sum_ctrls;
+        uint32_t *P_sum_ctrls;
 
 #ifdef __AVX2__
         uint32_t P_len_sum_ctrls = 
@@ -532,8 +503,7 @@ uint32_t calpha(struct wah_file *wf,
                                                      num_ctrls,
                                                      low_v,
                                                      high_v,
-                                                     &sums);
-                                                     //&P_sum_ctrls);
+                                                     &P_sum_ctrls);
 #else
         uint32_t P_len_sum_ctrls = 
                 sum_range_records_in_place_wahbm(*wf,
@@ -541,21 +511,19 @@ uint32_t calpha(struct wah_file *wf,
                                                  num_ctrls,
                                                  low_v,
                                                  high_v,
-                                                 &sums);
-                                                 //&P_sum_ctrls);
+                                                 &P_sum_ctrls);
 #endif
 
-        //case_ctrl_counts[ccc_i] = P_sum_ctrls;
-        //ccc_i += 1;
-        map_and_write(vids, sums, tmp_mapped_vals, num_variants, tmp_out);
-        free(sums);
+        case_ctrl_counts[ccc_i] = P_sum_ctrls;
+        ccc_i += 1;
     }
 
-    free(P_all_ids);
-    free(all_ids);
 
+    /*
+    uint32_t **mapped_case_ctrl_counts = 
+            (uint32_t **)malloc((N*2 + 2)* sizeof(uint32_t *));
+    */
 
-#if 0
     /* 
      * at this point we are going to realign the data so that 
      * the values associate with each variant are grouped together
@@ -599,25 +567,10 @@ uint32_t calpha(struct wah_file *wf,
     }
     fprintf(stderr, "\n");
     */
-#endif
-    fclose(tmp_out);
+
     return num_variants;
 }
 //}}}
-
-void map_and_write(uint32_t *vids,
-                   uint32_t *vals,
-                   uint32_t *mapped_vals,
-                   uint32_t num_variants,
-                   FILE *f)
-{
-    uint32_t i;
-    for ( i = 0; i < num_variants; ++i)
-        mapped_vals[vids[i]] = vals[i];
-
-    fwrite(mapped_vals, sizeof(uint32_t), num_variants, f);
-}
-
 
 //{{{void permute(uint32_t *R, uint32_t len_R)
 void permute(uint32_t *R, uint32_t len_R)
@@ -872,6 +825,7 @@ void print_calpha_result(uint32_t *R,
 
     // To reuse the same char* for each of the variants, we need to make sure
     // to allocate enough space to hold all the digits and commas 
+    /*
     for (i = 0; i < (num_variants * (N*2 +2)); ++i) {
         if (max_int < R[i])
             max_int = R[i];
@@ -882,6 +836,7 @@ void print_calpha_result(uint32_t *R,
     uint32_t P_csv_len = (max_int_len + N*2);
     char *P_csv = (char *)malloc(P_csv_len*sizeof(char));
     uint32_t P_csv_i;
+    */
 
     int l;
 
@@ -918,12 +873,14 @@ void print_calpha_result(uint32_t *R,
              "Description=\"Number of variants observed in controls\">\n");
     append_out_buf(&outbuf, info_s, strlen(info_s));
 
+    /*
     asprintf(&info_s,
              "##INFO=<ID=P_CASE_CTRL,Number=%u,Type=Integer,"
              "Description=\"Number of variants in permuted cases "
              "and controls where i is the case and i+1 is the control\">\n",
              N*2);
     append_out_buf(&outbuf, info_s, strlen(info_s));
+    */
 
 
     char last_header_line[]="#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n";
@@ -936,6 +893,7 @@ void print_calpha_result(uint32_t *R,
                        qfile.lines[i],
                        qfile.line_lens[i]-1);
 
+        /*
         P_csv_i = 0;
         // The first two values for R are the observations, the rest are 
         // permutation case/ctrl pairs
@@ -952,24 +910,22 @@ void print_calpha_result(uint32_t *R,
                             R[i*(N*2 + 2) + j+1]);
             P_csv_i += l;
         }
+        */
 
         asprintf(&info_s,
                 ";N_CASE=%u;"
                 "N_CTRL=%u;"
                 "O_CASE=%u;"
-                "O_CTRL=%u;"
-                "P_CASE_CTRL=%s\n",
+                "O_CTRL=%u\n",
+                //"P_CASE_CTRL=%s\n",
                 n_cases,
                 n_ctrls,
                 R[i*(N*2+2) + 0],
-                R[i*(N*2+2) + 1],
-                P_csv);
+                R[i*(N*2+2) + 1]);
+                //P_csv);
         append_out_buf(&outbuf, info_s, strlen(info_s));
     }
-
     free(info_s);
-    free(P_csv);
-
     quick_file_delete(&qfile);
     free_out_buf(&outbuf);
 }
@@ -980,7 +936,6 @@ int pop_help(char *func)
 {
     printf(
 "usage:   gqt %s -i <gqt file> \\\n"
-"                   -N <number of permutations> \\\n"
 "                   -p <population query 1> \\\n"
 "                   -p <population query 2> \\\n"
 "                   ... \\\n"

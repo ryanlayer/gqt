@@ -6,18 +6,61 @@
 #include <sys/stat.h>
 #include "genotq.h"
 
-//{{{ static int callback(void *ll_p,
-static int callback(void *ll_p,
+//{{{ static int uint32_t_ll_callback(void *ll_p,
+static int uint32_t_ll_callback(void *ll_p,
                     int argc,
                     char **argv,
                     char **col_name)
 {
-
     struct uint32_t_ll *ll = (struct uint32_t_ll *)ll_p;
 
     struct uint32_t_ll_node *new_node = (struct uint32_t_ll_node *)
         malloc(sizeof(struct uint32_t_ll_node));
     new_node->v = atoi(argv[0]);
+    new_node->next = NULL;
+
+    if (ll->head == NULL)
+        ll->head = new_node;
+    else
+        ll->tail->next = new_node;
+
+    ll->tail = new_node;
+
+    ll->len = ll->len + 1;
+    return 0;
+}
+//}}}
+
+//{{{ static int char_ll_callback(void *ll_p,
+static int char_ll_callback(void *ll_p,
+                    int argc,
+                    char **argv,
+                    char **col_name)
+{
+    if (argc != 2) {
+        fprintf(stderr, 
+                "FAILURE: Cannot get label value. Expecte 2 columns, "
+                "but recieved %d.\n",
+                argc);
+        exit(1);
+    }
+    struct char_ll *ll = (struct char_ll *)ll_p;
+
+    struct char_ll_node *new_node = (struct char_ll_node *)
+        malloc(sizeof(struct char_ll_node));
+
+    uint32_t bcf_i = 0;
+    uint32_t label_i = 1;
+    
+    if (strlen(argv[label_i]) == 0) {
+        fprintf(stderr, 
+                "FAILURE: Blank label found for BCF_ID:%s\n",
+                argv[label_i]);
+        exit(1);
+    }
+
+    new_node->v = (char *) malloc(strlen(argv[label_i])*sizeof(char));
+    strcpy(new_node->v, argv[label_i]);
     new_node->next = NULL;
 
     if (ll->head == NULL)
@@ -317,16 +360,18 @@ uint32_t resolve_ind_query(uint32_t **R, char *query, char *ped_db_file)
     char *test_q;
     int r;
     if (strlen(query) == 0)
-        r = asprintf(&test_q, "SELECT BCF_ID FROM ped");
+        r = asprintf(&test_q, "SELECT BCF_ID FROM ped ORDER BY BCF_ID");
     else
-        r = asprintf(&test_q, "SELECT BCF_ID FROM ped WHERE %s;", query);
+        r = asprintf(&test_q,
+                     "SELECT BCF_ID FROM ped WHERE %s ORDER BY BCF_ID;",
+                     query);
 
     struct uint32_t_ll ll;
     ll.head = NULL;
     ll.tail = NULL;
     ll.len = 0;
 
-    rc = sqlite3_exec(db, test_q, callback, &ll, &err_msg);
+    rc = sqlite3_exec(db, test_q, uint32_t_ll_callback, &ll, &err_msg);
     if( rc != SQLITE_OK ){
         fprintf(stderr, "SQL error: %s\n", err_msg);
         sqlite3_free(err_msg);
@@ -335,6 +380,59 @@ uint32_t resolve_ind_query(uint32_t **R, char *query, char *ped_db_file)
     *R = (uint32_t *) malloc(ll.len * sizeof(uint32_t));
 
     struct uint32_t_ll_node *tmp, *curr = ll.head;
+    uint32_t i;
+    for (i = 0; i < ll.len; ++i) {
+        (*R)[i] = curr->v;
+        tmp = curr->next;
+        free(curr);
+        curr = tmp;
+    }
+
+    sqlite3_close(db);
+    return ll.len;
+}
+//}}}
+
+//{{{ uint32_t resolve_label_query(char ***R,
+uint32_t resolve_label_query(char ***R,
+                             char *label_id,
+                             char *query,
+                             char *ped_db_file) 
+{
+    sqlite3 *db;
+    char *err_msg;
+    int rc = sqlite3_open(ped_db_file, &db);
+    if( rc ){
+        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return 1;
+    }
+
+    char *test_q;
+    int r;
+    if (strlen(query) == 0)
+        r = asprintf(&test_q, "SELECT BCF_ID,%s FROM ped ORDER BY BCF_ID",
+                label_id);
+    else
+        r = asprintf(&test_q,
+                     "SELECT BCF_ID,%s FROM ped WHERE %s ORDER BY BCF_ID;",
+                     label_id,
+                     query);
+
+    struct char_ll ll;
+    ll.head = NULL;
+    ll.tail = NULL;
+    ll.len = 0;
+
+    rc = sqlite3_exec(db, test_q, char_ll_callback, &ll, &err_msg);
+    if( rc != SQLITE_OK ){
+        fprintf(stderr, "SQL error: %s\n", err_msg);
+        sqlite3_free(err_msg);
+    }
+
+    *R = (char **) malloc(ll.len * sizeof(char *));
+
+    struct char_ll_node *tmp, *curr = ll.head;
     uint32_t i;
     for (i = 0; i < ll.len; ++i) {
         (*R)[i] = curr->v;

@@ -16,6 +16,11 @@ void permute(uint32_t *R, uint32_t len_R);
 
 int pop_help(char *op);
 
+uint32_t pca_shared(struct wah_file *wf,
+                    char **id_query_list,
+                    char *label_field_name,
+                    char *db_file_name,
+                    char *id_out_file);
 
 uint32_t fst(struct wah_file *wf,
              char **id_query_list,
@@ -63,19 +68,31 @@ int pop(char *op, int argc, char **argv)
          *id_query=NULL,
          *db_file_name=NULL,
          *bim_file_name=NULL,
+         *label_file_name=NULL,
+         *label_field_name=NULL,
          *vid_file_name=NULL;
     int i_is_set = 0,
         id_q_count = 0,
         d_is_set = 0,
         v_is_set = 0,
+        f_is_set = 0,
+        l_is_set = 0,
         b_is_set = 0;
     uint32_t N;
 
     char *id_query_list[100];
 
     //{{{ parse cmd line opts
-    while ((c = getopt (argc, argv, "hi:p:d:b:v:")) != -1) {
+    while ((c = getopt (argc, argv, "hi:p:d:b:v:f:l:")) != -1) {
         switch (c) {
+        case 'l':
+            l_is_set = 1;
+            label_file_name = optarg;
+            break;
+        case 'f':
+            f_is_set = 1;
+            label_field_name = optarg;
+            break;
         case 'i':
             i_is_set = 1;
             wahbm_file_name = optarg;
@@ -100,7 +117,9 @@ int pop(char *op, int argc, char **argv)
             return pop_help(op);
         case '?':
             if ( (optopt == 'i') ||
+                 (optopt == 'l') ||
                  (optopt == 'p') ||
+                 (optopt == 'f') ||
                  (optopt == 'd') ||
                  (optopt == 'b') )
                 fprintf (stderr, "Option -%c requires an argument.\n",
@@ -202,7 +221,23 @@ int pop(char *op, int argc, char **argv)
 
     uint32_t len_R;
 
-    if (strcmp("fst",op) == 0) {
+    if (strcmp("pca-shared",op) == 0) {
+        if (f_is_set == 0) {
+            printf("Label database field name not set.\n");
+            return pop_help(op);
+        }
+
+        if (l_is_set == 0) {
+            printf("Label output file name not set.\n");
+            return pop_help(op);
+        }
+
+        int r = pca_shared(&wf,
+                           id_query_list,
+                           label_field_name,
+                           db_file_name,
+                           label_file_name);
+    }else if (strcmp("fst",op) == 0) {
         double *R;
         len_R = fst(&wf, id_query_list, id_q_count, vids, db_file_name, &R);
         print_pop_result(op, R, wf.num_fields, bim_file_name);
@@ -238,15 +273,6 @@ int pop(char *op, int argc, char **argv)
                             0,
                             wf.num_fields,
                             bim_file_name);
-        /*
-        uint32_t i,j;
-        for (i = 0; i < len_R; ++i) {
-            for (j = 0; j < (N*2 + 2); ++j)
-                fprintf(stderr, "%u\t", R[i*(N*2+2) + j]);
-            fprintf(stderr, "\n");
-        }
-        */
-
         free(R);
 
     } else {
@@ -761,6 +787,46 @@ uint32_t fst(struct wah_file *wf,
 }
 //}}}
 
+
+//{{{ uint32_t shared(struct wah_file *wf,
+uint32_t pca_shared(struct wah_file *wf,
+                    char **id_query_list,
+                    char *label_field_name,
+                    char *db_file_name,
+                    char *id_out_file)
+{
+    uint32_t *record_ids;
+    uint32_t num_records = resolve_ind_query(&record_ids,
+                                             id_query_list[0],
+                                             db_file_name);
+
+    char **labels;
+    uint32_t num_labels = resolve_label_query(&labels,
+                                              label_field_name,
+                                             id_query_list[0],
+                                             db_file_name);
+
+    FILE *f = fopen(id_out_file, "w");
+    if (f == NULL) {
+        fprintf(stderr, "Could not write file: %s\n", id_out_file);
+        return 1;
+    }
+
+    uint32_t i;
+    for (i = 0; i < num_labels; ++i){
+        fprintf(f, "%s\n", labels[i]);
+        free(labels[i]);
+    }
+
+    fclose(f);
+ 
+    uint32_t r = wahbm_shared_by_name_subpop(wf,
+                                             record_ids,
+                                             num_records);
+    return 0;
+}
+//}}}
+
 //{{{ void print_pop_result(uint32_t *mask,
 void print_pop_result(char *op,
                       double *R,
@@ -936,6 +1002,9 @@ int pop_help(char *func)
 {
     printf(
 "usage:   gqt %s -i <gqt file> \\\n"
+"                   -d <ped database file> \\\n"
+"                   -f <label db field name> (requried for pca-shared)\\\n"
+"                   -l <label output file> (requried for pca-shared)\\\n"
 "                   -p <population query 1> \\\n"
 "                   -p <population query 2> \\\n"
 "                   ... \\\n"

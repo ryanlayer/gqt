@@ -30,6 +30,8 @@ int main(int argc, char **argv)
     //else if (strcmp(cmd,"sort") == 0) return sort(argc-2, argv+2);
     //else if (strcmp(cmd,"count") == 0) return count(argc-2, argv+2);
     //else if (strcmp(cmd,"sum") == 0) return sum(argc-2, argv+2);
+    else if (strcmp(cmd,"pca-shared") == 0) 
+        return pop("pca-shared", argc-1, argv+1);
     else if (strcmp(cmd,"gst") == 0) return pop("gst", argc-1, argv+1);
     else if (strcmp(cmd,"fst") == 0) return pop("fst", argc-1, argv+1);
     else if (strcmp(cmd,"calpha") == 0) return pop("calpha", argc-1, argv+1);
@@ -46,11 +48,13 @@ int gqt_help(int argc, char **argv)
 {
     printf("%s, v%s\n"
            "usage:   %s <command> [options]\n"
-           "         convert   Convert between file types\n"
-           "         query     Query the index\n"
-           "         calpha    Calculate C-alpha paramters (Neal 2011)\n" 
-           "         gst       Calculate Gst statistic (Neil 1973)\n"
-           "         fst       Calculate Fst statistic " 
+           "         convert    Convert between file types\n"
+           "         query      Query the index\n"
+           "         pca-shared Compute the similarity matrix for PCA base\n" 
+           "                    on the number of shared non-reference loci.\n" 
+           "         calpha     Calculate C-alpha paramters (Neal 2011)\n" 
+           "         gst        Calculate Gst statistic (Neil 1973)\n"
+           "         fst        Calculate Fst statistic " 
                                 "(Weir and Cockerham 1984)\n",
             PROGRAM_NAME, VERSION,
             PROGRAM_NAME);

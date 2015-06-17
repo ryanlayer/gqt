@@ -38,7 +38,7 @@ static int char_ll_callback(void *ll_p,
                     char **col_name)
 {
     if (argc != 2) {
-        fprintf(stderr, 
+        fprintf(stderr,
                 "FAILURE: Cannot get label value. Expecte 2 columns, "
                 "but recieved %d.\n",
                 argc);
@@ -51,9 +51,9 @@ static int char_ll_callback(void *ll_p,
 
     uint32_t bcf_i = 0;
     uint32_t label_i = 1;
-    
+
     if (strlen(argv[label_i]) == 0) {
-        fprintf(stderr, 
+        fprintf(stderr,
                 "FAILURE: Blank label found for BCF_ID:%s\n",
                 argv[label_i]);
         exit(1);
@@ -109,6 +109,9 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
         if (line[strlen(line) - 1] == '\n')
             line[strlen(line) - 1] = '\0';
 
+        if (line[0] == '#'){
+            line++;
+        }
         char *word;
         tmp_line = (char *) malloc(strlen(line) * sizeof(char));
         strcpy(tmp_line, line);
@@ -125,7 +128,7 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
 
             // Set field names
             ped_field_names[0] = strtok(tmp_line, "\t");
-            for (i = 1; i < num_ped_fields; ++i) 
+            for (i = 1; i < num_ped_fields; ++i)
                 ped_field_names[i] = strtok(NULL, "\t");
 
             // Convert " " to "_"
@@ -138,7 +141,7 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
 
             // Set field types
             ped_field_types = (int *) malloc(num_ped_fields * sizeof(int));
-            for (i = 0; i < num_ped_fields; ++i) 
+            for (i = 0; i < num_ped_fields; ++i)
                 ped_field_types[i] = 1;
 
             uint32_t line_no = 2;
@@ -158,7 +161,7 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
                                 line_no);
                         exit(1);
                     }
-                    for (j = 0; j < strlen(word); ++j) 
+                    for (j = 0; j < strlen(word); ++j)
                         ped_field_types[i] &= isdigit((int)word[j]);
                     word = strtok(NULL, "\t");
                 }
@@ -182,17 +185,17 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
 
     // Add the minimum fields
     char *q_create_table, *q_create_table_tmp;
-    int r = asprintf(&q_create_table, 
+    int r = asprintf(&q_create_table,
                      "CREATE TABLE ped(BCF_ID INTEGER, BCF_Sample TEXT");
 
     // Add fields from PED
     for (i = 0; i < num_ped_fields; ++i) {
         if (ped_field_types[i] == 1)
-            r = asprintf(&q_create_table_tmp, 
+            r = asprintf(&q_create_table_tmp,
                          "%s, %s INTEGER",
                          q_create_table,
                          ped_field_names[i]);
-                         
+
         else
             r = asprintf(&q_create_table_tmp,
                          "%s, %s TEXT",
@@ -208,7 +211,7 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
     q_create_table = q_create_table_tmp;
 
     // removed DB if it is there
-    struct stat buffer;   
+    struct stat buffer;
     r = stat(db_name, &buffer);
 
     if (r == 0)
@@ -247,7 +250,7 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
     // Add the sample names and location from the BCF file
     char *q;
     for (i = 0; i < hdr->n[BCF_DT_SAMPLE]; ++i) {
-        r = asprintf(&q, 
+        r = asprintf(&q,
                      "INSERT INTO ped(BCF_ID, BCF_Sample)"
                      "VALUES (%u, '%s');",
                      i,
@@ -306,13 +309,13 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
                 if (ped_field_types[i] == 1)
                     r = asprintf(&tmp_q,
                                  "%s %s=%s",
-                                 q, 
+                                 q,
                                 ped_field_names[i],
                                 ped_values[i]);
                 else
                      r = asprintf(&tmp_q,
                                  "%s %s='%s'",
-                                 q, 
+                                 q,
                                 ped_field_names[i],
                                 ped_values[i]);
 
@@ -345,8 +348,8 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
 }
 //}}}
 
-//{{{ uint32_t resolve_ind_query(uint32_t **R, char *query, char *ped_db_file) 
-uint32_t resolve_ind_query(uint32_t **R, char *query, char *ped_db_file) 
+//{{{ uint32_t resolve_ind_query(uint32_t **R, char *query, char *ped_db_file)
+uint32_t resolve_ind_query(uint32_t **R, char *query, char *ped_db_file)
 {
     sqlite3 *db;
     char *err_msg;
@@ -397,7 +400,7 @@ uint32_t resolve_ind_query(uint32_t **R, char *query, char *ped_db_file)
 uint32_t resolve_label_query(char ***R,
                              char *label_id,
                              char *query,
-                             char *ped_db_file) 
+                             char *ped_db_file)
 {
     sqlite3 *db;
     char *err_msg;

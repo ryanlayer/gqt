@@ -30,6 +30,7 @@ clean_up()
 {
     ls $DATA_PATH/* \
         | grep -v "^$BCF$" \
+        | grep -v "^$DATA_PATH/diff_gts.bcf$" \
         | grep -v "^$DATA_PATH/more_fields.ped$" \
         | grep -v "^$DATA_PATH/too_many_fields.ped$" \
         | xargs rm

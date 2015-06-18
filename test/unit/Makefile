@@ -2,7 +2,7 @@
 UNITY_ROOT=./unity
 HTS_ROOT=$(HOME)/src/htslib
 CC=gcc
-SRC=../../src/c/
+SRC=../../src/
 TEST_SRC=$(wildcard *.c)
 TEST_NAMES=$(TEST_SRC:.c=)
 PREFIX=Runner_

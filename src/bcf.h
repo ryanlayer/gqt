@@ -73,4 +73,27 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                                           char *bim_out,
                                           char *vid_out,
                                           char *tmp_dir);
+
+int get_variant_metadata_type(struct bcf_file *bcf_f,
+                              char *field_name);
+
+uint32_t get_variant_metadata(struct bcf_file *bcf_f,
+                              uint32_t num_vars,
+                              char *field_name,
+                              void **values,
+                              void *missing_value,
+                              int *type);
+
+uint32_t index_variant_metadata(char *bcf_file_name,
+                                char *vid_file_name,
+                                char *db_file_name,
+                                char *variant_index_file_name,
+                                uint32_t num_varaints,
+                                char *field_name,
+                                uint32_t num_to_test,
+                                uint32_t *num_bins,
+                                void **bin_range_lo,
+                                void **bin_range_hi,
+                                int *less_than_bin,
+                                int *greater_than_bin);
 #endif

@@ -832,6 +832,126 @@ int append_fill_word(struct wah_ll **A_head,
 } 
 //}}}
 
+//{{{uint32_t uint32_t_to_wah_bitmap(uint32_t *I,
+uint32_t uint32_t_to_wah_bitmap(uint32_t *I,
+                                uint32_t len_I,
+                                uint32_t *bin_range_lo,
+                                uint32_t *bin_range_hi,
+                                uint32_t len_bin_ranges,
+                                uint32_t less_than_bin,
+                                uint32_t greater_than_bin,
+                                uint32_t num_bins,
+                                uint32_t ***wah_bit_maps,
+                                uint32_t **wah_bit_map_lens)
+{
+    uint32_t *bm = NULL;
+    uint32_t bit_array_lens = uint32_t_to_bitmap(I,
+                                                 len_I,
+                                                 bin_range_lo,
+                                                 bin_range_hi,
+                                                 len_bin_ranges,
+                                                 less_than_bin,
+                                                 greater_than_bin,
+                                                 num_bins,
+                                                 &bm);
+
+    *wah_bit_map_lens = (uint32_t *) malloc(num_bins * sizeof(uint32_t));
+
+    *wah_bit_maps = (uint32_t **) malloc(num_bins * sizeof(uint32_t *));
+
+    uint32_t i;
+
+    for (i = 0; i < num_bins; ++i) {
+        (*wah_bit_map_lens)[i] = ints_to_wah(bm + i*bit_array_lens,
+                                             bit_array_lens,
+                                             len_I,
+                                             &((*wah_bit_maps)[i]));
+    }
+
+    return 0;
+}
+//}}}
+
+//{{{uint32_t int_to_wah_bitmap(int *I,
+uint32_t int_to_wah_bitmap(int *I,
+                           uint32_t len_I,
+                           int *bin_range_lo,
+                           int *bin_range_hi,
+                           uint32_t len_bin_ranges,
+                           uint32_t less_than_bin,
+                           uint32_t greater_than_bin,
+                           uint32_t num_bins,
+                           uint32_t ***wah_bit_maps,
+                           uint32_t **wah_bit_map_lens)
+{
+    uint32_t *bm = NULL;
+    uint32_t bit_array_lens = int_to_bitmap(I,
+                                            len_I,
+                                            bin_range_lo,
+                                            bin_range_hi,
+                                            len_bin_ranges,
+                                            less_than_bin,
+                                            greater_than_bin,
+                                            num_bins,
+                                            &bm);
+
+    *wah_bit_map_lens = (uint32_t *) malloc(num_bins * sizeof(uint32_t));
+
+    *wah_bit_maps = (uint32_t **) malloc(num_bins * sizeof(uint32_t *));
+
+    uint32_t i;
+
+    for (i = 0; i < num_bins; ++i) {
+        (*wah_bit_map_lens)[i] = ints_to_wah(bm + i*bit_array_lens,
+                                             bit_array_lens,
+                                             len_I,
+                                             &((*wah_bit_maps)[i]));
+    }
+
+    return 0;
+}
+//}}}
+
+//{{{uint32_t float_to_wah_bitmap(float *I,
+uint32_t float_to_wah_bitmap(float *I,
+                             uint32_t len_I,
+                             float *bin_range_lo,
+                             float *bin_range_hi,
+                             uint32_t len_bin_ranges,
+                             uint32_t less_than_bin,
+                             uint32_t greater_than_bin,
+                             uint32_t num_bins,
+                             uint32_t ***wah_bit_maps,
+                             uint32_t **wah_bit_map_lens)
+{
+    uint32_t *bm = NULL;
+    uint32_t bit_array_lens = float_to_bitmap(I,
+                                              len_I,
+                                              bin_range_lo,
+                                              bin_range_hi,
+                                              len_bin_ranges,
+                                              less_than_bin,
+                                              greater_than_bin,
+                                              num_bins,
+                                              &bm);
+
+    *wah_bit_map_lens = (uint32_t *) malloc(num_bins * sizeof(uint32_t));
+
+    *wah_bit_maps = (uint32_t **) malloc(num_bins * sizeof(uint32_t *));
+
+    uint32_t i;
+
+    for (i = 0; i < num_bins; ++i) {
+        (*wah_bit_map_lens)[i] = ints_to_wah(bm + i*bit_array_lens,
+                                             bit_array_lens,
+                                             len_I,
+                                             &((*wah_bit_maps)[i]));
+    }
+
+    return 0;
+}
+//}}}
+
 
 //{{{ int append_active_word_b(uint32_t *R,
 int append_active_word_b(uint32_t *R,

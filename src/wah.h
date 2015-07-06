@@ -472,5 +472,37 @@ uint32_t wah_or_b(uint32_t *R,
                   uint32_t *Y,
                   uint32_t len_Y);
 
+uint32_t uint32_t_to_wah_bitmap(uint32_t *I,
+                                uint32_t len_I,
+                                uint32_t *bin_range_lo,
+                                uint32_t *bin_range_hi,
+                                uint32_t len_bin_ranges,
+                                uint32_t less_than_bin,
+                                uint32_t greater_than_bin,
+                                uint32_t num_bins,
+                                uint32_t ***wah_bit_maps,
+                                uint32_t **wah_bit_map_lens);
+
+uint32_t int_to_wah_bitmap(int *I,
+                           uint32_t len_I,
+                           int *bin_range_lo,
+                           int *bin_range_hi,
+                           uint32_t len_bin_ranges,
+                           uint32_t less_than_bin,
+                           uint32_t greater_than_bin,
+                           uint32_t num_bins,
+                           uint32_t ***wah_bit_maps,
+                           uint32_t **wah_bit_map_lens);
+
+uint32_t float_to_wah_bitmap(float *I,
+                             uint32_t len_I,
+                             float *bin_range_lo,
+                             float *bin_range_hi,
+                             uint32_t len_bin_ranges,
+                             uint32_t less_than_bin,
+                             uint32_t greater_than_bin,
+                             uint32_t num_bins,
+                             uint32_t ***wah_bit_maps,
+                             uint32_t **wah_bit_map_lens);
 
 #endif

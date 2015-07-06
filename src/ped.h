@@ -29,7 +29,6 @@ struct char_ll {
     uint32_t len;
 };
 
-
 static int uint32_t_ll_callback(void *ll_p,
                                 int argc,
                                 char **argv,

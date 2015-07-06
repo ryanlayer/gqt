@@ -121,11 +121,13 @@ uint32_t wah_in_place_xor(uint32_t *r_wah,
 }
 //}}}
 
+
+
 //{{{ uint32_t get_wah_bitmap_in_place(struct wah_file wf,
 uint32_t get_wah_bitmap_in_place(struct wah_file wf,
-                                     uint32_t wah_record,
-                                     uint32_t bitmap,
-                                     uint32_t **wah_bitmap)
+                                 uint32_t wah_record,
+                                 uint32_t bitmap,
+                                 uint32_t **wah_bitmap)
 {
     // get the size of the WAH-encoded bitmap
     uint64_t wah_size = 0;
@@ -654,5 +656,3 @@ uint32_t count_range_records_in_place_wahbm(struct wah_file wf,
 }
 //}}}
 #endif
-
-

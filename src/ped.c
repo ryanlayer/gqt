@@ -233,7 +233,6 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
         sqlite3_free(err_msg);
     }
 
-
     // open BCF
     htsFile *fp    = hts_open(bcf_file_name,"rb");
     if ( !fp ) {

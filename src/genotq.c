@@ -178,3 +178,103 @@ int popcount(uint32_t x) {
 
 }
 //}}}
+
+//{{{ uint32_t bsearch_uint32_t(uint32_t key,
+int bsearch_uint32_t(uint32_t key,
+                     uint32_t *D,
+                     int D_size,
+                     int lo,
+                     int hi)
+{
+    int i = 0;
+    int mid;
+    while ( hi - lo > 1) {
+        ++i;
+        mid = (hi + lo) / 2;
+        if ( D[mid] < key )
+            lo = mid;
+        else
+            hi = mid;
+    }
+    return hi;
+}
+//}}}
+
+//{{{ uint32_t bsearch_double(double key,
+int bsearch_double(double key,
+                   double *D,
+                   int D_size,
+                   int lo,
+                   int hi)
+{
+    int i = 0;
+    int mid;
+    while ( hi - lo > 1) {
+        ++i;
+        mid = (hi + lo) / 2;
+        if ( D[mid] < key )
+            lo = mid;
+        else
+            hi = mid;
+    }
+    return hi;
+}
+//}}}
+
+//{{{ uint32_t bsearch_float(float key,
+int bsearch_float(float key,
+                  float *D,
+                  int D_size,
+                  int lo,
+                  int hi)
+{
+    int i = 0;
+    int mid;
+    while ( hi - lo > 1) {
+        ++i;
+        mid = (hi + lo) / 2;
+        if ( D[mid] < key )
+            lo = mid;
+        else
+            hi = mid;
+    }
+    return hi;
+}
+//}}}
+
+//{{{ int bsearch_int(int key,
+int bsearch_int(int key,
+                int *D,
+                int D_size,
+                int lo,
+                int hi)
+{
+    int i = 0;
+    int mid;
+    while ( hi - lo > 1) {
+        ++i;
+        mid = (hi + lo) / 2;
+        if ( D[mid] < key )
+            lo = mid;
+        else
+            hi = mid;
+    }
+    return hi;
+}
+//}}}
+
+//{{{int int_compare (const void * a, const void * b)
+int int_compare (const void * a, const void * b)
+{
+      return ( *(int*)a - *(int*)b );
+}
+//}}}
+
+//{{{int float_compare (const void * a, const void * b)
+int float_compare (const void * a, const void * b)
+{
+    float fa = *(const float*) a;
+    float fb = *(const float*) b;
+    return (fa > fb) - (fa < fb);
+}
+//}}}

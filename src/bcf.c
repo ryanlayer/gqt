@@ -815,6 +815,258 @@ void rotate_gt(uint32_t num_inds,
 }
 //}}}
 
+//{{{void close_bcf_file(struct bcf_file *bcf_f)
+void close_bcf_file(struct bcf_file *bcf_f)
+{
+    bcf_hdr_destroy(bcf_f->hdr);
+    bcf_destroy1(bcf_f->line);
+    hts_close(bcf_f->fp);
+}
+//}}}
+
+//{{{uint32_t get_variant_metadata(struct bcf_file *bcf_f,
+uint32_t get_variant_metadata(struct bcf_file *bcf_f,
+                              uint32_t num_vars,
+                              char *field_name,
+                              void **values,
+                              void *missing_value,
+                              int *type)
+{
+
+    float **f_val = (float **) values;
+    //int **i_val = (int **) values;
+
+    float *f_missing = (float *)missing_value;
+    //int *i_missing = (int *)missing_value;
+
+    int id = bcf_hdr_id2int(bcf_f->hdr,BCF_DT_ID,field_name);
+    if ( !bcf_hdr_idinfo_exists(bcf_f->hdr,BCF_HL_INFO,id) ) {
+        fprintf(stderr,
+                "The INFO tag \"%s\" is not defined in the header\n",
+                field_name);
+        return 1;
+    }
+
+    *type = bcf_hdr_id2type(bcf_f->hdr,BCF_HL_INFO,id);
+
+    if (*type == BCF_HT_FLAG)
+        //*i_val = (int *) malloc(num_vars * sizeof(int));
+        *f_val = (float *) malloc(num_vars * sizeof(float));
+    else if (*type == BCF_HT_INT)
+        //*i_val = (int *) malloc(num_vars * sizeof(int));
+        *f_val = (float *) malloc(num_vars * sizeof(float));
+    else if (*type == BCF_HT_REAL)
+        *f_val = (float *) malloc(num_vars * sizeof(float));
+    else {
+        fprintf(stderr,
+                "The type for INFO tag \"%s\" is not supported\n",
+                field_name);
+        return 1;
+    }
+
+    uint32_t i;
+
+    for (i = 0; i < num_vars; ++i) {
+        // Get the next bcf record
+        int r = bcf_read(bcf_f->fp, bcf_f->hdr, bcf_f->line);
+        r = bcf_hdr_set_samples(bcf_f->hdr, NULL, 0);
+        
+        bcf_unpack(bcf_f->line, BCF_UN_INFO);
+        bcf_info_t *info = bcf_get_info(bcf_f->hdr, bcf_f->line, field_name);
+
+        if ( (*type != BCF_HT_FLAG) && (info->len != 1) ) {
+            fprintf(stderr,
+                    "Non-scalar value found in field \"%s\" in variant at"
+                    "%d:%d\n", 
+                    field_name,
+                    bcf_f->line->rid,
+                    bcf_f->line->pos);
+            return 1;
+        }
+
+        if (info == NULL) {
+            if (*type == BCF_HT_FLAG)
+                (*f_val)[i] = 0;
+            else if (*type == BCF_HT_INT)
+                (*f_val)[i] = *f_missing;
+            else if (*type == BCF_HT_REAL)
+                (*f_val)[i] = *f_missing;
+        } else {
+            if (*type == BCF_HT_FLAG)
+                (*f_val)[i] = 1;
+            else if (*type == BCF_HT_INT) {
+                (*f_val)[i] = (float)info->v1.i;
+            } else if (*type == BCF_HT_REAL)
+                (*f_val)[i] = info->v1.f;
+        }
+    }
+
+    return 0;
+}
+//}}}
+
+//{{{ int get_variant_metadata_type(struct bcf_file *bcf_f,
+int get_variant_metadata_type(struct bcf_file *bcf_f,
+                              char *field_name)
+{
+    int id = bcf_hdr_id2int(bcf_f->hdr,BCF_DT_ID,field_name);
+    return bcf_hdr_id2type(bcf_f->hdr,BCF_HL_INFO,id);
+}
+//}}}
+
+//{{{ uint32_t index_variant_metadata(char *bcf_file_name,
+uint32_t index_variant_metadata(char *bcf_file_name,
+                                char *vid_file_name,
+                                char *db_file_name,
+                                char *variant_metadata_index_file_name,
+                                uint32_t num_variants,
+                                char *field_name,
+                                uint32_t num_to_test,
+                                uint32_t *num_bins,
+                                void **bin_range_lo,
+                                void **bin_range_hi,
+                                int *less_than_bin,
+                                int *greater_than_bin)
+{
+    if (num_to_test > num_variants)
+        num_to_test = num_variants;
+
+    struct bcf_file bcf_f = init_bcf_file(bcf_file_name);
+
+    int type = get_variant_metadata_type(&bcf_f, field_name);
+
+    void *missing;
+    int int_missing = 0;
+    float float_missing = 0.0;
+
+    if (type == BCF_HT_FLAG) {
+        *less_than_bin = 0;
+        *greater_than_bin = 0;
+    } else {
+        if (*less_than_bin == -1) {
+            *less_than_bin = 1;
+        }
+
+        if (*greater_than_bin == -1) {
+            *greater_than_bin = 1;
+        }
+    }
+
+    if (type == BCF_HT_REAL) {
+        missing = &float_missing;
+    } else if ((type == BCF_HT_INT) || (type == BCF_HT_FLAG)) {
+        missing = &float_missing;
+    }
+
+    void *variant_metadata;
+
+    int r = get_variant_metadata(&bcf_f,
+                                 num_variants,
+                                 field_name,
+                                 &variant_metadata,
+                                 missing,
+                                 &type);
+
+    close_bcf_file(&bcf_f);
+
+    if ((type == BCF_HT_INT) || 
+        (type == BCF_HT_REAL) ||
+        (type == BCF_HT_FLAG)) {
+
+        float *float_variant_metadata = (float *)variant_metadata;
+        float **float_bin_range_lo = (float **)bin_range_lo,
+              **float_bin_range_hi = (float **)bin_range_hi;
+
+         uint32_t actual_num_bins =
+                float_equal_freq_binning(float_variant_metadata,
+                                         num_to_test,
+                                         *num_bins,
+                                         float_bin_range_lo,
+                                         float_bin_range_hi);
+     
+         *num_bins = actual_num_bins + *less_than_bin + *greater_than_bin;
+
+        // open VID file
+        FILE *vid_f = fopen(vid_file_name, "rb");
+        if (vid_f == NULL) {
+            fprintf(stderr, "Could not read VID file: %s\n", vid_file_name);
+            return 1;
+        }
+        uint32_t *vids = (uint32_t *) malloc(num_variants*sizeof(uint32_t));
+        r = fread(vids, sizeof(uint32_t), num_variants, vid_f);
+        fclose(vid_f);
+
+        /* Since the variants are in allele freq order, we need to copy
+         * the resulting value to an array that is back in the original
+         * order
+         */
+        float *mapped_float_variant_metadata = 
+                (float *)calloc(num_variants, sizeof(float));
+        uint32_t i;
+        for ( i = 0; i < num_variants; ++i)
+            mapped_float_variant_metadata[i] = float_variant_metadata[vids[i]];
+
+        free(float_variant_metadata);
+        float_variant_metadata = mapped_float_variant_metadata;
+
+
+
+        uint32_t **ws = NULL;
+        uint32_t *w_lens = NULL;
+
+        uint32_t bit_array_lens = float_to_wah_bitmap(float_variant_metadata,
+                                                      num_variants,
+                                                      *float_bin_range_lo,
+                                                      *float_bin_range_hi,
+                                                      actual_num_bins,
+                                                      *less_than_bin,
+                                                      *greater_than_bin,
+                                                      *num_bins,
+                                                      &ws,
+                                                      &w_lens); 
+
+        FILE *f = fopen(variant_metadata_index_file_name, "a");
+
+        if (!f) {
+            fprintf(stderr,
+                    "Unable to open %s\n",
+                    variant_metadata_index_file_name);
+            return 1;
+        }
+
+        long start_offset = ftell(f);
+
+        fwrite(w_lens, sizeof(uint32_t), *num_bins, f);
+
+        for ( i = 0; i < *num_bins; ++i) {
+            fwrite(ws[i], sizeof(uint32_t), w_lens[i], f);
+            free(ws[i]);
+        }
+
+        fclose(f);
+
+        int rowid = register_variant_metadata_index(bcf_file_name,
+                                                    db_file_name,
+                                                    field_name,
+                                                    start_offset,
+                                                    type,
+                                                    *num_bins);
+        if (rowid == -1) {
+            exit(1);
+        }
+
+        int rows_added = add_variant_metadata_float_bins(db_file_name,
+                                                         rowid,
+                                                         *float_bin_range_lo,
+                                                         *float_bin_range_hi,
+                                                         actual_num_bins,
+                                                         *less_than_bin,
+                                                         *greater_than_bin);
+    }
+
+    return type;
+}
+
 #if 0
 //{{{int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 int convert_file_by_name_bcf_to_wahbm_bim(char *in,
@@ -990,11 +1242,3 @@ int read_unpack_next_bcf_line(struct bcf_file *bcf_f,
 //}}}
 #endif
 
-//{{{void close_bcf_file(struct bcf_file *bcf_f)
-void close_bcf_file(struct bcf_file *bcf_f)
-{
-    bcf_hdr_destroy(bcf_f->hdr);
-    bcf_destroy1(bcf_f->line);
-    hts_close(bcf_f->fp);
-}
-//}}}

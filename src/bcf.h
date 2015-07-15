@@ -8,6 +8,7 @@
 #include "genotq.h"
 
 struct bcf_file {
+    char *file_name;
     htsFile *fp;
     bcf_hdr_t *hdr;
     bcf1_t *line;

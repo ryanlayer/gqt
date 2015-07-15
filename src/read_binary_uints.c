@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <math.h>
 #include <inttypes.h>
+#include <err.h>
+#include <sysexits.h>
 
 int main(int argc, char **argv)
 {
@@ -18,6 +20,9 @@ int main(int argc, char **argv)
     char *file_name = argv[2];
     FILE *ptr_myfile;
     ptr_myfile=fopen(file_name,"rb");
+    if (!ptr_myfile)
+        err(EX_NOINPUT, "Cannot open \"%s\"", file_name);
+
     if (!ptr_myfile) {
         printf("Unable to open file!");
         return 1;

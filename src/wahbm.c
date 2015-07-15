@@ -45,11 +45,9 @@ struct wah_file init_wahbm_file(char *file_name)
     struct wah_file wf;
 
     wf.file = fopen(file_name, "rb");
+    if (!wf.file)
+        err(EX_NOINPUT, "Cannot open file \"%s\"", file_name);
 
-    if (!wf.file) {
-        fprintf(stderr, "Unable to open %s\n", file_name);
-        return wf;
-    }
 
     // Jump to the begining of the file to grab the record size
     fseek(wf.file, 0, SEEK_SET);
@@ -490,10 +488,8 @@ uint32_t wahbm_hamm_dist_by_name(char *in, char *out)
 {
 
     FILE *f = fopen(out, "w");
-    if (f == NULL) {
-        fprintf(stderr, "Could not open %s\n", out);
-        exit(1);
-    }
+    if (!f)
+        err(EX_CANTCREAT, "Cannot open file \"%s\"", out);
 
     struct wah_file wf = init_wahbm_file(in);
 
@@ -612,10 +608,8 @@ uint32_t wahbm_shared_by_name(char *in, char *out)
 {
 
     FILE *f = fopen(out, "w");
-    if (f == NULL) {
-        fprintf(stderr, "Could not open %s\n", out);
-        exit(1);
-    }
+    if (!f)
+        err(EX_CANTCREAT, "Cannot open file \"%s\"", out);
 
     struct wah_file wf = init_wahbm_file(in);
 

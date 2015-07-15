@@ -95,9 +95,14 @@ int convert(int argc, char **argv)
     char *type = argv[0];
 
     if (i_is_set == 0) {
-        printf("Input file is not set\n");
+        fprintf(stderr, "BCF/VCF/VCF.GZ file is not set\n");
         return convert_help();
-    } 
+    } else {
+        if ( access( in, F_OK) == -1 )
+            err(EX_NOINPUT,
+                "Error accessing BCF/VCF/VCF.GZ file \"%s\"",
+                in);
+    }
 
     if (strcmp(type, "bcf") == 0) {
         if ( (f_is_set == 0) || (r_is_set == 0) ) {
@@ -211,22 +216,24 @@ int convert(int argc, char **argv)
 
 int convert_help()
 {
-    printf("usage:   gqt convert <type> -i <input VCF/VCF.GZ/BCF file>\n"
-           "     types:\n"
-           "         bcf         create a GQT index\n"
-           "         ped         create sample phenotype database\n\n"
-           "     options:\n"
-           "         -p           PED file name (opt.)\n"
-           "         -c           Sample name column in PED (Default 2)\n"
-           "         -o           Output file name (opt.)\n"
-           "         -v           VID output file name (opt.)\n"
-           "         -b           BIM output file name (opt.)\n"
-           "         -r           Number of variants (opt. with index)\n"
-           "         -f           Number of samples (opt. with index)\n"
-           "         -t           Tmp working directory(./ by defualt)\n"
-           );
+    fprintf(stderr,
+            "%s v%s\n"
+            "usage:   gqt convert <type> -i <input VCF/VCF.GZ/BCF file>\n"
+            "     types:\n"
+            "         bcf         create a GQT index\n"
+            "         ped         create sample phenotype database\n\n"
+            "     options:\n"
+            "         -p           PED file name (opt.)\n"
+            "         -c           Sample name column in PED (Default 2)\n"
+            "         -o           Output file name (opt.)\n"
+            "         -v           VID output file name (opt.)\n"
+            "         -b           BIM output file name (opt.)\n"
+            "         -r           Number of variants (opt. with index)\n"
+            "         -f           Number of samples (opt. with index)\n"
+            "         -t           Tmp working directory(./ by defualt)\n",
+            PROGRAM_NAME, VERSION);
 
-    return 0;
+    return EX_USAGE;
 }
 
 

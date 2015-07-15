@@ -133,6 +133,15 @@ int pop(char *op, int argc, char **argv)
         }
     }
 
+    if (i_is_set == 0) {
+        fprintf(stderr, "GQT file is not set\n");
+        return pop_help(op);
+    } else {
+        if ( access( wahbm_file_name, F_OK) == -1 )
+            err(EX_NOINPUT, "Error accessing GQT file \"%s\"", wahbm_file_name);
+    }
+
+
     // Try to auto-detect file names based on GQT
     if ( (i_is_set == 1) && (b_is_set == 0)) {
 
@@ -144,7 +153,8 @@ int pop(char *op, int argc, char **argv)
         if ( access( bim_file_name, F_OK) != -1 ) {
             b_is_set = 1;
         } else {
-            printf("Auto detect failure: BIM file %s not found\n",
+            fprintf(stderr,
+                   "Auto detect failure: BIM file %s not found\n",
                    bim_file_name);
             return pop_help(op);
         }
@@ -160,8 +170,9 @@ int pop(char *op, int argc, char **argv)
         if ( access( vid_file_name, F_OK) != -1 ) {
             v_is_set = 1;
         } else {
-            printf("Auto detect failure: VID file %s not found\n",
-                   vid_file_name);
+            fprintf(stderr,
+                    "Auto detect failure: VID file %s not found\n",
+                    vid_file_name);
             return pop_help(op);
         }
     }
@@ -176,29 +187,29 @@ int pop(char *op, int argc, char **argv)
         if ( access( db_file_name, F_OK) != -1 ) {
             d_is_set = 1;
         } else {
-            printf("Auto detect failure: PED DB file %s not found\n",
+            fprintf(stderr, "Auto detect failure: PED DB file %s not found\n",
                    db_file_name);
             return pop_help(op);
         }
     }
 
     if (i_is_set == 0) {
-        printf("GQT file is not set\n");
+        fprintf(stderr, "GQT file is not set\n");
         return pop_help(op);
     }
 
     if (v_is_set == 0) {
-        printf("VID file is not set\n");
+        fprintf(stderr, "VID file is not set\n");
         return pop_help(op);
     }
 
     if (b_is_set == 0) {
-        printf("BIM file is not set\n");
+        fprintf(stderr, "BIM file is not set\n");
         return pop_help(op);
     }
 
     if (d_is_set == 0) {
-        printf("PED database file is not set\n");
+        fprintf(stderr, "PED database file is not set\n");
         return pop_help(op);
     }
     //}}}
@@ -209,7 +220,7 @@ int pop(char *op, int argc, char **argv)
     // open VID file
     FILE *vid_f = fopen(vid_file_name, "rb");
     if (vid_f == NULL) {
-        fprintf(stderr, "Could not read VIDE file: %s\n", vid_file_name);
+        fprintf(stderr, "Could not read VID file: %s\n", vid_file_name);
         return 1;
     }
     uint32_t *vids = (uint32_t *) malloc(wf.num_fields*sizeof(uint32_t));
@@ -223,12 +234,12 @@ int pop(char *op, int argc, char **argv)
 
     if (strcmp("pca-shared",op) == 0) {
         if (f_is_set == 0) {
-            printf("Label database field name not set.\n");
+            fprintf(stderr, "Label database field name not set.\n");
             return pop_help(op);
         }
 
         if (l_is_set == 0) {
-            printf("Label output file name not set.\n");
+            fprintf(stderr, "Label output file name not set.\n");
             return pop_help(op);
         }
 
@@ -1000,7 +1011,8 @@ void print_calpha_result(uint32_t *R,
 //{{{int pop_help(char *func)
 int pop_help(char *func)
 {
-    printf(
+    fprintf(stderr,
+"%s %s\n"
 "usage:   gqt %s -i <gqt file> \\\n"
 "                   -d <ped database file> \\\n"
 "                   -f <label db field name> (requried for pca-shared)\\\n"
@@ -1025,8 +1037,8 @@ int pop_help(char *func)
 "NOTE: gst and fst assume that variants are biallelic.  If your data\n"
 "contains multiallelic sites, we recommend decomposing your VCF \n"
 "(see A. Tan, Bioinformatics 2015) prior to indexing.\n",
-func);
-    return 1;
+            PROGRAM_NAME, VERSION, func);
+    return EX_USAGE;
 }
 //}}}
 

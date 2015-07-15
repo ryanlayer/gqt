@@ -19,11 +19,9 @@ struct wah_file init_wah_file(char *file_name)
     struct wah_file wf;
 
     wf.file = fopen(file_name, "rb");
+    if (!wf.file)
+        err(EX_NOINPUT, "Cannot open file \"%s\"", file_name);
 
-    if (!wf.file) {
-        fprintf(stderr, "Unable to open %s\n", file_name);
-        return wf;
-    }
 
     // Jump to the begining of the file to grab the record size
     fseek(wf.file, 0, SEEK_SET);

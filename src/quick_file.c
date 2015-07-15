@@ -22,12 +22,9 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
     uint64_t pos = 0;
 
     /* Open the file */
-    if ((fp = fopen(filename, "rb")) == NULL) {
-        fprintf(stderr,
-                "Error: Unable to open file %s. Exiting....\n",
-                filename);
-        exit(1);
-    }
+    fp = fopen(filename, "rb");
+    if (!fp)
+        err(EX_NOINPUT, "Cannot read file\"%s\"", filename);
 
     /* 
      * The file is :

@@ -32,9 +32,18 @@ int nlz1(unsigned x)
 struct bcf_file init_bcf_file(char *file_name)
 {
     struct bcf_file bcf_f;
+    
+    bcf_f.file_name = file_name;
 
     bcf_f.fp = hts_open(file_name,"rb");
+    if ( !bcf_f.fp ) 
+        err(EX_DATAERR, "Could not read file: %s", file_name);
+
     bcf_f.hdr = bcf_hdr_read(bcf_f.fp);
+
+    if ( !bcf_f.hdr )
+        err(EX_DATAERR, "Could not read the header: %s", file_name);
+
     bcf_f.line = bcf_init1();
     bcf_f.num_records = bcf_hdr_nsamples(bcf_f.hdr);
     bcf_f.gt = NULL;
@@ -165,7 +174,13 @@ void push_bcf_gt_md(pri_queue *q,
 {
 
     FILE *gt_of = fopen(gt_of_name,"wb");
+    if (!gt_of)
+        err(EX_CANTCREAT, "Cannot create file \"%s\"", gt_of_name);
+
+
     FILE *md_of = fopen(md_of_name,"w");
+    if (!md_of)
+        err(EX_CANTCREAT, "Cannot create file \"%s\"", md_of_name);
 
     uint32_t num_ind_ints = 1 + ((num_inds - 1) / 16);
 
@@ -199,6 +214,11 @@ void push_bcf_gt_md(pri_queue *q,
 
         // Get the next bcf record
         int r = bcf_read(bcf_f->fp, bcf_f->hdr, bcf_f->line);
+
+        if (r == -1) 
+            err(EX_NOINPUT, "Error reading file \"%s\"", bcf_f->file_name);
+        
+
 
         // Unpack all of the fields 
         bcf_unpack(bcf_f->line, BCF_UN_ALL);
@@ -351,12 +371,20 @@ void sort_gt_md(pri_queue *q,
     //FILE *md_of = fopen(md_of_name,"r");
     // unsorted genotypes
     FILE *gt_of = fopen(gt_of_name,"rb");
+    if (!gt_of)
+        err(EX_NOINPUT, "Cannot read file\"%s\"", gt_of_name);
+
     // sorted genotypes
     //FILE *md_out = fopen(md_s_of_name,"w");
     // sorted variant row #s
     FILE *v_out = fopen(vid_out,"wb");
+    if (!v_out)
+        err(EX_CANTCREAT, "Cannot create file \"%s\"", vid_out);
+
     // sorted genotypes
     FILE *s_gt_of = fopen(gt_s_of_name,"wb");
+    if (!s_gt_of)
+        err(EX_CANTCREAT, "Cannot create file \"%s\"", gt_s_of_name);
 
     uint32_t num_ind_ints = 1 + ((num_inds - 1) / 16);
 
@@ -481,6 +509,8 @@ void compress_md(struct bcf_file *bcf_f,
     uint64_t h_i = 0;
 
     FILE *fp_o = fopen(bim_out, "wb");
+    if (!fp_o)
+        err(EX_CANTCREAT, "Cannot create file \"%s\"", bim_out);
 
      /* 
      * The file is :
@@ -589,12 +619,9 @@ void compress_md(struct bcf_file *bcf_f,
     uint64_t md_size_tenth = md_size/10;
     uint64_t md_size_status = md_size_tenth;
 
-    if ((fp = fopen(md_s_of_name, "r")) == NULL) {
-        fprintf(stderr,
-                "error: unable to open file %s.\n",
-                md_s_of_name);
-        exit(1);
-    }
+    fp = fopen(md_s_of_name, "r");
+    if (!fp)
+        err(EX_NOINPUT, "Cannot read file \"%s\"", md_s_of_name);
 
     /* 
      * It is likely that there is still data on the buffer to be compressed.
@@ -747,7 +774,12 @@ void rotate_gt(uint32_t num_inds,
     uint32_t I_i = 0, I_int_i = 0, two_bit_i;
 
     FILE *s_gt_of = fopen(gt_s_of_name,"rb");
+    if (!s_gt_of)
+        err(EX_NOINPUT, "Cannot read file\"%s\"", gt_s_of_name);
+
     FILE *rs_gt_of = fopen(gt_s_r_of_name,"wb");
+    if (!rs_gt_of)
+        err(EX_NOINPUT, "Cannot read file\"%s\"", gt_s_r_of_name);
 
     // Write these to values to a well-formed uncompressed packed int binary
     // file (ubin) file

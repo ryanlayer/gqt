@@ -41,16 +41,16 @@ int view(int argc, char **argv)
                     fprintf (stderr, "Unknown option `-%c'.\n", optopt);
                 else
                 fprintf (stderr, "Unknown option character `\\x%x'.\n", optopt);
+                return view_help();
             default:
-                view_help();
-                return 1;
+                return view_help();
         }
     }
 
     char *type = argv[0];
 
     if (i_is_set == 0) {
-        printf("Input file is not set\n");
+        fprintf(stderr, "Input file is not set\n");
         return view_help();
     } 
 
@@ -63,14 +63,16 @@ int view(int argc, char **argv)
 
 int view_help()
 {
-    printf("usage:   gqt view <type> -i <input file>\n"
-           "         plt   Plain text\n"
-           "         ubin  Uncompressed binary\n"
-           "         wahbm WAH-encoded bitmap\n"
-           "         -r    Record number to print\n"
-    );
+    fprintf(stderr,
+            "%s %s\n"
+            "usage:   gqt view <type> -i <input file>\n"
+            "         plt   Plain text\n"
+            "         ubin  Uncompressed binary\n"
+            "         wahbm WAH-encoded bitmap\n"
+            "         -r    Record number to print\n",
+            PROGRAM_NAME, VERSION);
 
-    return 0;
+    return 1;
 }
 
 int view_plt(char *in)

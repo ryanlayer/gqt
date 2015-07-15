@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include <limits.h>
+#include <err.h>
+#include <sysexits.h>
 #include "parse_q.h"
 #include "pq.h"
 #include "ped.h"
@@ -17,6 +19,9 @@
 #include "variant_metadata.h"
 
 #define CHUNK 16384
+
+#define PROGRAM_NAME  "gqt"
+#define VERSION "0.2.2"
 
 struct uint_ll {
         uint32_t value;

@@ -141,15 +141,25 @@ int query(int argc, char **argv)
                     (optopt == 'g') ||
                     (optopt == 'd') ||
                     (optopt == 'b') )
-                fprintf (stderr, "Option -%c requires an argument.\n",
+                fprintf (stderr,
+                        "Option -%c requires an argument.\n",
                          optopt);
             else if (isprint (optopt))
                 fprintf (stderr, "Unknown option `-%c'.\n", optopt);
             else
                 fprintf (stderr, "Unknown option character `\\x%x'.\n", optopt);
+            return query_help();
         default:
             return query_help();
         }
+    }
+
+    if (i_is_set == 0) {
+        fprintf(stderr, "GQT file is not set\n");
+        return query_help();
+    } else {
+        if ( access( wahbm_file_name, F_OK) == -1 )
+            err(EX_NOINPUT, "Error accessing GQT file \"%s\"", wahbm_file_name);
     }
 
     // Try to auto-detect file names based on GQT
@@ -163,8 +173,9 @@ int query(int argc, char **argv)
         if ( access( bim_file_name, F_OK) != -1 ) {
             b_is_set = 1;
         } else {
-            printf("Auto detect failure: BIM file %s not found\n",
-                   bim_file_name);
+            fprintf(stderr,
+                    "Auto detect failure: BIM file %s not found\n",
+                    bim_file_name);
             return query_help();
         }
     }
@@ -179,8 +190,9 @@ int query(int argc, char **argv)
         if ( access( vid_file_name, F_OK) != -1 ) {
             v_is_set = 1;
         } else {
-            printf("Auto detect failure: VID file %s not found\n",
-                   vid_file_name);
+            fprintf(stderr,
+                    "Auto detect failure: VID file %s not found\n",
+                    vid_file_name);
             return query_help();
         }
     }
@@ -196,34 +208,32 @@ int query(int argc, char **argv)
         if ( access( db_file_name, F_OK) != -1 ) {
             d_is_set = 1;
         } else {
-            printf("Auto detect failure: PED DB file %s not found\n",
-                   db_file_name);
+            fprintf(stderr,
+                    "Auto detect failure: PED DB file %s not found\n",
+                    db_file_name);
             return query_help();
         }
     }
 
-    if (i_is_set == 0) {
-        printf("GQT file is not set\n");
-        return query_help();
-    }
 
     if (v_is_set == 0) {
-        printf("VID file is not set\n");
+        fprintf(stderr, "VID file is not set\n");
         return query_help();
     }
 
     if (b_is_set == 0) {
-        printf("BIM file is not set\n");
+        fprintf(stderr, "BIM file is not set\n");
         return query_help();
     }
 
     if (d_is_set == 0) {
-        printf("PED database file is not set\n");
+        fprintf(stderr, "PED database file is not set\n");
         return query_help();
     }
 
     if (gt_q_count != id_q_count) {
-        printf("Mismatched number of individual and genotype query strings\n");
+        fprintf(stderr, 
+                "Mismatched number of individual and genotype query strings\n");
         return query_help();
     }
     //}}}
@@ -249,7 +259,7 @@ int query(int argc, char **argv)
     // open VID file
     FILE *vid_f = fopen(vid_file_name, "rb");
     if (vid_f == NULL) {
-        fprintf(stderr, "Could not read VIDE file: %s\n", vid_file_name);
+        fprintf(stderr, "Could not read VID file: %s\n", vid_file_name);
         return 1;
     }
     uint32_t *vids = (uint32_t *) malloc(wf.num_fields*sizeof(uint32_t));
@@ -705,7 +715,8 @@ void print_query_result(uint32_t *mask,
 //{{{int query_help()
 int query_help()
 {
-    printf(
+    fprintf(stderr, 
+"%s v%s\n"
 "usage:   gqt query -i <wahbm file> \\\n"
 "                   [-b <bim file> || -s <bcf file> && -v <vid file>]  \\\n"                    
 "                   -c only print number of resulting variants \\\n"
@@ -756,7 +767,8 @@ int query_help()
 "variants that are either heterozygous or homozygous alternate in no more\n"
 "than 10 individuals the query would be\n"
 "\n"
-"\t-g \"count(HET HOM_ALT) < 10\"\n");
-    return 1;
+"\t-g \"count(HET HOM_ALT) < 10\"\n",
+PROGRAM_NAME, VERSION);
+    return EX_USAGE;
 }
 //}}}

@@ -162,6 +162,14 @@ int query(int argc, char **argv)
             err(EX_NOINPUT, "Error accessing GQT file \"%s\"", wahbm_file_name);
     }
 
+    if (d_is_set == 1) {
+        if ( access( db_file_name, F_OK) == -1 )
+            err(EX_NOINPUT,
+                "Error accessing PED DB file \"%s\"",
+                db_file_name);
+    }
+
+
     // Try to auto-detect file names based on GQT
     if ( (i_is_set == 1) && (b_is_set == 0)) {
 
@@ -258,10 +266,9 @@ int query(int argc, char **argv)
 
     // open VID file
     FILE *vid_f = fopen(vid_file_name, "rb");
-    if (vid_f == NULL) {
-        fprintf(stderr, "Could not read VID file: %s\n", vid_file_name);
-        return 1;
-    }
+    if (!vid_f)
+        err(EX_NOINPUT, "Cannot read file\"%s\"", vid_file_name);
+
     uint32_t *vids = (uint32_t *) malloc(wf.num_fields*sizeof(uint32_t));
     r = fread(vids, sizeof(uint32_t), wf.num_fields, vid_f);
     fclose(vid_f);
@@ -547,6 +554,9 @@ void get_bcf_query_result(uint32_t *mask,
      * and the mask, then sort it.
      */
     FILE *vid_f = fopen(vid_file_name, "rb");
+    if (!vid_f)
+        err(EX_NOINPUT, "Cannot read file\"%s\"", vid_file_name);
+
     uint32_t *vids = (uint32_t *) malloc(num_fields*sizeof(uint32_t));
     int r = fread(vids, sizeof(uint32_t), num_fields, vid_f);
     fclose(vid_f);

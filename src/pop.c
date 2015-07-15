@@ -219,10 +219,9 @@ int pop(char *op, int argc, char **argv)
 
     // open VID file
     FILE *vid_f = fopen(vid_file_name, "rb");
-    if (vid_f == NULL) {
-        fprintf(stderr, "Could not read VID file: %s\n", vid_file_name);
-        return 1;
-    }
+    if (!vid_f)
+        err(EX_NOINPUT, "Cannot read file\"%s\"", vid_file_name);
+
     uint32_t *vids = (uint32_t *) malloc(wf.num_fields*sizeof(uint32_t));
     int r = fread(vids, sizeof(uint32_t), wf.num_fields, vid_f);
     fclose(vid_f);
@@ -818,10 +817,8 @@ uint32_t pca_shared(struct wah_file *wf,
                                              db_file_name);
 
     FILE *f = fopen(id_out_file, "w");
-    if (f == NULL) {
-        fprintf(stderr, "Could not write file: %s\n", id_out_file);
-        return 1;
-    }
+    if (!f)
+        err(EX_CANTCREAT, "Cannot write to file\"%s\"", id_out_file);
 
     uint32_t i;
     for (i = 0; i < num_labels; ++i){

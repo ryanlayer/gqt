@@ -115,6 +115,8 @@ int plt_field_freq(char *in, char *out)
     fseek(pf.file, pf.header_offset, SEEK_SET);
 
     FILE *f = fopen(out, "w");
+    if (!f)
+        err(EX_CANTCREAT, "Cannot write to \"%s\"", out);
 
     fprintf(f, "%d\n%d\n", pf.num_fields, pf.num_records);
     for (i = 0; i < pf.num_records; ++i) {

@@ -94,10 +94,10 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
     // Figure out which fields will be in the DB
     if (ped_file_name != NULL) {
         FILE *ped_f = fopen(ped_file_name, "r");
-        if (ped_f == NULL) {
-            fprintf(stderr, "Could not open %s\n", ped_file_name);
-            exit(EXIT_FAILURE);
-        }
+        if (!ped_f)
+            err(EX_NOINPUT, "Cannot open file \"%s\"", ped_file_name);
+
+        fprintf(stderr, "Creating sample database %s\n", ped_file_name);
 
         fprintf(stderr, "Adding the following fields from %s\n",
                 ped_file_name);
@@ -221,31 +221,28 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
     sqlite3 *db;
     char *err_msg;
     int rc = sqlite3_open(db_name, &db);
-    if( rc ){
-        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
-        sqlite3_close(db);
-        return 1;
-    }
+    if( rc != SQLITE_OK )
+        err(EX_SOFTWARE,
+            "SQL error \"%s\" for database \"%s\"",
+            err_msg, db_name);
+
 
     rc = sqlite3_exec(db, q_create_table, NULL, 0, &err_msg);
-    if( rc != SQLITE_OK ){
-        fprintf(stderr, "SQL error: %s\n", err_msg);
-        sqlite3_free(err_msg);
-    }
+    if( rc != SQLITE_OK )
+        err(EX_SOFTWARE,
+            "SQL error \"%s\" in query \"%s\"",
+            err_msg,
+            q_create_table);
 
 
     // open BCF
     htsFile *fp    = hts_open(bcf_file_name,"rb");
-    if ( !fp ) {
-        fprintf(stderr,"Could not read %s\n", bcf_file_name);
-        return 1;
-    }
+    if ( !fp ) 
+        err(EX_DATAERR, "Could not read file: %s", bcf_file_name);
 
     bcf_hdr_t *hdr = bcf_hdr_read(fp);
-    if ( !hdr ) {
-        fprintf(stderr,"Could not read the header: %s\n", bcf_file_name);
-        return 1;
-    }
+    if ( !hdr )
+        err(EX_DATAERR, "Could not read the header: %s", bcf_file_name);
 
     // Add the sample names and location from the BCF file
     char *q;
@@ -257,11 +254,8 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
                      hdr->samples[i]);
 
         rc = sqlite3_exec(db, q, NULL, 0, &err_msg);
-        if( rc != SQLITE_OK ){
-            fprintf(stderr, "SQL error: %s\n", err_msg);
-            fprintf(stderr, "%s\n", q);
-            sqlite3_free(err_msg);
-        }
+        if( rc != SQLITE_OK )
+            err(EX_SOFTWARE,"SQL error \"%s\" in query \"%s\"", err_msg, q);
     }
     bcf_hdr_destroy(hdr);
     hts_close(fp);
@@ -275,10 +269,8 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
                 ped_file_name);
 
         FILE *ped_f = fopen(ped_file_name, "r");
-        if (ped_f == NULL) {
-            fprintf(stderr, "Could not open %s\n", ped_file_name);
-            exit(EXIT_FAILURE);
-        }
+        if (!ped_f)
+            err(EX_NOINPUT, "Cannot open file \"%s\"", ped_file_name);
 
         char *line = NULL;
         size_t len = 0;
@@ -332,11 +324,8 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
             q = tmp_q;
 
             rc = sqlite3_exec(db, q, NULL, 0, &err_msg);
-            if( rc != SQLITE_OK ){
-                fprintf(stderr, "SQL error: %s\n", err_msg);
-                fprintf(stderr, "%s\n", q);
-                sqlite3_free(err_msg);
-            }
+            if( rc != SQLITE_OK )
+                err(EX_SOFTWARE,"SQL error \"%s\" in query \"%s\"", err_msg, q);
         }
 
         fclose(ped_f);
@@ -354,11 +343,10 @@ uint32_t resolve_ind_query(uint32_t **R, char *query, char *ped_db_file)
     sqlite3 *db;
     char *err_msg;
     int rc = sqlite3_open(ped_db_file, &db);
-    if( rc ){
-        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
-        sqlite3_close(db);
-        return 1;
-    }
+    if( rc != SQLITE_OK )
+        err(EX_NOINPUT,
+            "SQL error \"%s\" for database \"%s\"",
+            err_msg, ped_db_file);
 
     char *test_q;
     int r;
@@ -375,10 +363,8 @@ uint32_t resolve_ind_query(uint32_t **R, char *query, char *ped_db_file)
     ll.len = 0;
 
     rc = sqlite3_exec(db, test_q, uint32_t_ll_callback, &ll, &err_msg);
-    if( rc != SQLITE_OK ){
-        fprintf(stderr, "SQL error: %s\n", err_msg);
-        sqlite3_free(err_msg);
-    }
+    if( rc != SQLITE_OK )
+        err(EX_SOFTWARE,"SQL error \"%s\" in query \"%s\"", err_msg, test_q);
 
     *R = (uint32_t *) malloc(ll.len * sizeof(uint32_t));
 
@@ -405,11 +391,10 @@ uint32_t resolve_label_query(char ***R,
     sqlite3 *db;
     char *err_msg;
     int rc = sqlite3_open(ped_db_file, &db);
-    if( rc ){
-        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
-        sqlite3_close(db);
-        return 1;
-    }
+    if( rc != SQLITE_OK )
+        err(EX_NOINPUT,
+            "SQL error \"%s\" for database \"%s\"",
+            err_msg, ped_db_file);
 
     char *test_q;
     int r;
@@ -428,10 +413,8 @@ uint32_t resolve_label_query(char ***R,
     ll.len = 0;
 
     rc = sqlite3_exec(db, test_q, char_ll_callback, &ll, &err_msg);
-    if( rc != SQLITE_OK ){
-        fprintf(stderr, "SQL error: %s\n", err_msg);
-        sqlite3_free(err_msg);
-    }
+    if( rc != SQLITE_OK )
+        err(EX_SOFTWARE,"SQL error \"%s\" in query \"%s\"", err_msg, test_q);
 
     *R = (char **) malloc(ll.len * sizeof(char *));
 

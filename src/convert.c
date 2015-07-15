@@ -114,33 +114,28 @@ int convert(int argc, char **argv)
             hts_idx_t *idx = NULL;
             htsFile *fp    = hts_open(in,"rb");
             if ( !fp ) {
-                fprintf(stderr,"Could not read %s\n", in);
-                return 1;
+                err(EX_DATAERR, "Could not read file: %s", in);
             }
 
             bcf_hdr_t *hdr = bcf_hdr_read(fp);
             if ( !hdr ) {
-                fprintf(stderr,"Could not read the header: %s\n", in);
-                return 1;
+                err(EX_DATAERR, "Could not read the header: %s", in);
             }
 
             if (hts_get_format(fp)->format==vcf) {
                 tbx = tbx_index_load(in);
                 if ( !tbx ) { 
-                    fprintf(stderr,"Could not load TBI index: %s\n", in);
-                    return 1;
+                    err(EX_NOINPUT,"Could not load TBI index: %s.tbi", in);
                 }
             } else if ( hts_get_format(fp)->format==bcf ) {
                 idx = bcf_index_load(in);
                 if ( !idx ) {
-                    fprintf(stderr,"Could not load CSI index: %s\n", in);
-                    return 1;
+                    err(EX_NOINPUT,"Could not load CSI index: %s.csi", in);
                 }
             } else {
-                fprintf(stderr,
-                        "Could not detect the file type as VCF or BCF: %s\n",
-                        in);
-                return 1;
+                err(EX_NOINPUT,
+                    "Could not detect the file type as VCF or BCF: %s",
+                    in);
             }
 
             num_fields = hdr->n[BCF_DT_SAMPLE];
@@ -208,7 +203,6 @@ int convert(int argc, char **argv)
             }
       }
 
-      fprintf(stderr, "Creating sample database %s\n", out);
       return ped_ped(in, ped, col, out);
     }
     return convert_help();

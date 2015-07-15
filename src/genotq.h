@@ -5,6 +5,7 @@
 #include <limits.h>
 #include <err.h>
 #include <sysexits.h>
+#include <sys/errno.h>
 #include "parse_q.h"
 #include "pq.h"
 #include "ped.h"
@@ -19,7 +20,7 @@
 #define CHUNK 16384
 
 #define PROGRAM_NAME  "gqt"
-#define VERSION "0.2.2"
+#define VERSION "0.2.3"
 
 struct uint_ll {
         uint32_t value;

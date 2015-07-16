@@ -7,7 +7,11 @@ pri_queue priq_new(int size)
     if (size < 4) size = 4;
 
     pri_queue q = malloc(sizeof(pri_queue_t));
+    if (!q)
+        err(EX_OSERR, "malloc error");
     q->buf = malloc(sizeof(q_elem_t) * size);
+    if (!q->buf)
+        err(EX_OSERR, "malloc error");
     q->alloc = size;
     q->n = 1;
 

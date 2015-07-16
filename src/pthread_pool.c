@@ -6,6 +6,8 @@
 
 void * pool_start(void * (*thread_func)(void *), uint32_t threads) {
 	struct pool *p = (struct pool *) malloc(sizeof(struct pool) + (threads-1) * sizeof(pthread_t));
+        if (!p)
+            err(EX_OSERR, "malloc error");
 	int i;
 
 	pthread_mutex_init(&p->q_mtx, NULL);
@@ -27,6 +29,8 @@ void * pool_start(void * (*thread_func)(void *), uint32_t threads) {
 void pool_enqueue(void *pool, void *arg, char free) {
 	struct pool *p = (struct pool *) pool;
 	struct pool_queue *q = (struct pool_queue *) malloc(sizeof(struct pool_queue));
+        if (!q)
+            err(EX_OSERR, "malloc error");
 	q->arg = arg;
 	q->next = NULL;
 	q->free = free;

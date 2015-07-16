@@ -60,6 +60,8 @@ uint32_t ints_to_rle(uint32_t *I, int I_len, uint32_t **O)
 
                 struct uint_ll *n = (struct uint_ll *) 
                         malloc(sizeof(struct uint_ll));
+                if (!n)
+                    err(EX_OSERR, "malloc error");
                 n->value = rle_v;
                 n->next = NULL;
                 ll_len += 1;
@@ -79,6 +81,8 @@ uint32_t ints_to_rle(uint32_t *I, int I_len, uint32_t **O)
     }
 
     struct uint_ll *n = (struct uint_ll *) malloc(sizeof(struct uint_ll));
+    if (!n)
+        err(EX_OSERR, "malloc error");
     n->value = rle_v;
     n->next = NULL;
     ll_len += 1;
@@ -91,6 +95,8 @@ uint32_t ints_to_rle(uint32_t *I, int I_len, uint32_t **O)
     tail = n;
 
     *O = (uint32_t *) malloc(ll_len*sizeof(uint32_t));
+    if (!O)
+        err(EX_OSERR, "malloc error");
     struct uint_ll *last, *curr = head;
     for (i = 0; i < ll_len; ++i) {
         (*O)[i] = curr->value;
@@ -139,6 +145,8 @@ uint32_t bin_char_to_int(char *bin)
 int *unpack_1_bit_ints(uint32_t packed_ints)
 {
     int *r = (int *) malloc (32*sizeof(int));
+    if (!r)
+        err(EX_OSERR, "malloc error");
 
     int i;
     for (i = 0; i < 32; ++i) 
@@ -152,6 +160,8 @@ int *unpack_1_bit_ints(uint32_t packed_ints)
 int *unpack_2_bit_ints(uint32_t packed_ints)
 {
     int *r = (int *) malloc (16*sizeof(int));
+    if (!r)
+        err(EX_OSERR, "malloc error");
 
     int i;
     for (i = 0; i < 16; ++i) 
@@ -276,5 +286,17 @@ int float_compare (const void * a, const void * b)
     float fa = *(const float*) a;
     float fb = *(const float*) b;
     return (fa > fb) - (fa < fb);
+}
+
+//{{{ void check_file_read(char *file_name, FILE *fp, size_t exp, size_t obs)
+void check_file_read(char *file_name, FILE *fp, size_t exp, size_t obs)
+{
+    if (exp != obs) {
+        if (feof(fp))
+            errx(EX_IOERR,
+                 "Error reading file \"%s\": End of file",
+                 file_name);
+        err(EX_IOERR, "Error reading file \"%s\"", file_name);
+    }
 }
 //}}}

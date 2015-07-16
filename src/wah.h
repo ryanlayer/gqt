@@ -3,6 +3,7 @@
 
 struct wah_file {
     FILE *file;
+    char *file_name;
     uint32_t num_fields, num_records;
     uint64_t *record_offsets;
     long header_offset;
@@ -55,6 +56,8 @@ struct wah_run {
  * @endcode
  */
 struct wah_file init_wah_file(char *file_name);
+
+void destroy_wah_file(struct wah_file *wf);
 
 /**
  * @brief   AND two WAH runs

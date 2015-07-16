@@ -223,7 +223,12 @@ int pop(char *op, int argc, char **argv)
         err(EX_NOINPUT, "Cannot read file\"%s\"", vid_file_name);
 
     uint32_t *vids = (uint32_t *) malloc(wf.num_fields*sizeof(uint32_t));
-    int r = fread(vids, sizeof(uint32_t), wf.num_fields, vid_f);
+    if (!vids)
+        err(EX_OSERR, "malloc error");
+
+    size_t fr = fread(vids, sizeof(uint32_t), wf.num_fields, vid_f);
+    check_file_read(vid_file_name, vid_f, wf.num_fields, fr);
+
     fclose(vid_f);
 
     uint32_t num_ints = (wf.num_fields + 32 - 1)/ 32;
@@ -291,7 +296,7 @@ int pop(char *op, int argc, char **argv)
     }
 
 
-    fclose(wf.file);
+    destroy_wahbm_file(&wf);
     return 0;
 }
 //}}}
@@ -423,6 +428,8 @@ uint32_t calpha(struct wah_file *wf,
 
     uint32_t **case_ctrl_counts = 
             (uint32_t **)malloc((N*2 + 2)* sizeof(uint32_t *));
+    if (!case_ctrl_counts)
+        err(EX_OSERR, "malloc error");
 
     uint32_t i,j;
     uint32_t *sums[id_q_count];
@@ -443,6 +450,8 @@ uint32_t calpha(struct wah_file *wf,
 
     uint32_t num_all = num_cases + num_ctrls;
     uint32_t *all_ids = (uint32_t *)malloc(num_all * sizeof(uint32_t));
+    if (!all_ids )
+        err(EX_OSERR, "malloc error");
 
     for (i = 0; i < num_cases; ++i) 
         all_ids[i] = case_ids[i];
@@ -497,6 +506,9 @@ uint32_t calpha(struct wah_file *wf,
     //srand(time(NULL));
     srand(1);
     uint32_t *P_all_ids = (uint32_t *)malloc(num_all*sizeof(uint32_t));
+    if (!P_all_ids )
+        err(EX_OSERR, "malloc error");
+
     memcpy(P_all_ids, all_ids, num_all*sizeof(uint32_t));
     uint32_t *P_case_ids, *P_ctrl_ids;    
     P_case_ids = P_all_ids;
@@ -576,6 +588,8 @@ uint32_t calpha(struct wah_file *wf,
      */
     *mapped_case_ctrl_counts = 
             (uint32_t *)malloc((num_variants)*(N*2 + 2)* sizeof(uint32_t *));
+    if (!*mapped_case_ctrl_counts)
+        err(EX_OSERR, "malloc error");
 
     for ( i = 0; i < (N*2 + 2); ++i) {
         for ( j = 0; j < num_variants; ++j) {

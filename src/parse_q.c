@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "parse_q.h"
+#include "genotq.h"
 
 extern int yylex();
 extern int yylineo;
@@ -132,6 +133,8 @@ int parse_q(char *q_text, struct gqt_query *q_props)
     memset(q_props->genotype_condition,0,4*sizeof(int));
 
     char *in = (char *) malloc(100*sizeof(char));
+    if (!in)
+        err(EX_OSERR, "malloc error");
     strcpy(in, q_text);
     YY_BUFFER_STATE buffer = yy_scan_string(in);
 

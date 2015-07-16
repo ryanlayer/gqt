@@ -145,7 +145,8 @@ uint32_t get_wah_bitmap_in_place(struct wah_file wf,
     }
 
     fseek(wf.file, wah_offset, SEEK_SET);
-    int r = fread(*wah_bitmap,sizeof(uint32_t),wah_size,wf.file);
+    size_t fr = fread(*wah_bitmap,sizeof(uint32_t),wah_size,wf.file);
+    check_file_read(wf.file_name, wf.file, wah_size, fr);
 
     return (uint32_t)wah_size;
 }
@@ -183,7 +184,8 @@ uint32_t get_wah_bitmaps_in_place(struct wah_file wf,
 
 
     fseek(wf.file, wah_offset, SEEK_SET);
-    int r = fread(*wah_bitmap,sizeof(uint32_t),wah_size,wf.file);
+    size_t fr = fread(*wah_bitmap,sizeof(uint32_t),wah_size,wf.file);
+    check_file_read(wf.file_name, wf.file, wah_size, fr);
 
     return (uint32_t)wah_size;
 }
@@ -202,11 +204,17 @@ uint32_t range_records_in_place_wahbm(struct wah_file wf,
     uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
     uint32_t *record_new_bm = (uint32_t *)
                         malloc(sizeof(uint32_t)*max_wah_size);
+    if (!record_new_bm )
+        err(EX_OSERR, "malloc error");
 
     uint32_t *or_result_bm = (uint32_t *)
                         malloc(sizeof(uint32_t)*max_wah_size);
+    if (!or_result_bm )
+        err(EX_OSERR, "malloc error");
     uint32_t *and_result_bm = (uint32_t *)
                         malloc(sizeof(uint32_t)*max_wah_size);
+    if (!and_result_bm )
+        err(EX_OSERR, "malloc error");
     uint32_t and_result_bm_size, record_new_bm_size, or_result_bm_size;
     uint32_t i,j;
     for (i = 0; i < max_wah_size; ++i)
@@ -255,13 +263,19 @@ uint32_t count_range_records_in_place_wahbm(struct wah_file wf,
 
 {
     *R = (uint32_t *) calloc(wf.num_fields,sizeof(uint32_t));
+    if (!*R )
+        err(EX_OSERR, "malloc error");
 
     uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
     uint32_t *record_new_bm = (uint32_t *)
                         malloc(sizeof(uint32_t)*max_wah_size);
+    if (!record_new_bm )
+        err(EX_OSERR, "malloc error");
 
     uint32_t *or_result_bm = (uint32_t *)
                         malloc(sizeof(uint32_t)*max_wah_size);
+    if (!or_result_bm )
+        err(EX_OSERR, "malloc error");
 
     uint32_t and_result_bm_size, record_new_bm_size, or_result_bm_size;
     uint32_t i,j,r_size;
@@ -309,14 +323,20 @@ uint32_t avx_count_range_records_in_place_wahbm(
 {
     //*R = (uint32_t *) calloc(wf.num_fields,sizeof(uint32_t));
     int r = posix_memalign((void **)R, 32, wf.num_fields*sizeof(uint32_t));
+    if (r !=0 )
+        err(EX_OSERR, "posix_memalign error");
     memset(*R, 0, wf.num_fields*sizeof(uint32_t));
 
     uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
     uint32_t *record_new_bm = (uint32_t *)
                         malloc(sizeof(uint32_t)*max_wah_size);
+    if (!record_new_bm )
+        err(EX_OSERR, "malloc error");
 
     uint32_t *or_result_bm = (uint32_t *)
                         malloc(sizeof(uint32_t)*max_wah_size);
+    if (!or_result_bm )
+        err(EX_OSERR, "malloc error");
 
     uint32_t and_result_bm_size, record_new_bm_size, or_result_bm_size;
     uint32_t i,j,r_size;
@@ -363,11 +383,15 @@ uint32_t avx_sum_range_records_in_place_wahbm(struct wah_file wf,
 
 {
     int r = posix_memalign((void **)R, 32, wf.num_fields*sizeof(uint32_t));
+    if (r !=0 )
+        err(EX_OSERR, "posix_memalign error");
     memset(*R, 0, wf.num_fields*sizeof(uint32_t));
 
     uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
     uint32_t *record_new_bm = (uint32_t *)
                         malloc(sizeof(uint32_t)*max_wah_size);
+    if (!record_new_bm )
+        err(EX_OSERR, "malloc error");
 
     uint32_t record_new_bm_size;
     uint32_t i,j,r_size;
@@ -431,10 +455,14 @@ uint32_t sum_range_records_in_place_wahbm(struct wah_file wf,
 
 {
     *R = (uint32_t *) calloc(wf.num_fields,sizeof(uint32_t));
+    if (!*R )
+        err(EX_OSERR, "malloc error");
 
     uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
     uint32_t *record_new_bm = (uint32_t *)
                         malloc(sizeof(uint32_t)*max_wah_size);
+    if (!record_new_bm )
+        err(EX_OSERR, "malloc error");
 
     uint32_t and_result_bm_size, record_new_bm_size, or_result_bm_size;
     uint32_t i,j,r_size;

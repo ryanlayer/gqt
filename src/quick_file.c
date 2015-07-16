@@ -36,13 +36,24 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
      * compressed data 
      */
     uint64_t u_size, c_size, h_size, num_r;
-    size_t s = fread(&u_size, sizeof(uint64_t), 1, fp);
-    s = fread(&c_size, sizeof(uint64_t), 1, fp);
-    s = fread(&h_size, sizeof(uint64_t), 1, fp);
-    s = fread(&num_r, sizeof(uint64_t), 1, fp);
+    size_t fr = fread(&u_size, sizeof(uint64_t), 1, fp);
+    check_file_read(filename, fp, 1, fr);
+
+    fr = fread(&c_size, sizeof(uint64_t), 1, fp);
+    check_file_read(filename, fp, 1, fr);
+
+    fr = fread(&h_size, sizeof(uint64_t), 1, fp);
+    check_file_read(filename, fp, 1, fr);
+
+    fr = fread(&num_r, sizeof(uint64_t), 1, fp);
+    check_file_read(filename, fp, 1, fr);
 
     uint64_t *md_lens = (uint64_t *)malloc(num_r * sizeof(uint64_t));
-    s = fread(md_lens, sizeof(uint64_t), num_r, fp);
+    if (!md_lens )
+        err(EX_OSERR, "malloc error");
+
+    fr = fread(md_lens, sizeof(uint64_t), num_r, fp);
+    check_file_read(filename, fp, num_r, fr);
 
     /* allocate inflate state */
     z_stream strm;
@@ -64,6 +75,8 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
             
 
     char *final_out_buf = (char *) malloc(u_size);
+    if (!final_out_buf )
+        err(EX_OSERR, "malloc error");
     qfile->main_buf = final_out_buf;
 
     /* 
@@ -78,6 +91,7 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
     /* decompress until deflate stream ends or end of file */
     do {
         strm.avail_in = fread(in_buf, 1, CHUNK, fp);
+        //check_file_read(filename, fp, CHUNK, strm.avail_in);
         if (ferror(fp)) {
             fprintf(stderr, "error: Cannot read compressed file.\n");
             (void)inflateEnd(&strm);
@@ -138,10 +152,14 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
 
     /* allocate an array of char **'s, one for each line. */
     qfile->lines = (char **)malloc(qfile->num_lines *sizeof(char *));
+    if (!qfile->lines )
+        err(EX_OSERR, "malloc error");
     memset(qfile->lines, 0, qfile->num_lines * sizeof(char *));
 
     /* also allocate the array of line lengths. */
     qfile->line_lens = (uint64_t *)malloc(qfile->num_lines * sizeof(uint64_t));
+    if (!qfile->line_lens)
+        err(EX_OSERR, "malloc error");
 
     /* Loop through the mainbuf again, turning all newlines into
      * null chars. Put a pointer to the next char on the lines array.

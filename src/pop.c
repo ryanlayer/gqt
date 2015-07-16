@@ -226,7 +226,9 @@ int pop(char *op, int argc, char **argv)
     if (!vids)
         err(EX_OSERR, "malloc error");
 
-    int r = fread(vids, sizeof(uint32_t), wf.num_fields, vid_f);
+    size_t fr = fread(vids, sizeof(uint32_t), wf.num_fields, vid_f);
+    check_file_read(vid_file_name, vid_f, wf.num_fields, fr);
+
     fclose(vid_f);
 
     uint32_t num_ints = (wf.num_fields + 32 - 1)/ 32;
@@ -294,7 +296,7 @@ int pop(char *op, int argc, char **argv)
     }
 
 
-    fclose(wf.file);
+    destroy_wahbm_file(&wf);
     return 0;
 }
 //}}}

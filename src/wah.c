@@ -17,6 +17,7 @@
 struct wah_file init_wah_file(char *file_name)
 {
     struct wah_file wf;
+    wf.file_name = strdup(file_name);
 
     wf.file = fopen(file_name, "rb");
     if (!wf.file)
@@ -25,8 +26,11 @@ struct wah_file init_wah_file(char *file_name)
 
     // Jump to the begining of the file to grab the record size
     fseek(wf.file, 0, SEEK_SET);
-    int r = fread(&wf.num_fields,sizeof(uint32_t),1,wf.file);
-    r = fread(&wf.num_records,sizeof(uint32_t),1,wf.file);
+    size_t fr = fread(&wf.num_fields,sizeof(uint32_t),1,wf.file);
+    check_file_read(file_name, wf.file, 1, fr);
+
+    fr = fread(&wf.num_records,sizeof(uint32_t),1,wf.file);
+    check_file_read(file_name, wf.file, 1, fr);
 
     wf.record_offsets = (uint64_t *) 
             malloc(sizeof (uint64_t)*wf.num_records);
@@ -34,13 +38,23 @@ struct wah_file init_wah_file(char *file_name)
         err(EX_OSERR, "malloc error");
 
     uint32_t i;
-    for (i = 0; i < wf.num_records; ++i)
-        r = fread(&(wf.record_offsets[i]),sizeof(uint64_t),1,wf.file);
-
+    for (i = 0; i < wf.num_records; ++i) {
+        fr = fread(&(wf.record_offsets[i]),sizeof(uint64_t),1,wf.file);
+        check_file_read(file_name, wf.file, 1, fr);
+    }
 
     wf.header_offset = ftell(wf.file);
 
     return wf;
+}
+//}}}
+
+//{{{void destroy_wah_file(struct wah_file *wf)
+void destroy_wah_file(struct wah_file *wf)
+{
+    fclose(wf->file);
+    free(wf->file_name);
+    free(wf->record_offsets);
 }
 //}}}
 

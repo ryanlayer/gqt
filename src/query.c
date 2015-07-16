@@ -273,7 +273,9 @@ int query(int argc, char **argv)
     if (!vids)
         err(EX_OSERR, "malloc error");
 
-    r = fread(vids, sizeof(uint32_t), wf.num_fields, vid_f);
+    size_t fr = fread(vids, sizeof(uint32_t), wf.num_fields, vid_f);
+    check_file_read(vid_file_name, vid_f, wf.num_fields, fr);
+
     fclose(vid_f);
 
     uint32_t num_ints = (wf.num_fields + 32 - 1)/ 32;
@@ -534,7 +536,7 @@ int query(int argc, char **argv)
             free(counts[j]);
     }
 
-    fclose(wf.file);
+    destroy_wahbm_file(&wf);
     return 0;
 }
 //}}}
@@ -565,7 +567,10 @@ void get_bcf_query_result(uint32_t *mask,
     uint32_t *vids = (uint32_t *) malloc(num_fields*sizeof(uint32_t));
     if (!vids )
         err(EX_OSERR, "malloc error");
-    int r = fread(vids, sizeof(uint32_t), num_fields, vid_f);
+
+    size_t fr = fread(vids, sizeof(uint32_t), num_fields, vid_f);
+    check_file_read(vid_file_name, vid_f, num_fields, fr);
+
     fclose(vid_f);
 
     uint32_t i, j, masked_vid_count = 0;
@@ -608,7 +613,7 @@ void get_bcf_query_result(uint32_t *mask,
     else
         out = hts_open("-", "wb");
 
-    r = bcf_hdr_write(out, hdr);
+    int r = bcf_hdr_write(out, hdr);
 
     uint32_t bcf_line_i = 0;
     masked_vid_i = 0;

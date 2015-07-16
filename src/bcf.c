@@ -444,7 +444,9 @@ void sort_gt_md(pri_queue *q,
         start = num_ind_ints*sizeof(uint32_t);
         start = (*d)*start;
         fseek(gt_of, start, SEEK_SET);
-        r = fread(packed_ints, sizeof(uint32_t), num_ind_ints, gt_of);
+
+        size_t fr = fread(packed_ints, sizeof(uint32_t), num_ind_ints, gt_of);
+        check_file_read(gt_of_name, gt_of, num_ind_ints, fr);
 
         if (fwrite(packed_ints,
                    sizeof(uint32_t),
@@ -455,7 +457,6 @@ void sort_gt_md(pri_queue *q,
         //write out the variant ID
         if (fwrite(d, sizeof(uint32_t), 1, v_out) != 1)
             err(EX_IOERR, "Error writing to \"%s\"", vid_out); 
-
 
         var_i += 1;
     }
@@ -706,6 +707,9 @@ void compress_md(struct bcf_file *bcf_f,
         }
     }
 
+    if (ferror(fp))
+        err(EX_IOERR, "Error reading file \"%s\"", md_s_of_name);
+
     // It is likely that there is still data on the buffer to be compressed.
 
     if (read > 0) {
@@ -843,7 +847,8 @@ void rotate_gt(uint32_t num_inds,
             col *= sizeof(uint32_t);
             fseek(s_gt_of, row + col, SEEK_SET);
 
-            int r = fread(&v, sizeof(uint32_t), 1, s_gt_of);
+            size_t fr = fread(&v, sizeof(uint32_t), 1, s_gt_of);
+            check_file_read(gt_s_of_name, s_gt_of, 1, fr);
 
             // one int corresponds to a col of 16 two-bit values
             // two_bit_i will move across the cols

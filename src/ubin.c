@@ -27,8 +27,12 @@ struct ubin_file init_ubin_file(char *file_name)
 
     // Jump to the begining of the file to grab the record size
     fseek(uf.file, 0, SEEK_SET);
-    int r = fread(&uf.num_fields,sizeof(uint32_t),1,uf.file);
-    r = fread(&uf.num_records,sizeof(uint32_t),1,uf.file);
+    size_t fr = fread(&uf.num_fields,sizeof(uint32_t),1,uf.file);
+    check_file_read(file_name, uf.file, 1, fr);
+
+    fr = fread(&uf.num_records,sizeof(uint32_t),1,uf.file);
+    check_file_read(file_name, uf.file, 1, fr);
+
     uf.header_offset = ftell(uf.file);
 
     return uf;
@@ -38,7 +42,7 @@ struct ubin_file init_ubin_file(char *file_name)
 
 //{{{ uint32_t convert_file_by_name_ubin_to_wahbm16(char *ubin_in, 
 uint32_t convert_file_by_name_ubin_to_wahbm16(char *ubin_in,
-                                                  char *wah_out)
+                                              char *wah_out)
 {
     FILE *wf = fopen(wah_out,"wb");
     if (!wf)
@@ -81,7 +85,8 @@ uint32_t convert_file_by_name_ubin_to_wahbm16(char *ubin_in,
         if ( (tenth_num_records == 0) || (i % tenth_num_records == 0))
             fprintf(stderr, ".");
 
-        int r =fread(c,sizeof(uint32_t),num_ints_per_record,uf.file);
+        size_t fr = fread(c,sizeof(uint32_t),num_ints_per_record,uf.file);
+        check_file_read(ubin_in, uf.file, num_ints_per_record, fr);
          
         uint16_t *wah;
         uint32_t *wah_sizes;
@@ -174,7 +179,8 @@ uint32_t convert_file_by_name_ubin_to_wahbm(char *ubin_in, char *wah_out)
         if ( (tenth_num_records == 0) || (i % tenth_num_records == 0))
             fprintf(stderr, ".");
 
-        int r = fread(c, sizeof(uint32_t), num_ints_per_record, uf.file);
+        size_t fr = fread(c, sizeof(uint32_t), num_ints_per_record, uf.file);
+        check_file_read(ubin_in, uf.file, num_ints_per_record, fr);
          
         uint32_t *wah;
         uint32_t *wah_sizes;
@@ -251,7 +257,8 @@ uint32_t convert_file_by_name_ubin_to_wah(char *ubin_in, char *wah_out)
     fseek(uf.file, uf.header_offset, SEEK_SET);
 
     for (i = 0; i < uf.num_records; ++i) {
-        int r = fread(c,sizeof(uint32_t),num_ints_per_record,uf.file);
+        size_t fr = fread(c,sizeof(uint32_t),num_ints_per_record,uf.file);
+        check_file_read(ubin_in, uf.file, num_ints_per_record, fr);
          
         uint32_t *wah;
         uint32_t wah_len = ints_to_wah(c,
@@ -280,34 +287,6 @@ uint32_t convert_file_by_name_ubin_to_wah(char *ubin_in, char *wah_out)
     fclose(uf.file);
     return 0;
 }
-//}}}
-
-//{{{ uint32_t get_ubin_record(struct ubin_file uf,
-uint32_t get_ubin_record(struct ubin_file uf,
-                             uint32_t record_id,
-                             uint32_t **ubin_record)
-{
-    int num_ints_per_record = 1 + ((uf.num_fields - 1) / 16);
-
-    uint32_t ubin_offset = uf.header_offset + 
-            sizeof(uint32_t)*(record_id*num_ints_per_record);
-
-    //fprintf(stderr, "ubin_offset:%u\n", ubin_offset);
-
-    *ubin_record = (uint32_t *)
-                   malloc(sizeof(uint32_t)*num_ints_per_record);
-    if (!*ubin_record)
-        err(EX_OSERR, "malloc error");
-
-    fseek(uf.file, ubin_offset, SEEK_SET);
-    int r = fread(*ubin_record,
-                   sizeof(uint32_t),
-                   num_ints_per_record,
-                   uf.file);
-
-    return num_ints_per_record;
-}
-
 //}}}
 
 //{{{ uint32_t ubin_to_bitmap(uint32_t *U,
@@ -843,3 +822,35 @@ uint32_t convert_file_by_name_ubin_to_plt(char *ubin_in, char *plt_out)
     return num_printed;
 }
 //}}}
+
+#if 0
+//{{{ uint32_t get_ubin_record(struct ubin_file uf,
+uint32_t get_ubin_record(struct ubin_file uf,
+                             uint32_t record_id,
+                             uint32_t **ubin_record)
+{
+    int num_ints_per_record = 1 + ((uf.num_fields - 1) / 16);
+
+    uint32_t ubin_offset = uf.header_offset + 
+            sizeof(uint32_t)*(record_id*num_ints_per_record);
+
+    //fprintf(stderr, "ubin_offset:%u\n", ubin_offset);
+
+    *ubin_record = (uint32_t *)
+                   malloc(sizeof(uint32_t)*num_ints_per_record);
+    if (!*ubin_record)
+        err(EX_OSERR, "malloc error");
+
+    fseek(uf.file, ubin_offset, SEEK_SET);
+    size_t fr = fread(*ubin_record,
+                   sizeof(uint32_t),
+                   num_ints_per_record,
+                   uf.file);
+
+    return num_ints_per_record;
+}
+
+//}}}
+#endif
+
+

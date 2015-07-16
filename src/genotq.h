@@ -57,4 +57,6 @@ void parse_cmd_line_int_csv(uint32_t *I,
                             int num_I,
                             char *cmd_line_arg);
 const char *int_to_binary(uint32_t x);
+
+void check_file_read(char *file_name, FILE *fp, size_t exp, size_t obs);
 #endif

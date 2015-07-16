@@ -36,15 +36,24 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
      * compressed data 
      */
     uint64_t u_size, c_size, h_size, num_r;
-    size_t s = fread(&u_size, sizeof(uint64_t), 1, fp);
-    s = fread(&c_size, sizeof(uint64_t), 1, fp);
-    s = fread(&h_size, sizeof(uint64_t), 1, fp);
-    s = fread(&num_r, sizeof(uint64_t), 1, fp);
+    size_t fr = fread(&u_size, sizeof(uint64_t), 1, fp);
+    check_file_read(filename, fp, 1, fr);
+
+    fr = fread(&c_size, sizeof(uint64_t), 1, fp);
+    check_file_read(filename, fp, 1, fr);
+
+    fr = fread(&h_size, sizeof(uint64_t), 1, fp);
+    check_file_read(filename, fp, 1, fr);
+
+    fr = fread(&num_r, sizeof(uint64_t), 1, fp);
+    check_file_read(filename, fp, 1, fr);
 
     uint64_t *md_lens = (uint64_t *)malloc(num_r * sizeof(uint64_t));
     if (!md_lens )
         err(EX_OSERR, "malloc error");
-    s = fread(md_lens, sizeof(uint64_t), num_r, fp);
+
+    fr = fread(md_lens, sizeof(uint64_t), num_r, fp);
+    check_file_read(filename, fp, num_r, fr);
 
     /* allocate inflate state */
     z_stream strm;
@@ -82,6 +91,7 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
     /* decompress until deflate stream ends or end of file */
     do {
         strm.avail_in = fread(in_buf, 1, CHUNK, fp);
+        //check_file_read(filename, fp, CHUNK, strm.avail_in);
         if (ferror(fp)) {
             fprintf(stderr, "error: Cannot read compressed file.\n");
             (void)inflateEnd(&strm);

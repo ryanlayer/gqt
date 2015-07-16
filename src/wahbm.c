@@ -44,6 +44,8 @@ struct wah_file init_wahbm_file(char *file_name)
 {
     struct wah_file wf;
 
+    wf.file_name = strdup(file_name);
+
     wf.file = fopen(file_name, "rb");
     if (!wf.file)
         err(EX_NOINPUT, "Cannot open file \"%s\"", file_name);
@@ -51,8 +53,11 @@ struct wah_file init_wahbm_file(char *file_name)
 
     // Jump to the begining of the file to grab the record size
     fseek(wf.file, 0, SEEK_SET);
-    int r = fread(&wf.num_fields,sizeof(uint32_t),1,wf.file);
-    r = fread(&wf.num_records,sizeof(uint32_t),1,wf.file);
+    size_t fr = fread(&wf.num_fields,sizeof(uint32_t),1,wf.file);
+    check_file_read(file_name, wf.file, 1, fr);
+
+    fr = fread(&wf.num_records,sizeof(uint32_t),1,wf.file);
+    check_file_read(file_name, wf.file, 1, fr);
 
     wf.record_offsets = (uint64_t *) 
             malloc(sizeof (uint64_t)*wf.num_records*4);
@@ -60,13 +65,22 @@ struct wah_file init_wahbm_file(char *file_name)
         err(EX_OSERR, "malloc error");
 
     uint32_t i;
-    for (i = 0; i < wf.num_records*4; ++i)
-        r = fread(&(wf.record_offsets[i]),sizeof(uint64_t),1,wf.file);
+    for (i = 0; i < wf.num_records*4; ++i) {
+        fr = fread(&(wf.record_offsets[i]),sizeof(uint64_t),1,wf.file);
+        check_file_read(file_name, wf.file, 1, fr);
+    }
 
 
     wf.header_offset = ftell(wf.file);
 
     return wf;
+}
+//}}}
+
+//{{{ void destroy_wahbm_file(struct wah_file *wf)
+void destroy_wahbm_file(struct wah_file *wf)
+{
+    destroy_wah_file(wf);
 }
 //}}}
 
@@ -246,6 +260,8 @@ uint32_t wahbm_speed_check(char *in)
     stop();
     printf("%lu\n", report());
     }
+
+    destroy_wahbm_file(&wf);
 
     return 0;
 }
@@ -531,7 +547,7 @@ uint32_t wahbm_pca_by_name(char *in, char *out)
 #endif
 
 
-
+    destroy_wahbm_file(&wf);
 
     return 0;
 }
@@ -674,6 +690,7 @@ uint32_t wahbm_hamm_dist_by_name(char *in, char *out)
     }
 
     fclose(f);
+    destroy_wahbm_file(&wf);
 
     return 0;
 }
@@ -758,6 +775,7 @@ uint32_t wahbm_shared_by_name(char *in, char *out)
     }
 
     fclose(f);
+    destroy_wahbm_file(&wf);
 
     return 0;
 }
@@ -964,6 +982,7 @@ uint32_t wahbm_top_n_matches_by_name(char *in, uint32_t num_matches)
         printf("\n");
     }
 
+    destroy_wahbm_file(&wf);
     return 0;
 }
 //}}}
@@ -1104,7 +1123,9 @@ uint32_t print_by_name_wahbm(char *wahbm_file_name,
                                uint32_t format)
 {
     struct wah_file wf = init_wahbm_file(wahbm_file_name);
-    return print_wahbm(wf, record_ids, num_r, format);
+    uint32_t r = print_wahbm(wf, record_ids, num_r, format);
+    destroy_wahbm_file(&wf);
+    return r;
 }
 //}}} 
 
@@ -1159,7 +1180,8 @@ uint32_t get_wah_bitmap(struct wah_file wf,
     if (!*wah_bitmap)
         err(EX_OSERR, "malloc error");
     fseek(wf.file, wah_offset, SEEK_SET);
-    int r = fread(*wah_bitmap,sizeof(uint32_t),wah_size,wf.file);
+    size_t fr = fread(*wah_bitmap,sizeof(uint32_t),wah_size,wf.file);
+    check_file_read(wf.file_name, wf.file, wah_size, fr);
 
     return (uint32_t)wah_size;
 }

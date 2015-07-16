@@ -58,5 +58,3 @@ run $GQT query -i $BCF.gqt -b no_file
 assert_fail_to_stderr $EX_NOINPUT $LINENO
 
 
-
-rm_index

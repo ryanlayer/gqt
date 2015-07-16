@@ -303,7 +303,11 @@ void push_bcf_gt_md(pri_queue *q,
         priq_push(*q, j, p);
 
         // Write to file
-        fwrite(packed_ints, sizeof(uint32_t), num_ind_ints, gt_of);
+        if (fwrite(packed_ints,
+                   sizeof(uint32_t),
+                   num_ind_ints,
+                   gt_of) != num_ind_ints)
+            err(EX_IOERR, "Error writing to \"%s\"", gt_of_name); 
 
         // Get metadata
         bcf_f->line->n_sample = 0;
@@ -441,11 +445,17 @@ void sort_gt_md(pri_queue *q,
         start = (*d)*start;
         fseek(gt_of, start, SEEK_SET);
         r = fread(packed_ints, sizeof(uint32_t), num_ind_ints, gt_of);
-        fwrite(packed_ints, sizeof(uint32_t), num_ind_ints,s_gt_of);
 
+        if (fwrite(packed_ints,
+                   sizeof(uint32_t),
+                   num_ind_ints,
+                   s_gt_of) != num_ind_ints)
+            err(EX_IOERR, "Error writing to \"%s\"", gt_s_of_name); 
 
         //write out the variant ID
-        fwrite(d, sizeof(uint32_t), 1, v_out);
+        if (fwrite(d, sizeof(uint32_t), 1, v_out) != 1)
+            err(EX_IOERR, "Error writing to \"%s\"", vid_out); 
+
 
         var_i += 1;
     }
@@ -529,12 +539,22 @@ void compress_md(struct bcf_file *bcf_f,
      * md line lengths       ( bcf_f->num_records*sizeof(uint64_t))
      * compressed data 
      */
-    fwrite(&u_size, sizeof(uint64_t), 1, fp_o);
-    fwrite(&c_size, sizeof(uint64_t), 1, fp_o);
-    fwrite(&h_size, sizeof(uint64_t), 1, fp_o);
+    if (fwrite(&u_size, sizeof(uint64_t), 1, fp_o) != 1)
+            err(EX_IOERR, "Error writing to \"%s\"", bim_out); 
+
+    if (fwrite(&c_size, sizeof(uint64_t), 1, fp_o) != 1)
+            err(EX_IOERR, "Error writing to \"%s\"", bim_out); 
+
+    if (fwrite(&h_size, sizeof(uint64_t), 1, fp_o) != 1)
+            err(EX_IOERR, "Error writing to \"%s\"", bim_out); 
+
     uint64_t numv_64 = num_vars;
-    fwrite(&numv_64, sizeof(uint64_t), 1, fp_o);
-    fwrite(md_s_index, sizeof(uint64_t), num_vars, fp_o);
+
+    if (fwrite(&numv_64, sizeof(uint64_t), 1, fp_o) != 1)
+            err(EX_IOERR, "Error writing to \"%s\"", bim_out); 
+
+    if (fwrite(md_s_index, sizeof(uint64_t), num_vars, fp_o) != num_vars)
+            err(EX_IOERR, "Error writing to \"%s\"", bim_out); 
 
     // in_buf will hold the uncompressed data and out_buf the compressed
     unsigned char *in_buf = (unsigned char *)
@@ -545,7 +565,7 @@ void compress_md(struct bcf_file *bcf_f,
     // The output buffer needs to be slightly larger than the in_buff
     unsigned char *out_buf = (unsigned char *)
             malloc(sizeof(unsigned char) * (CHUNK * 2));
-    if (!out_buf )
+    if (!out_buf)
         err(EX_OSERR, "malloc error");
 
     uint32_t in_buf_len = CHUNK;
@@ -613,10 +633,9 @@ void compress_md(struct bcf_file *bcf_f,
 
             // Track the size of the compressed data
             c_size += have;
-            if (fwrite(out_buf, 1, have, fp_o) != have) {
-                fprintf(stderr, "Error writing compressed value 0.\n");
-                exit(1);
-            }
+            if (fwrite(out_buf, 1, have, fp_o) != have) 
+                err(EX_IOERR, "Error writing compressed value 0.");
+
             //fwrite(in_buf, 1, CHUNK, fp_o);
             in_buf_i = 0;
         }
@@ -675,10 +694,8 @@ void compress_md(struct bcf_file *bcf_f,
 
         // Track the size of the compressed data
         c_size += have;
-        if (fwrite(out_buf, 1, have, fp_o) != have) {
-            fprintf(stderr, "Error writing compressed value 1.\n");
-            exit(1);
-        }
+        if (fwrite(out_buf, 1, have, fp_o) != have) 
+            err(EX_IOERR, "Error writing compressed value 1.");
 
         in_buf_i = 0;
         to_read = in_buf_len;
@@ -721,17 +738,18 @@ void compress_md(struct bcf_file *bcf_f,
 
         // Track the size of the compressed data
         c_size += have;
-        if (fwrite(out_buf, 1, have, fp_o) != have) {
-            fprintf(stderr, "Error writing compressed value 1.\n");
-            exit(1);
-        }
+        if (fwrite(out_buf, 1, have, fp_o) != have) 
+            err(EX_IOERR, "Error writing compressed value 1.");
     }
 
 
     // update the header values
     fseek(fp_o, 0, SEEK_SET);
-    fwrite(&u_size, sizeof(uint64_t), 1, fp_o);
-    fwrite(&c_size, sizeof(uint64_t), 1, fp_o);
+    if (fwrite(&u_size, sizeof(uint64_t), 1, fp_o) != 1)
+        err(EX_IOERR, "Error writing to \"%s\"", bim_out); 
+
+    if (fwrite(&c_size, sizeof(uint64_t), 1, fp_o) != 1)
+        err(EX_IOERR, "Error writing to \"%s\"", bim_out); 
 
     fclose(fp_o);
     fclose(fp);
@@ -802,8 +820,10 @@ void rotate_gt(uint32_t num_inds,
 
     // Write these to values to a well-formed uncompressed packed int binary
     // file (ubin) file
-    fwrite(&num_vars, sizeof(uint32_t), 1, rs_gt_of);
-    fwrite(&num_inds, sizeof(uint32_t), 1, rs_gt_of);
+    if (fwrite(&num_vars, sizeof(uint32_t), 1, rs_gt_of) != 1)
+        err(EX_IOERR, "Error writing to \"%s\"", gt_s_r_of_name); 
+    if (fwrite(&num_inds, sizeof(uint32_t), 1, rs_gt_of) != 1)
+        err(EX_IOERR, "Error writing to \"%s\"", gt_s_r_of_name); 
      
     uint32_t tenth_num_ind_ints = num_ind_ints / 10;
     fprintf(stderr, "Rotating genotypes");
@@ -842,16 +862,19 @@ void rotate_gt(uint32_t num_inds,
         // When we are at the end of the file, and the number of lines 
         // is not a factor of 16, only write out the lines that contain values
         if (num_inds_to_write >= 16) {
-            fwrite(I_data,
+            if (fwrite(I_data,
                    sizeof(uint32_t),
                    num_var_ints*16,
-                   rs_gt_of);
+                   rs_gt_of) != num_var_ints*16)
+                err(EX_IOERR, "Error writing to \"%s\"", gt_s_r_of_name); 
+
             num_inds_to_write -= 16;
         } else {
-            fwrite(I_data,
+            if (fwrite(I_data,
                    sizeof(uint32_t),
                    num_var_ints*num_inds_to_write,
-                   rs_gt_of);
+                   rs_gt_of) != num_var_ints*num_inds_to_write)
+                err(EX_IOERR, "Error writing to \"%s\"", gt_s_r_of_name); 
         }
         memset(I_data, 0, num_var_ints*16*sizeof(uint32_t));
         I_int_i = 0;

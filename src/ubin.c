@@ -48,12 +48,18 @@ uint32_t convert_file_by_name_ubin_to_wahbm16(char *ubin_in,
     struct ubin_file uf = init_ubin_file(ubin_in);
 
     //write header for WAH bitmap index file
-    fwrite(&(uf.num_fields), sizeof(uint32_t), 1, wf);
-    fwrite(&(uf.num_records), sizeof(uint32_t), 1, wf);
+    if (fwrite(&(uf.num_fields), sizeof(uint32_t), 1, wf) != 1)
+        err(EX_IOERR, "Error writing to \"%s\"", wah_out); 
+
+    if (fwrite(&(uf.num_records), sizeof(uint32_t), 1, wf) != 1)
+        err(EX_IOERR, "Error writing to \"%s\"", wah_out); 
+
     int zero = 0;
     int k;
-    for (k = 0; k < uf.num_records*4; ++k)
-        fwrite(&zero, sizeof(int), 1, wf);
+    for (k = 0; k < uf.num_records*4; ++k) {
+        if (fwrite(&zero, sizeof(int), 1, wf) != 1)
+            err(EX_IOERR, "Error writing to \"%s\"", wah_out); 
+    }
 
     int num_ints_per_record = 1 + ((uf.num_fields - 1) / 16);
     int num_bytes_per_record = num_ints_per_record * 4;
@@ -88,13 +94,13 @@ uint32_t convert_file_by_name_ubin_to_wahbm16(char *ubin_in,
         fseek(wf,sizeof(uint32_t)* (2+4* wah_i),  SEEK_SET);
         for (j = 0; j < 4; ++j) {
             offset_total += wah_sizes[j];
-            fwrite(&offset_total, sizeof(uint32_t), 1, wf);
+            if (fwrite(&offset_total, sizeof(uint32_t), 1, wf) != 1)
+                err(EX_IOERR, "Error writing to \"%s\"", wah_out); 
         }
 
         fseek(wf,0,SEEK_END);
-        size_t ret = fwrite(wah, sizeof(uint16_t), wah_len, wf);
-        if (ret != wah_len)
-            fprintf(stderr, "ret:%zu != wah_len:%u\n", ret, wah_len);
+        if (fwrite(wah, sizeof(uint16_t), wah_len, wf) != wah_len)
+            err(EX_IOERR, "Error writing to \"%s\"", wah_out); 
 
         wah_i+=1;
         free(wah);
@@ -134,13 +140,19 @@ uint32_t convert_file_by_name_ubin_to_wahbm(char *ubin_in, char *wah_out)
     struct ubin_file uf = init_ubin_file(ubin_in);
 
     //write header for WAH bitmap index file
-    fwrite(&(uf.num_fields), sizeof(uint32_t), 1, wf);
-    fwrite(&(uf.num_records), sizeof(uint32_t), 1, wf);
+    if (fwrite(&(uf.num_fields), sizeof(uint32_t), 1, wf) != 1)
+        err(EX_IOERR, "Error writing to \"%s\"", wah_out); 
+
+    if (fwrite(&(uf.num_records), sizeof(uint32_t), 1, wf) != 1)
+        err(EX_IOERR, "Error writing to \"%s\"", wah_out); 
+
     int zero = 0;
     int k;
     //the header includes an index to each of BM, 4 per individual
-    for (k = 0; k < uf.num_records*4; ++k)
-        fwrite(&zero, sizeof(uint64_t), 1, wf);
+    for (k = 0; k < uf.num_records*4; ++k) {
+        if (fwrite(&zero, sizeof(uint64_t), 1, wf) != 1)
+            err(EX_IOERR, "Error writing to \"%s\"", wah_out); 
+    }
 
     int num_ints_per_record = 1 + ((uf.num_fields - 1) / 16);
     int num_bytes_per_record = num_ints_per_record * 4;
@@ -179,15 +191,15 @@ uint32_t convert_file_by_name_ubin_to_wahbm(char *ubin_in, char *wah_out)
         // Write the end offset of all 4
         for (j = 0; j < 4; ++j) {
             offset_total += wah_sizes[j];
-            fwrite(&offset_total, sizeof(uint64_t), 1, wf);
+            if (fwrite(&offset_total, sizeof(uint64_t), 1, wf) != 1)
+                err(EX_IOERR, "Error writing to \"%s\"", wah_out); 
         }
 
         // Jump to the end of the file
         fseek(wf, 0, SEEK_END);
         // Write out the compressed WAH bitmap
-        size_t ret = fwrite(wah, sizeof(uint32_t), wah_len, wf);
-        if (ret != wah_len)
-            fprintf(stderr, "ret:%zu != wah_len:%u\n", ret, wah_len);
+        if (fwrite(wah, sizeof(uint32_t), wah_len, wf) != wah_len)
+                err(EX_IOERR, "Error writing to \"%s\"", wah_out); 
 
         wah_i+=1;
         free(wah);
@@ -214,12 +226,16 @@ uint32_t convert_file_by_name_ubin_to_wah(char *ubin_in, char *wah_out)
     struct ubin_file uf = init_ubin_file(ubin_in);
 
     //write header for WAH bitmap index file
-    fwrite(&(uf.num_fields), sizeof(int), 1, wf);
-    fwrite(&(uf.num_records), sizeof(int), 1, wf);
+    if (fwrite(&(uf.num_fields), sizeof(int), 1, wf) != 1)
+        err(EX_IOERR, "Error writing to \"%s\"", wah_out); 
+    if (fwrite(&(uf.num_records), sizeof(int), 1, wf) != 1)
+        err(EX_IOERR, "Error writing to \"%s\"", wah_out); 
     int zero = 0;
     int k;
-    for (k = 0; k < uf.num_records; ++k)
-        fwrite(&zero, sizeof(int), 1, wf);
+    for (k = 0; k < uf.num_records; ++k) {
+        if (fwrite(&zero, sizeof(int), 1, wf) != 1)
+            err(EX_IOERR, "Error writing to \"%s\"", wah_out); 
+    }
 
     int num_ints_per_record = 1 + ((uf.num_fields - 1) / 16);
     int num_bytes_per_record = num_ints_per_record * 4;
@@ -246,12 +262,13 @@ uint32_t convert_file_by_name_ubin_to_wah(char *ubin_in, char *wah_out)
         fseek(wf,sizeof(uint32_t)* (2+wah_i),  SEEK_SET);
 
         offset_total += wah_len;
-        fwrite(&offset_total, sizeof(uint32_t), 1, wf);
+        if (fwrite(&offset_total, sizeof(uint32_t), 1, wf) != 1)
+            err(EX_IOERR, "Error writing to \"%s\"", wah_out); 
 
         fseek(wf,0,SEEK_END);
-        size_t ret = fwrite(wah, sizeof(uint32_t), wah_len, wf);
-        if (ret != wah_len)
-            fprintf(stderr, "ret:%zu != wah_len:%u\n", ret, wah_len);
+
+        if (fwrite(wah, sizeof(uint32_t), wah_len, wf) != wah_len)
+            err(EX_IOERR, "Error writing to \"%s\"", wah_out); 
 
         wah_i+=1;
         free(wah);

@@ -235,10 +235,12 @@ int convert_file_plt_to_ubin(struct plt_file pf, char *out_file_name)
     }
 
     // First value is the number of fields per record
-    fwrite(&(pf.num_fields), sizeof(int), 1, o_file);
+    if (fwrite(&(pf.num_fields), sizeof(int), 1, o_file) != 1)
+        err(EX_IOERR, "Error writing to \"%s\"", out_file_name); 
 
     // Second value is the number of records
-    fwrite(&(pf.num_records), sizeof(int), 1, o_file);
+    if (fwrite(&(pf.num_records), sizeof(int), 1, o_file) != 1)
+        err(EX_IOERR, "Error writing to \"%s\"", out_file_name); 
 
 
     // jump past the header
@@ -251,8 +253,10 @@ int convert_file_plt_to_ubin(struct plt_file pf, char *out_file_name)
                                                                 pf.num_fields,
                                                                 &packed_ints);
 
-        for (j = 0; j < num_packed_ints; ++j)
-            fwrite(&(packed_ints[j]), sizeof(uint32_t), 1, o_file);
+        for (j = 0; j < num_packed_ints; ++j) {
+            if (fwrite(&(packed_ints[j]), sizeof(uint32_t), 1, o_file) != 1)
+                err(EX_IOERR, "Error writing to \"%s\"", out_file_name); 
+        }
 
         free(packed_ints);
     }
@@ -431,18 +435,21 @@ int convert_file_by_name_invert_plt_to_ubin(char *in_file_name,
 
 
     // First value is the number of fields per record
-    fwrite(&(n_num_fields), sizeof(uint32_t), 1, o_file);
+    if (fwrite(&(n_num_fields), sizeof(uint32_t), 1, o_file) != 1)
+        err(EX_IOERR, "Error writing to \"%s\"", out_file_name); 
 
     // Second value is the number of records
-    fwrite(&(n_num_records), sizeof(uint32_t), 1, o_file);
+    if (fwrite(&(n_num_records), sizeof(uint32_t), 1, o_file) != 1)
+        err(EX_IOERR, "Error writing to \"%s\"", out_file_name); 
 
     uint32_t num_ints_per_record = 1 + (((n_num_fields) - 1) / 16);
     for (i = 0; i < n_num_records; ++i) {
         //fprintf(stderr, "O:%u\n", i);
-        fwrite(&(ubin[i][0]),
-               sizeof(uint32_t),
-               num_ints_per_record,
-               o_file);
+        if (fwrite(&(ubin[i][0]),
+                   sizeof(uint32_t),
+                   num_ints_per_record,
+                   o_file) != num_ints_per_record)
+            err(EX_IOERR, "Error writing to \"%s\"", out_file_name); 
     }
         
     fclose(pf.file);

@@ -57,4 +57,26 @@ assert_fail_to_stderr $EX_NOINPUT $LINENO
 run $GQT query -i $BCF.gqt -b no_file
 assert_fail_to_stderr $EX_NOINPUT $LINENO
 
+# corrupt GQT file
+make_index
+echo 11111111111111111111111 > $BCF.gqt
+run $GQT query -i $BCF.gqt 
+assert_fail_to_stderr $EX_IOERR $LINENO
+assert_in_stderr $BCF.gqt $LINENO
+rm_index
 
+# corrupt BIM file
+make_index
+echo 11111111111111111111111 > $BCF.bim
+run $GQT query -i $BCF.gqt 
+assert_fail_to_stderr $EX_IOERR $LINENO
+assert_in_stderr $BCF.bim $LINENO
+rm_index
+
+# corrupt VID file
+make_index
+echo 11111111111111111111111 > $BCF.vid
+run $GQT query -i $BCF.gqt 
+assert_fail_to_stderr $EX_IOERR $LINENO
+assert_in_stderr $BCF.vid $LINENO
+rm_index

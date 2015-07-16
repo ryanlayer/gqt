@@ -182,6 +182,8 @@ int ihs(int argc, char **argv)
 
 
             gt_mask[i] = (uint32_t *) malloc(num_ints * sizeof(uint32_t));
+            if (!gt_mask[i])
+                err(EX_OSERR, "malloc error");
 
             /* User specifies a condition */
             if ( q[i].op_condition != -1) { 

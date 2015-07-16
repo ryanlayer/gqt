@@ -42,6 +42,8 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
     s = fread(&num_r, sizeof(uint64_t), 1, fp);
 
     uint64_t *md_lens = (uint64_t *)malloc(num_r * sizeof(uint64_t));
+    if (!md_lens )
+        err(EX_OSERR, "malloc error");
     s = fread(md_lens, sizeof(uint64_t), num_r, fp);
 
     /* allocate inflate state */
@@ -64,6 +66,8 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
             
 
     char *final_out_buf = (char *) malloc(u_size);
+    if (!final_out_buf )
+        err(EX_OSERR, "malloc error");
     qfile->main_buf = final_out_buf;
 
     /* 
@@ -138,10 +142,14 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
 
     /* allocate an array of char **'s, one for each line. */
     qfile->lines = (char **)malloc(qfile->num_lines *sizeof(char *));
+    if (!qfile->lines )
+        err(EX_OSERR, "malloc error");
     memset(qfile->lines, 0, qfile->num_lines * sizeof(char *));
 
     /* also allocate the array of line lengths. */
     qfile->line_lens = (uint64_t *)malloc(qfile->num_lines * sizeof(uint64_t));
+    if (!qfile->line_lens)
+        err(EX_OSERR, "malloc error");
 
     /* Loop through the mainbuf again, turning all newlines into
      * null chars. Put a pointer to the next char on the lines array.

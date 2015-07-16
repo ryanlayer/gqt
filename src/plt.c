@@ -270,6 +270,8 @@ uint32_t plt_line_to_packed_ints(char *line,
 {
     uint32_t len = 1 + ((num_fields - 1) / 16);
     *packed_ints = (unsigned *) malloc((len)*sizeof(uint32_t));
+    if (!*packed_ints)
+        err(EX_OSERR, "malloc error");
     int i, two_bit_count, pack_int_count = 0;
 
     //printf("%s\n", line);
@@ -470,6 +472,8 @@ uint32_t invert_plt_to_ubin(char *line,
     if (*ubin == NULL) {
         *ubin = (uint32_t **) malloc( 
                 (*new_num_records)* sizeof(uint32_t *));
+        if (!*ubin)
+            err(EX_OSERR, "malloc error");
 
         for (i = 0; i < *new_num_records; ++i)
             (*ubin)[i] = (uint32_t *) 
@@ -590,6 +594,8 @@ uint32_t range_records_plt(struct plt_file pf,
     uint32_t num_ints_per_record = 1 + ((pf.num_fields - 1) / 32);
 
     *R = (uint32_t *) malloc(num_ints_per_record*sizeof(uint32_t));
+    if (!*R)
+        err(EX_OSERR, "malloc error");
 
     for (i = 0; i < num_ints_per_record; ++i)
         (*R)[i] = -1;
@@ -642,6 +648,8 @@ uint32_t range_fields_plt(struct plt_file pf,
     uint32_t num_ints_per_record = 1 + ((pf.num_records - 1) / 32);
 
     *R = (uint32_t *) malloc(num_ints_per_record*sizeof(uint32_t));
+    if (!*R)
+        err(EX_OSERR, "malloc error");
 
     for (i = 0; i < num_ints_per_record; ++i)
         (*R)[i] = -1;
@@ -720,6 +728,8 @@ uint32_t ne_records_plt(struct plt_file pf,
     uint32_t num_ints_per_record = 1 + ((pf.num_fields - 1) / 32);
 
     *R = (uint32_t *) malloc(num_ints_per_record*sizeof(uint32_t));
+    if (!*R)
+        err(EX_OSERR, "malloc error");
 
     for (i = 0; i < num_ints_per_record; ++i)
         (*R)[i] = -1;

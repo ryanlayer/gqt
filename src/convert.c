@@ -167,21 +167,29 @@ int convert(int argc, char **argv)
 
         if (o_is_set == 0) {
             out  = (char*)malloc(strlen(in) + 5); // 5 for ext and \0
+            if (!out)
+                err(EX_OSERR, "malloc error");
             strcpy(out,in);
             strcat(out, ".gqt");
         }
         if (b_is_set == 0) {
             bim  = (char*)malloc(strlen(in) + 5); // 5 for ext and \0
+            if (!bim)
+                err(EX_OSERR, "malloc error");
             strcpy(bim,in);
             strcat(bim, ".bim");
         }
         if (v_is_set == 0) {
             vid  = (char*)malloc(strlen(in) + 5); // 5 for ext and \0
+            if (!vid)
+                err(EX_OSERR, "malloc error");
             strcpy(vid,in);
             strcat(vid, ".vid");
         }
         if (t_is_set == 0) {
             tmp_dir  = (char*)malloc(3*sizeof(char)); // "./\0"
+            if (!tmp_dir  )
+                err(EX_OSERR, "malloc error");
             strcpy(tmp_dir,"./");
         }
 
@@ -194,10 +202,14 @@ int convert(int argc, char **argv)
         if (o_is_set == 0) {
             if (p_is_set == 1) {
                 out  = (char*)malloc(strlen(ped) + 4); // 4 for ext and \0
+                if (!out)
+                    err(EX_OSERR, "malloc error");
                 strcpy(out,ped);
                 strcat(out, ".db");
             } else {
                 out  = (char*)malloc(strlen(in) + 4); // 4 for ext and \0
+                if (!out)
+                    err(EX_OSERR, "malloc error");
                 strcpy(out,in);
                 strcat(out, ".db");
             }

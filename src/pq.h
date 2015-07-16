@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <sysexits.h>
+#include <err.h>
  
 typedef struct
 {

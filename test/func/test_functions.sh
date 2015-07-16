@@ -9,6 +9,7 @@ BCFTOOLS=bcftools
 GQT=../../bin/gqt
 DATA_PATH=../data
 BCF=$DATA_PATH/10.1e4.var.bcf
+BAD_PED=$DATA_PATH/too_many_fields.ped
 
 TMP_O=$TMPDIR/o
 TMP_E=$TMPDIR/e

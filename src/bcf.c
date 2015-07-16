@@ -89,8 +89,12 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
     pri_queue q = priq_new(0);
 
     uint64_t *md_index = (uint64_t *) malloc(num_vars * sizeof(uint64_t));
-
+    if (!md_index )
+        err(EX_OSERR, "malloc error");
+    
     uint64_t *md_s_index = (uint64_t *) malloc(num_vars * sizeof(uint64_t));
+    if (!md_s_index )
+        err(EX_OSERR, "malloc error");
 
     push_bcf_gt_md(&q,
                    &bcf_f,
@@ -293,6 +297,8 @@ void push_bcf_gt_md(pri_queue *q,
         // Push it into the q
         p.len = prefix_len;
         int *j = (int *) malloc (sizeof(int));
+        if (!j)
+            err(EX_OSERR, "malloc error");
         j[0] = i;
         priq_push(*q, j, p);
 
@@ -390,6 +396,8 @@ void sort_gt_md(pri_queue *q,
 
     uint32_t *packed_ints = (uint32_t *)
             malloc(num_ind_ints*sizeof(uint32_t));
+    if (!packed_ints )
+        err(EX_OSERR, "malloc error");
 
     priority p;
 
@@ -531,9 +539,14 @@ void compress_md(struct bcf_file *bcf_f,
     // in_buf will hold the uncompressed data and out_buf the compressed
     unsigned char *in_buf = (unsigned char *)
             malloc(sizeof(unsigned char) * CHUNK);
+    if (!in_buf )
+        err(EX_OSERR, "malloc error");
+
     // The output buffer needs to be slightly larger than the in_buff
     unsigned char *out_buf = (unsigned char *)
             malloc(sizeof(unsigned char) * (CHUNK * 2));
+    if (!out_buf )
+        err(EX_OSERR, "malloc error");
 
     uint32_t in_buf_len = CHUNK;
     uint32_t in_buf_i = 0;
@@ -768,7 +781,13 @@ void rotate_gt(uint32_t num_inds,
     uint32_t i, j, v;
 
     uint32_t *I_data = (uint32_t *)calloc(num_var_ints*16,sizeof(uint32_t));
+    if (!I_data )
+        err(EX_OSERR, "calloc error");
+
     uint32_t **I = (uint32_t **)malloc(16*sizeof(uint32_t*));
+    if (!I)
+        err(EX_OSERR, "malloc error");
+
     for (i = 0; i < 16; ++i)
         I[i] = I_data + i*num_var_ints;
     uint32_t I_i = 0, I_int_i = 0, two_bit_i;
@@ -985,6 +1004,8 @@ uint32_t md_bcf_line(struct bcf_file bcf_f,
                  strlen(bcf_f.line->d.allele[1]) +
                  4; //tabs
     *md = (char *) malloc(len * sizeof(char));
+    if (!md )
+        err(EX_OSERR, "malloc error");
 
     sprintf(*md,
             "%s\t%d\t%s\t%s\t%s",

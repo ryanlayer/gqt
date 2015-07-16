@@ -30,6 +30,8 @@ struct wah_file init_wah_file(char *file_name)
 
     wf.record_offsets = (uint64_t *) 
             malloc(sizeof (uint64_t)*wf.num_records);
+    if (!wf.record_offsets)
+        err(EX_OSERR, "malloc error");
 
     uint32_t i;
     for (i = 0; i < wf.num_records; ++i)
@@ -309,6 +311,8 @@ uint32_t  wah_or(struct wah_run *x,
     }
 
     *O = (uint32_t *) malloc(Z_len * sizeof(uint32_t));
+    if (!*O)
+        err(EX_OSERR, "malloc error");
 
     struct wah_ll *Z_tmp, *Z_curr = Z_head;
     int i = 0;
@@ -424,6 +428,8 @@ uint32_t wah_and(struct wah_run *x,
     }
 
     *O = (uint32_t *) malloc(Z_len * sizeof(uint32_t));
+    if (!*O )
+        err(EX_OSERR, "malloc error");
 
     struct wah_ll *Z_tmp, *Z_curr = Z_head;
     int i = 0;
@@ -498,6 +504,8 @@ uint32_t ints_to_wah16(uint32_t *I,
     // Move the linked list to an array
     W_len = c;
     *W = (uint16_t *) malloc(W_len * sizeof(uint16_t));
+    if (!*W)
+        err(EX_OSERR, "malloc error");
 
     A_curr = A_head;
     struct wah16_ll *A_tmp;
@@ -542,6 +550,8 @@ uint32_t ints_to_wah(uint32_t *I,
     // Move the linked list to an array
     W_len = c;
     *W = (uint32_t *) malloc(W_len * sizeof(uint32_t));
+    if (!*W )
+        err(EX_OSERR, "malloc error");
 
     A_curr = A_head;
     struct wah_ll *A_tmp;
@@ -678,6 +688,8 @@ int append_active_16word(struct wah16_ll **A_head,
 {
     struct wah16_ll *n = (struct wah16_ll *)
         malloc(sizeof(struct wah16_ll));
+    if (!n)
+        err(EX_OSERR, "malloc error");
 
     n->value = a;
     n->next = NULL;
@@ -737,6 +749,8 @@ int append_active_word(struct wah_ll **A_head,
 {
     struct wah_ll *n = (struct wah_ll *)
         malloc(sizeof(struct wah_ll));
+    if (!n)
+        err(EX_OSERR, "malloc error");
 
     n->value = a;
     n->next = NULL;
@@ -806,6 +820,8 @@ int append_fill_word(struct wah_ll **A_head,
     } else {
         struct wah_ll *n = (struct wah_ll *)
                 malloc(sizeof(struct wah_ll));
+        if (!n)
+            err(EX_OSERR, "malloc error");
 
         n->next = NULL;
 
@@ -918,6 +934,8 @@ uint32_t wah_to_ints(uint32_t *W,
 
     uint32_t num_ints = (num_bits + 32 - 1) / 32;
     *O = (uint32_t *) malloc (num_ints * sizeof(uint32_t));
+    if (!*O)
+        err(EX_OSERR, "malloc error");
 
 
     uint32_t num_words,
@@ -965,101 +983,3 @@ uint32_t wah_to_ints(uint32_t *W,
     return num_ints;
 }
 //}}}
-
-
-//old
-#if 0
-//{{{ uint32_t get_wah_record(struct wah_file wf,
-uint32_t get_wah_record(struct wah_file wf,
-                        uint32_t wah_record,
-                        uint32_t **wah)
-{
-    // get the size of the WAH-encoded bitmap
-    uint32_t wah_size = 0, wah_offset = 0;
-    if ( wah_record == 0) {
-        wah_size = wf.record_offsets[wah_record];
-        wah_offset = wf.header_offset;
-    } else {
-        wah_size = wf.record_offsets[wah_record] - 
-                   wf.record_offsets[wah_record - 1];
-
-        wah_offset = wf.header_offset +
-                     sizeof(uint32_t) * 
-                        (wf.record_offsets[wah_record] - wah_size);
-    }
-
-    *wah = (uint32_t *) malloc(sizeof(uint32_t)*wah_size);
-    fseek(wf.file, wah_offset, SEEK_SET);
-    int r = fread(*wah,sizeof(uint32_t),wah_size,wf.file);
-
-    return wah_size;
-}
-//}}}
-
-//{{{ uint32_t print_wah(struct wah_file wf,
-uint32_t print_wah(struct wah_file wf,
-                       uint32_t *record_ids,
-                       uint32_t num_r,
-                       uint32_t format)
-{
-    uint32_t i,j,k,wah_size,printed_bits,to_print = num_r;
-    uint32_t *wah = NULL;
-
-    if (num_r == 0)
-        to_print = wf.num_records;
-
-    for (i = 0; i < to_print; ++i) {
-
-        // get the compressed bitmap
-        if (num_r > 0)
-            wah_size = get_wah_record(wf,
-                                     record_ids[i],
-                                     &wah);
-        else
-            wah_size = get_wah_record(wf,
-                                     i,
-                                     &wah);
-
-        // decompress 
-        uint32_t *ints = NULL;
-        uint32_t ints_size = wah_to_ints(wah,wah_size,&ints);
-        printed_bits = 0;
-
-        for (j = 0; j < ints_size; ++j) {
-            if (j !=0)
-                printf(" ");
-            for (k = 0; k < 16; ++k) {
-                uint32_t val = (ints[j] >> (30 - 2*k)) & 3;
-                if (k !=0)
-                    printf(" ");
-                printf("%u", val);
-                printed_bits += 1;
-                if (printed_bits == wf.num_fields)
-                    break;
-            }
-            if (printed_bits == wf.num_fields)
-                break;
-        }
-        printf("\n");
-
-        free(ints);
-        ints = NULL;
-        free(wah);
-        wah = NULL;
-    }
-
-    return to_print;
-}
-//}}}
-
-//{{{ uint32_t print_by_name_wah(char *wahbm_file_name,
-uint32_t print_by_name_wah(char *wahbm_file_name,
-                               uint32_t *record_ids,
-                               uint32_t num_r,
-                               uint32_t format)
-{
-    struct wah_file wf = init_wah_file(wahbm_file_name);
-    return print_wah(wf, record_ids, num_r, format);
-}
-//}}} 
-#endif

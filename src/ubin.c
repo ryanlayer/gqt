@@ -60,6 +60,8 @@ uint32_t convert_file_by_name_ubin_to_wahbm16(char *ubin_in,
 
     uint32_t *c = (uint32_t *)
         malloc(num_ints_per_record*sizeof(uint32_t));
+    if (!c)
+        err(EX_OSERR, "malloc error");
 
     int i,j,wah_i = 0, offset_total  = 0;
 
@@ -144,6 +146,8 @@ uint32_t convert_file_by_name_ubin_to_wahbm(char *ubin_in, char *wah_out)
     int num_bytes_per_record = num_ints_per_record * 4;
 
     uint32_t *c = (uint32_t *) malloc(num_ints_per_record*sizeof(uint32_t));
+    if (!c)
+        err(EX_OSERR, "malloc error");
 
     int i,j,wah_i = 0;
     uint64_t offset_total  = 0;
@@ -222,6 +226,8 @@ uint32_t convert_file_by_name_ubin_to_wah(char *ubin_in, char *wah_out)
 
     uint32_t *c = (uint32_t *)
         malloc(num_ints_per_record*sizeof(uint32_t));
+    if (!c)
+        err(EX_OSERR, "malloc error");
 
     int i,j,wah_i = 0, offset_total  = 0;
 
@@ -273,6 +279,8 @@ uint32_t get_ubin_record(struct ubin_file uf,
 
     *ubin_record = (uint32_t *)
                    malloc(sizeof(uint32_t)*num_ints_per_record);
+    if (!*ubin_record)
+        err(EX_OSERR, "malloc error");
 
     fseek(uf.file, ubin_offset, SEEK_SET);
     int r = fread(*ubin_record,
@@ -298,6 +306,8 @@ uint32_t ubin_to_bitmap(uint32_t *U,
     // There are 4 unique values, so in total B will require 4x  
     uint32_t B_len = 4 * value_index_size;
     *B = (uint32_t *) calloc(B_len, sizeof(uint32_t));
+    if (!*B)
+        err(EX_OSERR, "malloc error");
 
     uint32_t two_bit, set_bit, bit_offset, B_int_i, B_two_bit_i, B_bit_i;
 
@@ -375,6 +385,8 @@ uint32_t ubin_to_bitmap_wah16(uint32_t *U,
     uint32_t b_len = B_len / 4;  // size of each bitmap index
 
     *wah_sizes = (uint32_t *) malloc(4*sizeof(uint32_t));
+    if (!*wah_sizes)
+        err(EX_OSERR, "malloc error");
 
     uint16_t *wahs[4];
     uint32_t wahs_size[4],
@@ -396,6 +408,8 @@ uint32_t ubin_to_bitmap_wah16(uint32_t *U,
 
     uint32_t W_i = 0;
     *W = (uint16_t *) malloc(total_wah_size*sizeof(uint16_t));
+    if (!*W)
+        err(EX_OSERR, "malloc error");
     for (i = 0; i < 4; i++) {
         for (j = 0; j < wahs_size[i]; j++) {
             (*W)[W_i] = wahs[i][j];
@@ -421,6 +435,8 @@ uint32_t ubin_to_bitmap_wah(uint32_t *U,
     uint32_t b_len = B_len / 4;  // size of each bitmap index
 
     *wah_sizes = (uint32_t *) malloc(4*sizeof(uint32_t));
+    if (!*wah_sizes)
+        err(EX_OSERR, "malloc error");
 
     uint32_t *wahs[4],
                  wahs_size[4],
@@ -442,6 +458,8 @@ uint32_t ubin_to_bitmap_wah(uint32_t *U,
 
     uint32_t W_i = 0;
     *W = (uint32_t *) malloc(total_wah_size*sizeof(uint32_t));
+    if (!*W )
+        err(EX_OSERR, "malloc error");
     for (i = 0; i < 4; i++) {
         for (j = 0; j < wahs_size[i]; j++) {
             (*W)[W_i] = wahs[i][j];
@@ -536,6 +554,8 @@ uint32_t print_ubin(struct ubin_file uf,
 
     uint32_t *c = (uint32_t *)
         malloc(num_ints_per_record*sizeof(uint32_t));
+    if (!c)
+        err(EX_OSERR, "malloc error");
 
     uint32_t i, j, k, num_printed = 0;
 
@@ -628,12 +648,16 @@ uint32_t range_records_ubin(struct ubin_file uf,
     int num_bytes_per_record = num_ints_per_record * 4;
 
     *R = (uint32_t *) malloc(num_output_ints*sizeof(uint32_t));
+    if (!*R )
+        err(EX_OSERR, "malloc error");
     uint32_t i,j;
     for (i = 0; i < num_output_ints; ++i)
         (*R)[i] = -1;
 
     uint32_t *c = (uint32_t *)
         malloc(num_ints_per_record*sizeof(uint32_t));
+    if (!c)
+        err(EX_OSERR, "malloc error");
 
     uint32_t R_int_i, R_bit_i;
     uint32_t c_int_i, c_two_bit_i;
@@ -686,12 +710,16 @@ uint32_t count_range_records_ubin(struct ubin_file uf,
                                       uint32_t **R)
 {
     *R = (uint32_t *) calloc(uf.num_fields,sizeof(uint32_t));
+    if (!*R)
+        err(EX_OSERR, "malloc error");
 
     uint32_t num_ints_per_record = 1 + ((uf.num_fields - 1) / 16);
     int num_bytes_per_record = num_ints_per_record * 4;
 
     uint32_t *c = (uint32_t *)
         malloc(num_ints_per_record*sizeof(uint32_t));
+    if (!c)
+        err(EX_OSERR, "malloc error");
 
     uint32_t R_int_i, R_bit_i;
     uint32_t c_int_i, c_two_bit_i;
@@ -764,6 +792,8 @@ uint32_t convert_file_by_name_ubin_to_plt(char *ubin_in, char *plt_out)
 
     uint32_t *c = (uint32_t *)
         malloc(num_ints_per_record*sizeof(uint32_t));
+    if (!c)
+        err(EX_OSERR, "malloc error");
 
     uint32_t i, j, k, num_printed = 0;
 

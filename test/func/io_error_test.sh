@@ -42,7 +42,6 @@ assert_fail_to_stderr $EX_NOINPUT $LINENO
 run $GQT convert ped -i no_file -p no_file
 assert_fail_to_stderr $EX_NOINPUT $LINENO
 
-
 $GQT convert bcf -i $BCF 2> /dev/null
 $GQT convert ped -i $BCF 2> /dev/null
 
@@ -52,5 +51,12 @@ assert_fail_to_stderr $EX_SOFTWARE $LINENO
 run $GQT query -i $BCF.gqt -d no_db -p "Bar==1" -g "HET"
 assert_fail_to_stderr $EX_NOINPUT $LINENO
 
-#run $GQT convert bcf -i no_file 
+run $GQT query -i $BCF.gqt -v no_file
+assert_fail_to_stderr $EX_NOINPUT $LINENO
 
+run $GQT query -i $BCF.gqt -b no_file
+assert_fail_to_stderr $EX_NOINPUT $LINENO
+
+
+
+rm_index

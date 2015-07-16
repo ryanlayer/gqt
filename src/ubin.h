@@ -5,6 +5,7 @@
 
 struct ubin_file {
     FILE *file;
+    char *file_name;
     uint32_t num_fields, num_records;
     long header_offset;
 };

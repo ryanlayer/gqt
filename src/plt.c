@@ -235,10 +235,12 @@ int convert_file_plt_to_ubin(struct plt_file pf, char *out_file_name)
     }
 
     // First value is the number of fields per record
-    fwrite(&(pf.num_fields), sizeof(int), 1, o_file);
+    if (fwrite(&(pf.num_fields), sizeof(int), 1, o_file) != 1)
+        err(EX_IOERR, "Error writing to \"%s\"", out_file_name); 
 
     // Second value is the number of records
-    fwrite(&(pf.num_records), sizeof(int), 1, o_file);
+    if (fwrite(&(pf.num_records), sizeof(int), 1, o_file) != 1)
+        err(EX_IOERR, "Error writing to \"%s\"", out_file_name); 
 
 
     // jump past the header
@@ -251,8 +253,10 @@ int convert_file_plt_to_ubin(struct plt_file pf, char *out_file_name)
                                                                 pf.num_fields,
                                                                 &packed_ints);
 
-        for (j = 0; j < num_packed_ints; ++j)
-            fwrite(&(packed_ints[j]), sizeof(uint32_t), 1, o_file);
+        for (j = 0; j < num_packed_ints; ++j) {
+            if (fwrite(&(packed_ints[j]), sizeof(uint32_t), 1, o_file) != 1)
+                err(EX_IOERR, "Error writing to \"%s\"", out_file_name); 
+        }
 
         free(packed_ints);
     }
@@ -270,6 +274,8 @@ uint32_t plt_line_to_packed_ints(char *line,
 {
     uint32_t len = 1 + ((num_fields - 1) / 16);
     *packed_ints = (unsigned *) malloc((len)*sizeof(uint32_t));
+    if (!*packed_ints)
+        err(EX_OSERR, "malloc error");
     int i, two_bit_count, pack_int_count = 0;
 
     //printf("%s\n", line);
@@ -429,18 +435,21 @@ int convert_file_by_name_invert_plt_to_ubin(char *in_file_name,
 
 
     // First value is the number of fields per record
-    fwrite(&(n_num_fields), sizeof(uint32_t), 1, o_file);
+    if (fwrite(&(n_num_fields), sizeof(uint32_t), 1, o_file) != 1)
+        err(EX_IOERR, "Error writing to \"%s\"", out_file_name); 
 
     // Second value is the number of records
-    fwrite(&(n_num_records), sizeof(uint32_t), 1, o_file);
+    if (fwrite(&(n_num_records), sizeof(uint32_t), 1, o_file) != 1)
+        err(EX_IOERR, "Error writing to \"%s\"", out_file_name); 
 
     uint32_t num_ints_per_record = 1 + (((n_num_fields) - 1) / 16);
     for (i = 0; i < n_num_records; ++i) {
         //fprintf(stderr, "O:%u\n", i);
-        fwrite(&(ubin[i][0]),
-               sizeof(uint32_t),
-               num_ints_per_record,
-               o_file);
+        if (fwrite(&(ubin[i][0]),
+                   sizeof(uint32_t),
+                   num_ints_per_record,
+                   o_file) != num_ints_per_record)
+            err(EX_IOERR, "Error writing to \"%s\"", out_file_name); 
     }
         
     fclose(pf.file);
@@ -470,6 +479,8 @@ uint32_t invert_plt_to_ubin(char *line,
     if (*ubin == NULL) {
         *ubin = (uint32_t **) malloc( 
                 (*new_num_records)* sizeof(uint32_t *));
+        if (!*ubin)
+            err(EX_OSERR, "malloc error");
 
         for (i = 0; i < *new_num_records; ++i)
             (*ubin)[i] = (uint32_t *) 
@@ -590,6 +601,8 @@ uint32_t range_records_plt(struct plt_file pf,
     uint32_t num_ints_per_record = 1 + ((pf.num_fields - 1) / 32);
 
     *R = (uint32_t *) malloc(num_ints_per_record*sizeof(uint32_t));
+    if (!*R)
+        err(EX_OSERR, "malloc error");
 
     for (i = 0; i < num_ints_per_record; ++i)
         (*R)[i] = -1;
@@ -642,6 +655,8 @@ uint32_t range_fields_plt(struct plt_file pf,
     uint32_t num_ints_per_record = 1 + ((pf.num_records - 1) / 32);
 
     *R = (uint32_t *) malloc(num_ints_per_record*sizeof(uint32_t));
+    if (!*R)
+        err(EX_OSERR, "malloc error");
 
     for (i = 0; i < num_ints_per_record; ++i)
         (*R)[i] = -1;
@@ -720,6 +735,8 @@ uint32_t ne_records_plt(struct plt_file pf,
     uint32_t num_ints_per_record = 1 + ((pf.num_fields - 1) / 32);
 
     *R = (uint32_t *) malloc(num_ints_per_record*sizeof(uint32_t));
+    if (!*R)
+        err(EX_OSERR, "malloc error");
 
     for (i = 0; i < num_ints_per_record; ++i)
         (*R)[i] = -1;

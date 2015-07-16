@@ -44,6 +44,8 @@ struct wah_file init_wahbm_file(char *file_name)
 {
     struct wah_file wf;
 
+    wf.file_name = strdup(file_name);
+
     wf.file = fopen(file_name, "rb");
     if (!wf.file)
         err(EX_NOINPUT, "Cannot open file \"%s\"", file_name);
@@ -51,20 +53,34 @@ struct wah_file init_wahbm_file(char *file_name)
 
     // Jump to the begining of the file to grab the record size
     fseek(wf.file, 0, SEEK_SET);
-    int r = fread(&wf.num_fields,sizeof(uint32_t),1,wf.file);
-    r = fread(&wf.num_records,sizeof(uint32_t),1,wf.file);
+    size_t fr = fread(&wf.num_fields,sizeof(uint32_t),1,wf.file);
+    check_file_read(file_name, wf.file, 1, fr);
+
+    fr = fread(&wf.num_records,sizeof(uint32_t),1,wf.file);
+    check_file_read(file_name, wf.file, 1, fr);
 
     wf.record_offsets = (uint64_t *) 
             malloc(sizeof (uint64_t)*wf.num_records*4);
+    if (!wf.record_offsets)
+        err(EX_OSERR, "malloc error");
 
     uint32_t i;
-    for (i = 0; i < wf.num_records*4; ++i)
-        r = fread(&(wf.record_offsets[i]),sizeof(uint64_t),1,wf.file);
+    for (i = 0; i < wf.num_records*4; ++i) {
+        fr = fread(&(wf.record_offsets[i]),sizeof(uint64_t),1,wf.file);
+        check_file_read(file_name, wf.file, 1, fr);
+    }
 
 
     wf.header_offset = ftell(wf.file);
 
     return wf;
+}
+//}}}
+
+//{{{ void destroy_wahbm_file(struct wah_file *wf)
+void destroy_wahbm_file(struct wah_file *wf)
+{
+    destroy_wah_file(wf);
 }
 //}}}
 
@@ -77,27 +93,53 @@ uint32_t wahbm_speed_check(char *in)
 
     uint32_t i_0_s, i_1_s, i_2_s;
     uint32_t *i_0 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!i_0)
+        err(EX_OSERR, "malloc error");
     uint32_t *i_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!i_1)
+        err(EX_OSERR, "malloc error");
     uint32_t *i_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!i_2)
+        err(EX_OSERR, "malloc error");
 
     uint32_t j_0_s, j_1_s, j_2_s;
     uint32_t *j_0 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!j_0)
+        err(EX_OSERR, "malloc error");
     uint32_t *j_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!j_1)
+        err(EX_OSERR, "malloc error");
     uint32_t *j_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!j_2)
+        err(EX_OSERR, "malloc error");
 
     uint32_t x_0_s, x_1_s, x_2_s;
     uint32_t *x_0 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!x_0)
+        err(EX_OSERR, "malloc error");
     uint32_t *x_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!x_1)
+        err(EX_OSERR, "malloc error");
     uint32_t *x_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!x_2)
+        err(EX_OSERR, "malloc error");
 
 
     uint32_t x_0_sc, x_1_sc, x_2_sc;
     uint32_t *x_0_c = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!x_0_c)
+        err(EX_OSERR, "malloc error");
     uint32_t *x_1_c = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!x_1_c)
+        err(EX_OSERR, "malloc error");
     uint32_t *x_2_c = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!x_2_c)
+        err(EX_OSERR, "malloc error");
 
     uint32_t t_s;
     uint32_t *t = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!t)
+        err(EX_OSERR, "malloc error");
 
     uint32_t i,j,k, i_to_j_d;
 
@@ -219,6 +261,8 @@ uint32_t wahbm_speed_check(char *in)
     printf("%lu\n", report());
     }
 
+    destroy_wahbm_file(&wf);
+
     return 0;
 }
 //}}}
@@ -233,27 +277,53 @@ uint32_t wahbm_pca_by_name(char *in, char *out)
 
     uint32_t i_0_s, i_1_s, i_2_s;
     uint32_t *i_0 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!i_0 )
+        err(EX_OSERR, "malloc error");
     uint32_t *i_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!i_1 )
+        err(EX_OSERR, "malloc error");
     uint32_t *i_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!i_2 )
+        err(EX_OSERR, "malloc error");
 
     uint32_t j_0_s, j_1_s, j_2_s;
     uint32_t *j_0 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!j_0 )
+        err(EX_OSERR, "malloc error");
     uint32_t *j_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!j_1 )
+        err(EX_OSERR, "malloc error");
     uint32_t *j_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!j_2 )
+        err(EX_OSERR, "malloc error");
 
     uint32_t x_0_s, x_1_s, x_2_s;
     uint32_t *x_0 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!x_0 )
+        err(EX_OSERR, "malloc error");
     uint32_t *x_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!x_1 )
+        err(EX_OSERR, "malloc error");
     uint32_t *x_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!x_2 )
+        err(EX_OSERR, "malloc error");
 
 
     uint32_t x_0_sc, x_1_sc, x_2_sc;
     uint32_t *x_0_c = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!x_0_c )
+        err(EX_OSERR, "malloc error");
     uint32_t *x_1_c = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!x_1_c )
+        err(EX_OSERR, "malloc error");
     uint32_t *x_2_c = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!x_2_c )
+        err(EX_OSERR, "malloc error");
 
     uint32_t t_s;
     uint32_t *t = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!t)
+        err(EX_OSERR, "malloc error");
 
     uint32_t i,j,k, i_to_j_d;
 
@@ -477,7 +547,7 @@ uint32_t wahbm_pca_by_name(char *in, char *out)
 #endif
 
 
-
+    destroy_wahbm_file(&wf);
 
     return 0;
 }
@@ -497,21 +567,43 @@ uint32_t wahbm_hamm_dist_by_name(char *in, char *out)
 
     uint32_t i_0_s, i_1_s, i_2_s, i_a_s;
     uint32_t *i_0 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!i_0 )
+        err(EX_OSERR, "malloc error");
     uint32_t *i_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!i_1 )
+        err(EX_OSERR, "malloc error");
     uint32_t *i_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!i_2 )
+        err(EX_OSERR, "malloc error");
 
     uint32_t *i_a = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!i_a )
+        err(EX_OSERR, "malloc error");
 
     uint32_t j_0_s, j_1_s, j_2_s;
     uint32_t *j_0 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!j_0 )
+        err(EX_OSERR, "malloc error");
     uint32_t *j_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!j_1 )
+        err(EX_OSERR, "malloc error");
     uint32_t *j_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!j_2 )
+        err(EX_OSERR, "malloc error");
 
     uint32_t j_r_s, j_a_s, j_het_s, j_hom_s;
     uint32_t *j_r = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!j_r )
+        err(EX_OSERR, "malloc error");
     uint32_t *j_a = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!j_a )
+        err(EX_OSERR, "malloc error");
     uint32_t *j_het = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!j_het )
+        err(EX_OSERR, "malloc error");
     uint32_t *j_hom = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!j_hom )
+        err(EX_OSERR, "malloc error");
 
 
     uint32_t i,j,k, i_to_j_d;
@@ -598,6 +690,7 @@ uint32_t wahbm_hamm_dist_by_name(char *in, char *out)
     }
 
     fclose(f);
+    destroy_wahbm_file(&wf);
 
     return 0;
 }
@@ -617,15 +710,29 @@ uint32_t wahbm_shared_by_name(char *in, char *out)
 
     uint32_t i_1_s, i_2_s, i_a_s, i_a_c_s;
     uint32_t *i_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!i_1 )
+        err(EX_OSERR, "malloc error");
     uint32_t *i_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!i_2 )
+        err(EX_OSERR, "malloc error");
 
     uint32_t *i_a = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!i_a )
+        err(EX_OSERR, "malloc error");
     uint32_t *i_a_c = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!i_a_c )
+        err(EX_OSERR, "malloc error");
 
     uint32_t j_1_s, j_2_s, j_a_s;
     uint32_t *j_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!j_1 )
+        err(EX_OSERR, "malloc error");
     uint32_t *j_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!j_2 )
+        err(EX_OSERR, "malloc error");
     uint32_t *j_a = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!j_a )
+        err(EX_OSERR, "malloc error");
 
     uint32_t i,j,k, i_to_j_d;
 
@@ -668,6 +775,7 @@ uint32_t wahbm_shared_by_name(char *in, char *out)
     }
 
     fclose(f);
+    destroy_wahbm_file(&wf);
 
     return 0;
 }
@@ -684,15 +792,29 @@ uint32_t wahbm_shared_by_name_subpop(struct wah_file *wf,
 
     uint32_t i_1_s, i_2_s, i_a_s, i_a_c_s;
     uint32_t *i_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!i_1 )
+        err(EX_OSERR, "malloc error");
     uint32_t *i_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!i_2 )
+        err(EX_OSERR, "malloc error");
 
     uint32_t *i_a = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!i_a )
+        err(EX_OSERR, "malloc error");
     uint32_t *i_a_c = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!i_a_c )
+        err(EX_OSERR, "malloc error");
 
     uint32_t j_1_s, j_2_s, j_a_s;
     uint32_t *j_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!j_1 )
+        err(EX_OSERR, "malloc error");
     uint32_t *j_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!j_2 )
+        err(EX_OSERR, "malloc error");
     uint32_t *j_a = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!j_a )
+        err(EX_OSERR, "malloc error");
 
     uint32_t i,j,k, i_to_j_d;
 
@@ -747,23 +869,41 @@ uint32_t wahbm_top_n_matches_by_name(char *in, uint32_t num_matches)
 
     uint32_t i_0_s, i_1_s, i_2_s;
     uint32_t *i_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!i_1 )
+        err(EX_OSERR, "malloc error");
     uint32_t *i_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!i_2 )
+        err(EX_OSERR, "malloc error");
 
     uint32_t j_0_s, j_1_s, j_2_s;
     uint32_t *j_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!j_1 )
+        err(EX_OSERR, "malloc error");
     uint32_t *j_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!j_2 )
+        err(EX_OSERR, "malloc error");
 
     uint32_t x_0_s, x_1_s, x_2_s;
     uint32_t *x_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!x_1 )
+        err(EX_OSERR, "malloc error");
     uint32_t *x_2 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!x_2 )
+        err(EX_OSERR, "malloc error");
 
 
     uint32_t x_0_sc, x_1_sc, x_2_sc;
     uint32_t *x_1_c = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!x_1_c )
+        err(EX_OSERR, "malloc error");
     uint32_t *x_2_c = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!x_2_c )
+        err(EX_OSERR, "malloc error");
 
     uint32_t t_s;
     uint32_t *t = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+    if (!t)
+        err(EX_OSERR, "malloc error");
 
     uint32_t i,j,k,l, i_to_j_d;
     uint32_t leading_zeros, v;
@@ -842,6 +982,7 @@ uint32_t wahbm_top_n_matches_by_name(char *in, uint32_t num_matches)
         printf("\n");
     }
 
+    destroy_wahbm_file(&wf);
     return 0;
 }
 //}}}
@@ -858,6 +999,8 @@ uint32_t print_wahbm(struct wah_file wf,
     uint32_t num_ints_per_record = 1 + ((wf.num_fields - 1) / 16);
 
     uint32_t *output = (uint32_t *)malloc(wf.num_fields*sizeof(uint32_t));
+    if (!output )
+        err(EX_OSERR, "malloc error");
 
     if (num_r == 0)
         to_print = wf.num_records;
@@ -980,7 +1123,9 @@ uint32_t print_by_name_wahbm(char *wahbm_file_name,
                                uint32_t format)
 {
     struct wah_file wf = init_wahbm_file(wahbm_file_name);
-    return print_wahbm(wf, record_ids, num_r, format);
+    uint32_t r = print_wahbm(wf, record_ids, num_r, format);
+    destroy_wahbm_file(&wf);
+    return r;
 }
 //}}} 
 
@@ -1032,8 +1177,11 @@ uint32_t get_wah_bitmap(struct wah_file wf,
 
 
     *wah_bitmap = (uint32_t *) malloc(sizeof(uint32_t)*wah_size);
+    if (!*wah_bitmap)
+        err(EX_OSERR, "malloc error");
     fseek(wf.file, wah_offset, SEEK_SET);
-    int r = fread(*wah_bitmap,sizeof(uint32_t),wah_size,wf.file);
+    size_t fr = fread(*wah_bitmap,sizeof(uint32_t),wah_size,wf.file);
+    check_file_read(wf.file_name, wf.file, wah_size, fr);
 
     return (uint32_t)wah_size;
 }
@@ -2002,6 +2150,8 @@ uint32_t p_pool_add_n_wahbm(uint32_t *R,
 
                     arg = (struct t_add_n_wahbm_args *)
                             malloc(sizeof(struct t_add_n_wahbm_args));
+                    if (!arg)
+                        err(EX_OSERR, "malloc error");
                     arg->bits = bits;
                     arg->field_i = field_i;
                     arg->R = R;

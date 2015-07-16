@@ -270,7 +270,12 @@ int query(int argc, char **argv)
         err(EX_NOINPUT, "Cannot read file\"%s\"", vid_file_name);
 
     uint32_t *vids = (uint32_t *) malloc(wf.num_fields*sizeof(uint32_t));
-    r = fread(vids, sizeof(uint32_t), wf.num_fields, vid_f);
+    if (!vids)
+        err(EX_OSERR, "malloc error");
+
+    size_t fr = fread(vids, sizeof(uint32_t), wf.num_fields, vid_f);
+    check_file_read(vid_file_name, vid_f, wf.num_fields, fr);
+
     fclose(vid_f);
 
     uint32_t num_ints = (wf.num_fields + 32 - 1)/ 32;
@@ -399,6 +404,8 @@ int query(int argc, char **argv)
                 mapped_counts[i][vids[j]] = counts[i][j];
 
             gt_mask[i] = (uint32_t *) malloc(num_ints * sizeof(uint32_t));
+            if (!gt_mask[i])
+                err(EX_OSERR, "malloc error");
 
             /* User specifies a condition */
             if ( q[i].op_condition != -1) { 
@@ -529,7 +536,7 @@ int query(int argc, char **argv)
             free(counts[j]);
     }
 
-    fclose(wf.file);
+    destroy_wahbm_file(&wf);
     return 0;
 }
 //}}}
@@ -558,7 +565,12 @@ void get_bcf_query_result(uint32_t *mask,
         err(EX_NOINPUT, "Cannot read file\"%s\"", vid_file_name);
 
     uint32_t *vids = (uint32_t *) malloc(num_fields*sizeof(uint32_t));
-    int r = fread(vids, sizeof(uint32_t), num_fields, vid_f);
+    if (!vids )
+        err(EX_OSERR, "malloc error");
+
+    size_t fr = fread(vids, sizeof(uint32_t), num_fields, vid_f);
+    check_file_read(vid_file_name, vid_f, num_fields, fr);
+
     fclose(vid_f);
 
     uint32_t i, j, masked_vid_count = 0;
@@ -568,6 +580,8 @@ void get_bcf_query_result(uint32_t *mask,
 
     uint32_t *masked_vids = (uint32_t *)
             malloc(masked_vid_count*sizeof(uint32_t));
+    if (!masked_vids )
+        err(EX_OSERR, "malloc error");
     uint32_t masked_vid_i = 0;
 
     for (i = 0; i < mask_len; ++i) {
@@ -599,7 +613,7 @@ void get_bcf_query_result(uint32_t *mask,
     else
         out = hts_open("-", "wb");
 
-    r = bcf_hdr_write(out, hdr);
+    int r = bcf_hdr_write(out, hdr);
 
     uint32_t bcf_line_i = 0;
     masked_vid_i = 0;

@@ -9,6 +9,7 @@ BCFTOOLS=bcftools
 GQT=../../bin/gqt
 DATA_PATH=../data
 BCF=$DATA_PATH/10.1e4.var.bcf
+BAD_PED=$DATA_PATH/too_many_fields.ped
 
 TMP_O=$TMPDIR/o
 TMP_E=$TMPDIR/e
@@ -228,6 +229,29 @@ function assert_stderr {
         if [ $VERBOSE ] 
         then
             echo -e "-->\t$ERRVAL"
+        fi
+    fi
+}
+#}}}
+
+#{{{function assert_in_stderr {
+function assert_in_stderr {
+    if [ -z "$ERRVAL" ]
+    then
+        echo -e "FAILURE EMPTY STDERR($2): \"$CMD\""
+        exit
+    else
+        if [[ $ERRVAL == *"$1"* ]]
+        then
+            echo -e "SUCESS STDERR CONTAINS \"$1\" ($2): \"$CMD\""
+            if [ $VERBOSE ] 
+            then
+                echo -e "-->\t$ERRVAL"
+            fi
+        else
+            echo -e "FAILURE STDERR DOES NOT CONTAIN \"$1\" ($2): \"$CMD\""
+            echo -e "-->\t$ERRVAL"
+            exit
         fi
     fi
 }

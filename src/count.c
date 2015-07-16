@@ -408,10 +408,8 @@ int count_in_place_wahbm(char *in,
         print_count_result(wf_R, wf.num_fields, bim);
 
     free(wf_R);
-    fclose(wf.file);
-
+    destroy_wahbm_file(&wf);
     return 0;
-
 }
 
 int count_compressed_in_place_wahbm(char *in,
@@ -447,12 +445,9 @@ int count_compressed_in_place_wahbm(char *in,
         print_count_result(wf_R, wf.num_fields, bim);
 
     free(wf_R);
-    fclose(wf.file);
+    destroy_wahbm_file(&wf);
 
     return 0;
-
-
-
 }
 
 int count_wahbm(char *in,
@@ -488,7 +483,7 @@ int count_wahbm(char *in,
         print_count_result(wf_R, wf.num_fields, bim);
 
     free(wf_R);
-    fclose(wf.file);
+    destroy_wahbm_file(&wf);
 
     return 0;
 }

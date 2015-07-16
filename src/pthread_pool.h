@@ -7,6 +7,8 @@
 #define __PTHREAD_POOL_H__
 #include <stdint.h>
 #include <pthread.h>
+#include <sysexits.h>
+#include <err.h>
 /**
  * Create a new thread pool.
  * 

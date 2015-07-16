@@ -499,11 +499,18 @@ uint32_t range_records_compressed_in_place_wahbm(
     uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
     uint32_t *record_new_bm = (uint32_t *)
                         malloc(sizeof(uint32_t)*max_wah_size);
+    if (!record_new_bm )
+        err(EX_OSERR, "malloc error");
 
     uint32_t *or_result_bm = (uint32_t *)
                         malloc(sizeof(uint32_t)*max_wah_size);
+    if (!or_result_bm )
+        err(EX_OSERR, "malloc error");
+
     uint32_t *and_result_bm = (uint32_t *)
                         malloc(sizeof(uint32_t)*max_wah_size);
+    if (!and_result_bm )
+        err(EX_OSERR, "malloc error");
     uint32_t and_result_bm_size, record_new_bm_size, or_result_bm_size;
     uint32_t i,j;
 
@@ -562,9 +569,13 @@ uint32_t count_range_records_compressed_in_place_wahbm(
     uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
     uint32_t *record_new_bm = (uint32_t *)
                         malloc(sizeof(uint32_t)*max_wah_size);
+    if (!record_new_bm )
+        err(EX_OSERR, "malloc error");
 
     uint32_t *or_result_bm = (uint32_t *)
                         malloc(sizeof(uint32_t)*max_wah_size);
+    if (!or_result_bm )
+        err(EX_OSERR, "malloc error");
 
     uint32_t and_result_bm_size, record_new_bm_size, or_result_bm_size;
     uint32_t i,j,r_size;
@@ -752,6 +763,8 @@ uint32_t compressed_in_place_wah_to_ints(uint32_t *W,
 
     uint32_t num_ints = (num_bits + 32 - 1) / 32;
     *O = (uint32_t *) malloc (num_ints * sizeof(uint32_t));
+    if (!*O )
+        err(EX_OSERR, "malloc error");
 
 
     uint32_t num_words,

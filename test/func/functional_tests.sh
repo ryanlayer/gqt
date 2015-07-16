@@ -236,6 +236,14 @@ then
     echo "SUCCESS($LINENO): Number of HOM_REF in both ESN match in VCF and GQT"
 else
     echo "ERROR($LINENO): Number of HOM_REF in both ESN do not match in VCF($VCF_BOTH_NUM)  and GQT($GQT_BOTH_NUM)"
+    echo -e"
+    $GQT query \
+        -i $BCF.gqt \ 
+        -d $DATA_PATH/more_fields.ped.db \ 
+        -p "Population ='ESN'" \
+        -g "HOM_REF" \
+        | grep -v "#" \
+        | wc -l"
 fi 
 
 

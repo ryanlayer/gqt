@@ -5,18 +5,19 @@
  *      Author: nek3d
  */
 
-#include "output_buffer.h"
 #include <string.h>
+#include "output_buffer.h"
+#include "genotq.h"
 
 static int output_buffer_main_buf_size = 1048576; /* 1 megabyte */
 
 /* Allocate and initialize buffer space and members.
  * Pass stdout if not using a file. */
 void init_out_buf(struct output_buffer *out_buf, FILE *out_file) {
-	if ((out_buf->main_buf = (char *)malloc(output_buffer_main_buf_size)) == NULL) {
-		fprintf(stderr, "Error: Failure to allocate output buffer. Exiting...");
-		exit(1);
-	}
+	out_buf->main_buf = (char *)malloc(output_buffer_main_buf_size);
+        if (!out_buf->main_buf )
+            err(EX_OSERR, "malloc error");
+        
 	memset(out_buf->main_buf, 0, output_buffer_main_buf_size);
 	out_buf->out_file = (out_file == NULL ? stdout : out_file);
 	out_buf->curr_pos = 0;

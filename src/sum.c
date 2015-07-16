@@ -209,6 +209,8 @@ int sum(int argc, char **argv)
         //fprintf(stderr, "num_records:%u\n", num_records);
     } else {
         R = (uint32_t *) malloc(num_records * sizeof(uint32_t));
+        if (!R)
+            err(EX_OSERR, "malloc error");
         parse_cmd_line_int_csv(R, num_records, record_ids);
     }
 
@@ -462,7 +464,7 @@ int sum_in_place_wahbm(char *in,
         print_sum_result(wf_R, wf.num_fields, bim);
 
     free(wf_R);
-    fclose(wf.file);
+    destroy_wahbm_file(&wf);
 
     return 0;
 

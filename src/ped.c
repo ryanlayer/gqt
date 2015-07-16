@@ -16,6 +16,8 @@ static int uint32_t_ll_callback(void *ll_p,
 
     struct uint32_t_ll_node *new_node = (struct uint32_t_ll_node *)
         malloc(sizeof(struct uint32_t_ll_node));
+    if (!new_node )
+        err(EX_OSERR, "malloc error");
     new_node->v = atoi(argv[0]);
     new_node->next = NULL;
 
@@ -48,6 +50,8 @@ static int char_ll_callback(void *ll_p,
 
     struct char_ll_node *new_node = (struct char_ll_node *)
         malloc(sizeof(struct char_ll_node));
+    if (!new_node )
+        err(EX_OSERR, "malloc error");
 
     uint32_t bcf_i = 0;
     uint32_t label_i = 1;
@@ -60,6 +64,8 @@ static int char_ll_callback(void *ll_p,
     }
 
     new_node->v = (char *) malloc(strlen(argv[label_i])*sizeof(char));
+    if (!new_node->v )
+        err(EX_OSERR, "malloc error");
     strcpy(new_node->v, argv[label_i]);
     new_node->next = NULL;
 
@@ -114,6 +120,8 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
         }
         char *word;
         tmp_line = (char *) malloc(strlen(line) * sizeof(char));
+        if (!tmp_line )
+            err(EX_OSERR, "malloc error");
         strcpy(tmp_line, line);
 
         word = strtok(tmp_line, "\t");
@@ -124,6 +132,8 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
 
         if (num_ped_fields > 0) {
             ped_field_names = (char **) malloc(num_ped_fields * sizeof(char *));
+            if (!ped_field_names )
+                err(EX_OSERR, "malloc error");
             strcpy(tmp_line, line);
 
             // Set field names
@@ -141,6 +151,8 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
 
             // Set field types
             ped_field_types = (int *) malloc(num_ped_fields * sizeof(int));
+            if (!ped_field_types )
+                err(EX_OSERR, "malloc error");
             for (i = 0; i < num_ped_fields; ++i)
                 ped_field_types[i] = 1;
 
@@ -277,6 +289,8 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
 
         ssize_t read = getline(&line, &len, ped_f); // skip header
         char **ped_values = (char **) malloc(num_ped_fields *sizeof(char *));
+        if (!ped_values)
+            err(EX_OSERR, "malloc error");
         char *tmp_q;
 
         while ( (read = getline(&line, &len, ped_f)) != -1) {
@@ -367,6 +381,8 @@ uint32_t resolve_ind_query(uint32_t **R, char *query, char *ped_db_file)
         err(EX_SOFTWARE,"SQL error \"%s\" in query \"%s\"", err_msg, test_q);
 
     *R = (uint32_t *) malloc(ll.len * sizeof(uint32_t));
+    if (!R)
+        err(EX_OSERR, "malloc error");
 
     struct uint32_t_ll_node *tmp, *curr = ll.head;
     uint32_t i;
@@ -417,6 +433,8 @@ uint32_t resolve_label_query(char ***R,
         err(EX_SOFTWARE,"SQL error \"%s\" in query \"%s\"", err_msg, test_q);
 
     *R = (char **) malloc(ll.len * sizeof(char *));
+    if (!R)
+        err(EX_OSERR, "malloc error");
 
     struct char_ll_node *tmp, *curr = ll.head;
     uint32_t i;

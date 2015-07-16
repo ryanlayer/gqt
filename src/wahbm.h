@@ -29,6 +29,11 @@
  */
 struct wah_file init_wahbm_file(char *file_name);
 
+/*
+ * Calls  destroy_wah_file
+ */
+void destroy_wahbm_file(struct wah_file *wf);
+
 /**
  * @brief Print a WAH encoded bitmap file.
  *

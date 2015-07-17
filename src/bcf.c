@@ -580,8 +580,7 @@ void compress_md(struct bcf_file *bcf_f,
 
     int ret = deflateInit(&strm, 6);
     if (ret != Z_OK) {
-        fprintf(stderr, "error: Cannot init stream\n");
-        exit(1);
+        errx(EX_CANTCREAT,"Zlib error: Cannot init stream\n");
     }
 
     // have is used to store the size of the compressed data
@@ -614,19 +613,16 @@ void compress_md(struct bcf_file *bcf_f,
             ret = deflate(&strm, Z_FULL_FLUSH);
 
             if (ret == Z_BUF_ERROR) {
-                fprintf(stderr,
-                        "No progress is possible; either avail_in or "
-                        "avail_out was zero %u\t%u.\n", 
+                errx(EX_SOFTWARE,
+                        "Zlib error: No progress is possible; either avail_in or "
+                        "avail_out was zero %u\t%u.", 
                         strm.avail_in, strm.avail_out);
-                exit(1);
             } else if (ret == Z_MEM_ERROR) {
-                fprintf(stderr, "Insufficient memory.\n");
-                exit(1);
+                errx(EX_SOFTWARE, "Zlib error: Insufficient memory.");
             } else if (ret == Z_STREAM_ERROR) {
-                fprintf(stderr,
-                        "The state (as represented in stream) is inconsistent,"
-                        " or stream was NULL.");
-                exit(1);
+                errx(EX_SOFTWARE,
+                        "Zlib error: The state (as represented in stream) is "
+                        "inconsistent or stream was NULL.");
             }
 
             // The amount compressed is the amount of the buffer used
@@ -676,19 +672,16 @@ void compress_md(struct bcf_file *bcf_f,
         ret = deflate(&strm, Z_FULL_FLUSH);
 
         if (ret == Z_BUF_ERROR) {
-            fprintf(stderr,
-                    "No progress is possible; either avail_in or "
-                    "avail_out was zero %u\t%u.\n", 
+            errx(EX_SOFTWARE,
+                    "Zlib error: No progress is possible; either avail_in or "
+                    "avail_out was zero %u\t%u.", 
                     strm.avail_in, strm.avail_out);
-            exit(1);
         } else if (ret == Z_MEM_ERROR) {
-            fprintf(stderr, "Insufficient memory.\n");
-            exit(1);
+            errx(EX_SOFTWARE, "Zlib error: Insufficient memory.");
         } else if (ret == Z_STREAM_ERROR) {
-            fprintf(stderr,
-                    "The state (as represented in stream) is inconsistent,"
-                    " or stream was NULL.");
-            exit(1);
+            errx(EX_SOFTWARE,
+                 "Zlib error: The state (as represented in stream) is "
+                 "inconsistent or stream was NULL.");
         }
 
         have = out_buf_len - strm.avail_out;
@@ -723,19 +716,16 @@ void compress_md(struct bcf_file *bcf_f,
         ret = deflate(&strm, Z_FULL_FLUSH);
 
         if (ret == Z_BUF_ERROR) {
-            fprintf(stderr,
-                    "No progress is possible; either avail_in or "
-                    "avail_out was zero %u\t%u.\n", 
-                    strm.avail_in, strm.avail_out);
-            exit(1);
+            errx(EX_SOFTWARE,
+                 "Zlib error: No progress is possible; either avail_in or "
+                 "avail_out was zero %u\t%u.", 
+                 strm.avail_in, strm.avail_out);
         } else if (ret == Z_MEM_ERROR) {
-            fprintf(stderr, "Insufficient memory.\n");
-            exit(1);
+            errx(EX_SOFTWARE, "Zlib error: Insufficient memory.");
         } else if (ret == Z_STREAM_ERROR) {
-            fprintf(stderr,
-                    "The state (as represented in stream) is inconsistent,"
-                    " or stream was NULL.");
-            exit(1);
+            errx(EX_SOFTWARE,
+                 "Zlib error: The state (as represented in stream) is "
+                 "inconsistent or stream was NULL.");
         }
 
         have = out_buf_len - strm.avail_out;

@@ -69,6 +69,7 @@ $(OBJ)/%.o: %.c
 $(BIN)/%: %.c $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ \
 		-I$(HTS_ROOT) \
+		-I$(SQLITE_ROOT) \
 		-DSAMTOOLS=1 \
 		$(HTS_ROOT)/libhts.a \
 		$(SQLITE_ROOT)/sqlite3.o \

@@ -29,6 +29,6 @@ void quick_file_init(char *filename, struct quick_file_info *qfile);
 /* Don't forget to pass the struct back to this method for memory clean-up */
 void quick_file_delete(struct quick_file_info *qfile);
 
-
+char *zerr(int ret);
 
 #endif /* QUICKFILE_H_ */

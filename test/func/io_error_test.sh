@@ -80,3 +80,12 @@ run $GQT query -i $BCF.gqt
 assert_fail_to_stderr $EX_IOERR $LINENO
 assert_in_stderr $BCF.vid $LINENO
 rm_index
+
+# corrupt VID file
+make_index
+perl -e '$out = "foobar";print pack("V*",10,0,length($out),0,48,0,1,0,666,666);print $out' > truncated.bin
+run $GQT query -i $BCF.gqt  -b truncated.bin
+assert_fail_to_stderr $EX_NOINPUT $LINENO
+assert_in_stderr Zlib $LINENO
+rm_index
+rm truncated.bin

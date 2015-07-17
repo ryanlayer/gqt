@@ -22,3 +22,27 @@ do
     run $GQT $CMD -i no_such_file
     assert_fail_to_stderr $EX_NOINPUT $LINENO
 done
+
+run $GQT query -i $BCF.gqt -p "" -g "f"
+assert_fail_to_stderr $EX_USAGE $LINENO
+assert_in_stderr "gqt: GENOTYPE SYNTAX ERROR: Invalid query 'f'.  Expected funciton (count, pct, maf) or gentoype (HET, HOM_REF, HOM_ALT, or UNKNOWN)." $LINENO
+ 
+run $GQT query -i $BCF.gqt -p "" -g "count(HET f)"
+assert_fail_to_stderr $EX_USAGE $LINENO
+assert_in_stderr "gqt: GENOTYPE SYNTAX ERROR: Invalid function parameter 'f'.  Expected HET, HOM_REF, HOM_ALT, or UNKNOWN." $LINENO
+ 
+run $GQT query -i $BCF.gqt -p "" -g "count(HET 1)"
+assert_fail_to_stderr $EX_USAGE $LINENO
+assert_in_stderr "gqt: GENOTYPE SYNTAX ERROR:Opperation (count,pct,maf) and condition (==,!=,<, etc.) expected prior to '1'" $LINENO
+
+run $GQT query -i $BCF.gqt -p "" -g "count(HET)<"
+assert_fail_to_stderr $EX_USAGE $LINENO
+assert_in_stderr "gqt: GENOTYPE SYNTAX ERROR: Missing condition value (after ==, <, etc.)" $LINENO
+
+run $GQT query -i $BCF.gqt -p "" -g "maf(HET)<1"
+assert_fail_to_stderr $EX_USAGE $LINENO
+assert_in_stderr "gqt: GENOTYPE SYNTAX ERROR: Opperation (maf) does not expect genotype (HOM_REF,HET,HOM_ALT,UNKNOWN) prior to ')'" $LINENO
+
+run $GQT query -i $BCF.gqt -p "" -g "maf()<1 f"
+assert_fail_to_stderr $EX_USAGE $LINENO
+assert_in_stderr "gqt: GENOTYPE SYNTAX ERROR: Invalid trailing value 'f'"

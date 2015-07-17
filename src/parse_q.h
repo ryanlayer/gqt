@@ -12,11 +12,12 @@
 #define     p_het 9
 #define     p_homo_ref 10
 #define     p_homo_alt 11
-#define     p_unknown 12
+#define     p_unknown_gt 12
 #define     p_r_paren 13
 #define     p_l_paren 14
 #define     p_number 15
 #define     p_maf 16
+#define     p_unknown 17
 
 
 /* state tracks the expression 
@@ -50,6 +51,8 @@ int set_gt(int ntoken, struct gqt_query *q, int *state);
 int set_op(int ntoken, struct gqt_query *q, int *state);
 
 int set_op_cond(int ntoken, struct gqt_query *q, int *state);
+
+void invalid_token(char *token_text, int *state);
 
 int parse_q(char *q_text, struct gqt_query *q_props);
 #endif

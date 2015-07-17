@@ -22,7 +22,7 @@
 #define CHUNK 16384
 
 #define PROGRAM_NAME  "gqt"
-#define VERSION "0.2.6"
+#define VERSION "0.2.7"
 
 struct uint_ll {
         uint32_t value;

@@ -122,8 +122,8 @@ EX_CONFIG=78
 
 #{{{ function run {
 function run {
-    CMD=$@
-    $CMD > $TMP_O 2> $TMP_E
+    CMD="$@"
+    O="$("$@" >$TMP_O 2>$TMP_E)"
     RETVAL=$?
     OUTVAL=`cat $TMP_O`
     ERRVAL=`cat $TMP_E`
@@ -251,6 +251,29 @@ function assert_in_stderr {
         else
             echo -e "FAILURE STDERR DOES NOT CONTAIN \"$1\" ($2): \"$CMD\""
             echo -e "-->\t$ERRVAL"
+            exit
+        fi
+    fi
+}
+#}}}
+
+#{{{function assert_in_stdout {
+function assert_in_stdout {
+    if [ -z "$OUTVAL" ]
+    then
+        echo -e "FAILURE EMPTY STDOUT($2): \"$CMD\""
+        exit
+    else
+        if [[ $OUTVAL == *"$1"* ]]
+        then
+            echo -e "SUCESS STDOUT CONTAINS \"$1\" ($2): \"$CMD\""
+            if [ $VERBOSE ] 
+            then
+                echo -e "-->\t$OUTVAL"
+            fi
+        else
+            echo -e "FAILURE STDOUT DOES NOT CONTAIN \"$1\" ($2): \"$CMD\""
+            echo -e "-->\t$OUTVAL"
             exit
         fi
     fi

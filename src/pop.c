@@ -51,15 +51,17 @@ void print_calpha_result(uint32_t *R,
                          uint32_t n_ctrls,
                          uint32_t N,
                          uint32_t num_variants,
-                         char *bim);
+                         char *bim,
+                         char *full_cmd);
 
 void print_pop_result(char *op,
                       double *R,
                       uint32_t num_variants,
-                      char *bim);
+                      char *bim,
+                      char *full_cmd);
 
-//{{{ int pop(char *op, int argc, char **argv)
-int pop(char *op, int argc, char **argv)
+//{{{ int pop(char *op, int argc, char **argv, char *full_cmd)
+int pop(char *op, int argc, char **argv, char *full_cmd)
 {
     if (argc < 2) return pop_help(op);
 
@@ -255,11 +257,11 @@ int pop(char *op, int argc, char **argv)
     }else if (strcmp("fst",op) == 0) {
         double *R;
         len_R = fst(&wf, id_query_list, id_q_count, vids, db_file_name, &R);
-        print_pop_result(op, R, wf.num_fields, bim_file_name);
+        print_pop_result(op, R, wf.num_fields, bim_file_name, full_cmd);
     } else if (strcmp("gst",op) == 0) {
         double *R;
         len_R = gst(&wf, id_query_list, id_q_count, vids, db_file_name, &R);
-        print_pop_result(op, R, wf.num_fields, bim_file_name);
+        print_pop_result(op, R, wf.num_fields, bim_file_name, full_cmd);
     } else if (strcmp("calpha",op) == 0) {
         /*
         if (N_is_set == 0) {
@@ -287,7 +289,8 @@ int pop(char *op, int argc, char **argv)
                             n_ctrls,
                             0,
                             wf.num_fields,
-                            bim_file_name);
+                            bim_file_name,
+                            full_cmd);
         free(R);
 
     } else {
@@ -811,7 +814,6 @@ uint32_t fst(struct wah_file *wf,
 }
 //}}}
 
-
 //{{{ uint32_t shared(struct wah_file *wf,
 uint32_t pca_shared(struct wah_file *wf,
                     char **id_query_list,
@@ -853,7 +855,8 @@ uint32_t pca_shared(struct wah_file *wf,
 void print_pop_result(char *op,
                       double *R,
                       uint32_t num_variants,
-                      char *bim)
+                      char *bim,
+                      char *full_cmd)
 {
     uint32_t i;
 
@@ -869,6 +872,13 @@ void print_pop_result(char *op,
                    qfile.header_len);
 
     char *info_s;
+
+    asprintf(&info_s, 
+            "##%s_%sVersion=%s\n"
+            "##%s_%sCommand=%s\n",
+            PROGRAM_NAME, op, VERSION,
+            PROGRAM_NAME, op, full_cmd);
+    append_out_buf(&outbuf, info_s, strlen(info_s));
 
     asprintf(&info_s,
              "##INFO=<ID=GQT_%s,Number=1,Type=Float,"
@@ -903,11 +913,9 @@ void print_calpha_result(uint32_t *R,
                          uint32_t n_ctrls,
                          uint32_t N,
                          uint32_t num_variants,
-                         char *bim)
+                         char *bim,
+                         char *full_cmd)
 {
-
-
-
     uint32_t i,j;
     uint32_t max_int = 0;
 
@@ -940,6 +948,14 @@ void print_calpha_result(uint32_t *R,
                    qfile.header_len);
 
     char *info_s;
+
+
+    asprintf(&info_s, 
+            "##%s_calphaVersion=%s\n"
+            "##%s_calphaCommand=%s\n",
+            PROGRAM_NAME, VERSION,
+            PROGRAM_NAME, full_cmd);
+    append_out_buf(&outbuf, info_s, strlen(info_s));
 
     asprintf(&info_s,
              "##INFO=<ID=N_CASE,Number=1,Type=Integer,"

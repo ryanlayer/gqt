@@ -20,7 +20,8 @@ void print_query_result(uint32_t *mask,
                         uint32_t *id_lens,
                         uint32_t num_qs,
                         uint32_t num_fields,
-                        char *bim);
+                        char *bim,
+                        char *full_cmd);
 int query_cmp(uint32_t value,
               int op_condition,
               int condition_value);
@@ -70,8 +71,8 @@ int query_cmp(uint32_t value,
 }
 //}}}
 
-//{{{ int query(int argc, char **argv)
-int query(int argc, char **argv)
+//{{{ int query(int argc, char **argv, char *full_cmd)
+int query(int argc, char **argv, char *full_cmd)
 {
     if (argc < 2) return query_help();
 
@@ -525,7 +526,8 @@ int query(int argc, char **argv)
                            id_lens,
                            gt_q_count,
                            wf.num_fields,
-                           bim_file_name);
+                           bim_file_name,
+                           full_cmd);
     }
 
     for (j = 0; j < gt_q_count; ++j) {
@@ -641,7 +643,8 @@ void print_query_result(uint32_t *mask,
                         uint32_t *id_lens,
                         uint32_t num_qs,
                         uint32_t num_fields,
-                        char *bim)
+                        char *bim,
+                        char *full_cmd)
 {
     uint32_t i,j,k,line_idx,bytes, bit_i = 0;
 
@@ -658,7 +661,16 @@ void print_query_result(uint32_t *mask,
                    qfile.main_buf,
                    qfile.header_len);
 
-    char *info_s;
+    char *info_s = NULL;;
+
+    asprintf(&info_s, 
+            "##%s_queryVersion=%s\n"
+            "##%s_queryCommand=%s\n",
+            PROGRAM_NAME, VERSION,
+            PROGRAM_NAME, full_cmd);
+                      
+    append_out_buf(&outbuf, info_s, strlen(info_s));
+
     for (k=0; k < num_qs; k++) {
         if ( q[k].variant_op == p_count ) {
             asprintf(&info_s, "##INFO=<ID=GQT_%u,Number=1,Type=Integer,"

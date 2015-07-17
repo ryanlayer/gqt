@@ -253,8 +253,14 @@ $GQT query \
     -p "" \
     -g "pct(HOM_REF)" \
     | grep -v "^#" \
-    | cut -d"=" -f3 \
-    > tmp.pct
+    | awk '{
+        split($8,a,";");
+        for (i=1;i<=length(a);i++) {
+            split(a[i],b,"=");
+            if (b[1]=="GQT_0")
+                print b[2];
+        }
+    }' > tmp.pct
 
 $GQT query \
     -i $BCF.gqt \
@@ -262,8 +268,14 @@ $GQT query \
     -p "" \
     -g "count(HOM_REF)" \
     | grep -v "^#" \
-    | cut -d"=" -f3 \
-    > tmp.count
+    | awk '{
+        split($8,a,";");
+        for (i=1;i<=length(a);i++) {
+            split(a[i],b,"=");
+            if (b[1]=="GQT_0")
+                print b[2];
+        }
+    }' > tmp.count
 
 if [ -n "`paste tmp.pct tmp.count | awk '$1*10 != $2'`" ]
 then 
@@ -287,14 +299,25 @@ $GQT query \
 
 cat tmp.gqt \
     | grep -v "#" \
-    | cut -f 8 | cut -d ";" -f2 | cut -d "=" -f2 \
-    > tmp.pct
+    | awk '{
+        split($8,a,";");
+        for (i=1;i<=length(a);i++) {
+            split(a[i],b,"=");
+            if (b[1]=="GQT_0")
+                print b[2];
+        }
+    }' > tmp.pct
 
 cat tmp.gqt \
     | grep -v "#" \
-    | cut -f 8 | cut -d ";" -f3 | cut -d "=" -f2 \
-    > tmp.count
-
+    | awk '{
+        split($8,a,";");
+        for (i=1;i<=length(a);i++) {
+            split(a[i],b,"=");
+            if (b[1]=="GQT_1")
+                print b[2];
+        }
+    }' > tmp.count
 
 if [ -n "`paste tmp.pct tmp.count | awk '$1*10 != $2'`" ]
 then 
@@ -463,23 +486,30 @@ then
         | awk '{if ($4 == "A") print $5*$6; else print (1-$5)*$6;}' \
         | awk '{s+=$1} END {print s}'`
 
+    #GQT_COUNT=`$GQT query \
     GQT_COUNT=`$GQT query \
                     -i $BCF.gqt \
                     -d $DATA_PATH/more_fields.ped.db \
                     -p "" \
                     -g "maf()" \
                     | grep -v "^#" \
-                    | cut -d "=" -f 3 \
-                    | awk '{print $1*20}' \
-                    | awk '{s+=$1} END {print s}'`
-
+                    | awk '{
+                        split($8,a,";");
+                        for (i=1;i<=length(a);i++) {
+                            split(a[i],b,"=");
+                            if (b[1]=="GQT_0")
+                                print b[2];
+                        }
+                    }' \
+                | awk '{print $1*20}' \
+                | awk '{s+=$1} END {print s}'`
 
     if [ $GQT_COUNT -eq $PLINK_COUNT ]
     then
         echo "SUCCESS($LINENO): GQT count matches PLINK count"
         rm  plink.out.frq plink.out.log plink.out.nosex
     else
-        echo "ERROR($LINENO): GQT count does not matche PLINK count. $GQT_COUNT vs $PLINK_COUNT"
+        echo "ERROR($LINENO): GQT count does not match PLINK count. $GQT_COUNT vs $PLINK_COUNT"
     fi
 else
     echo "SKIP($LINENO): PLINK not set"
@@ -492,7 +522,14 @@ export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:$HOME/src/htslib"
 BCFTOOLS_COUNT=`bcftools view $BCF\
     | bcftools plugin fill-AN-AC \
     | grep -v "#" \
-    | cut -f 8 | cut -d ";" -f3 | cut -d "=" -f2 \
+    | awk '{
+        split($8,a,";");
+        for (i=1;i<=length(a);i++) {
+            split(a[i],b,"=");
+            if (b[1]=="AC")
+                print b[2];
+        }
+    }' \
     | awk '{s+=$1} END {print s}'`
 
 HET_COUNT=`$GQT query \
@@ -501,7 +538,14 @@ HET_COUNT=`$GQT query \
     -p "" \
     -g "count(HET)" \
     | grep -v "#" \
-    | cut -d "=" -f3 \
+    | awk '{
+        split($8,a,";");
+        for (i=1;i<=length(a);i++) {
+            split(a[i],b,"=");
+            if (b[1]=="GQT_0")
+                print b[2];
+        }
+    }' \
     | awk '{s+=$1} END {print s}'`
 
 ALT_COUNT=`$GQT query \
@@ -510,7 +554,14 @@ ALT_COUNT=`$GQT query \
     -p "" \
     -g "count(HOM_ALT)" \
     | grep -v "#" \
-    | cut -d "=" -f3 \
+    | awk '{
+        split($8,a,";");
+        for (i=1;i<=length(a);i++) {
+            split(a[i],b,"=");
+            if (b[1]=="GQT_0")
+                print b[2];
+        }
+    }' \
     | awk '{s+=$1*2} END {print s}'`
 
 GQT_COUNT=`echo $HET_COUNT $ALT_COUNT | awk '{print $1+$2;}'`
@@ -545,7 +596,14 @@ then
 
         cat $DATA_PATH/gqt.fst.vcf \
         | grep -v "^#" \
-        | cut -f 8 | cut -d ";" -f 2 | cut -d "=" -f2 \
+        | awk '{
+            split($8,a,";");
+            for (i=1;i<=length(a);i++) {
+                split(a[i],b,"=");
+                if (b[1]=="GQT_fst")
+                    print b[2];
+            }
+        }' \
         > gqt.fst.tmp
 
         MISSES=`paste vcftools.fst.tmp gqt.fst.tmp \

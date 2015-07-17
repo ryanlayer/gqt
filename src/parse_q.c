@@ -36,9 +36,7 @@ int set_gt(int ntoken, struct gqt_query *q, int *state)
 {
     if ((*state & OP_SET_END) ||
         (*state & GT_SET_END) ) {
-        fprintf(stderr, "SYNTAX ERROR: invalid placement of '%s' ",
-                names[ntoken]);
-        return 1;
+        errx(EX_USAGE, "GENOTYPE SYNTAX ERROR: invalid placement of '%s' ", names[ntoken]);
     }
 
     switch (ntoken) {
@@ -54,7 +52,7 @@ int set_gt(int ntoken, struct gqt_query *q, int *state)
             q->genotype_condition[2] = 1;
             return 0;
             break;
-        case p_unknown:
+        case p_unknown_gt:
             q->genotype_condition[3] = 1;
             return 0;
             break;
@@ -69,9 +67,7 @@ int set_gt(int ntoken, struct gqt_query *q, int *state)
 int set_op(int ntoken, struct gqt_query *q, int *state)
 {
     if (*state != START_OF_EXP) {
-        fprintf(stderr, "SYNTAX ERROR: invalid placement of '%s' ",
-                names[ntoken]);
-        return 1;
+        errx(EX_USAGE, "GENOTYPE SYNTAX ERROR: invalid placement of '%s' ", names[ntoken]);
     }
 
     *state |= OP_SET_START;
@@ -86,10 +82,9 @@ int set_op(int ntoken, struct gqt_query *q, int *state)
 int set_op_cond(int ntoken, struct gqt_query *q, int *state)
 {
     if ((*state & OP_SET_END) != OP_SET_END) {
-        fprintf(stderr, "SYNTAX ERROR: "
+        errx(EX_USAGE, "GENOTYPE SYNTAX ERROR: "
                         "Opperation (count,pct,maf) expected prior to '%s' ",
                         names[ntoken]);
-        return 1;
     }
 
     *state |= COND_SET;
@@ -104,11 +99,10 @@ int set_op_cond(int ntoken, struct gqt_query *q, int *state)
 int set_cond_value(char *yytext, struct gqt_query *q, int *state)
 {
     if ((*state & COND_SET) != COND_SET) {
-        fprintf(stderr, "SYNTAX ERROR:"
+        errx(EX_USAGE, "GENOTYPE SYNTAX ERROR:"
                         "Opperation (count,pct,maf) and condition "
                         "(==,!=,<, etc.) expected prior to '%s' ",
                         yytext);
-        return 1;
     }
 
     *state |= COND_VALUE_SET;
@@ -118,6 +112,46 @@ int set_cond_value(char *yytext, struct gqt_query *q, int *state)
     return 0;
 }
 //}}}
+
+void invalid_token(char *token_text, int *state)
+{
+    /*
+     * START_OF_EXP    0
+     * OP_SET_START    1<<1
+     * OP_SET_END      1<<2
+     * GT_SET_START    1<<3
+     * GT_SET_END      1<<4
+     * COND_SET        1<<5
+     * COND_VALUE_SET  1<<6
+     */
+
+    if (*state == START_OF_EXP) {
+        errx(EX_USAGE,
+             "GENOTYPE SYNTAX ERROR: Invalid query '%s'.  "
+             "Expected funciton (count, pct, maf) or gentoype "
+             "(HET, HOM_REF, HOM_ALT, or UNKNOWN).",
+             token_text);
+    } else if ((*state & OP_SET_START) == OP_SET_START) {
+        if ((*state & OP_SET_END) == 0) {
+            errx(EX_USAGE,
+                 "GENOTYPE SYNTAX ERROR: Invalid function parameter '%s'.  "
+                 "Expected HET, HOM_REF, HOM_ALT, or UNKNOWN.",
+                 token_text);
+        } else if ( ((*state & COND_SET) == COND_SET) &&
+                    ((*state & COND_VALUE_SET) == 0)) {
+            errx(EX_USAGE,
+                 "GENOTYPE SYNTAX ERROR: Invalid condition parameter '%s'.  "
+                 "Expected interger or float.",
+                 token_text);
+        } else {
+            errx(EX_USAGE,
+                 "genotype syntax error: invalid trailing value '%s'.",
+                 token_text);
+        }
+    }
+
+    errx(EX_USAGE, "Invalid trailing token \"%s\".", token_text);
+}
 
 //{{{ int parse_q(char *q_text, struct gqt_query *q_props)
 int parse_q(char *q_text, struct gqt_query *q_props)
@@ -141,7 +175,16 @@ int parse_q(char *q_text, struct gqt_query *q_props)
     ntoken = yylex();
 
     while (ntoken) {
+
+        if ((state & COND_VALUE_SET) == COND_VALUE_SET) {
+            errx(EX_USAGE,
+                 "GENOTYPE SYNTAX ERROR: Invalid trailing value '%s'",
+                 yytext);
+        }
         switch (ntoken) {
+            case p_unknown:
+                invalid_token(yytext, &state);
+                break;
             case p_maf:
             case p_count:
             case p_pct:
@@ -150,47 +193,43 @@ int parse_q(char *q_text, struct gqt_query *q_props)
                 int last_ntoken = ntoken;
                 ntoken = yylex();
                 if (ntoken != p_r_paren) {
-                    fprintf(stderr, "SYNTAX ERROR: '(' expected after '%s' ",
-                            names[last_ntoken]);
-                    return 1;
+                    errx(EX_USAGE,
+                         "GENOTYPE SYNTAX ERROR: '(' expected after '%s' ",
+                         names[last_ntoken]);
                 }
                 state |= OP_SET_START;
                 break;
             case p_het:
             case p_homo_ref:
             case p_homo_alt:
-            case p_unknown:
+            case p_unknown_gt:
                 if (set_gt(ntoken, q_props, &state))
                     return 1;
                 state |= GT_SET_START;
                 break;
             case p_r_paren:
-                fprintf(stderr, "SYNTAX ERROR: "
-                            "Opperation (count,pct,maf) expected "
-                            "prior to '%s' ",
-                            names[ntoken]);
-                    return 1;
+                errx(EX_USAGE,
+                     "GENOTYPE SYNTAX ERROR: "
+                     "Opperation (count,pct,maf) expected prior to '%s' ",
+                     names[ntoken]);
             case p_l_paren:
-
-
-
                 if ( ((q_props->variant_op == p_count) ||
                       (q_props->variant_op == p_pct))  &&
                      (state != (OP_SET_START | GT_SET_START) ) ) {
-                    fprintf(stderr, "SYNTAX ERROR: "
-                            "Opperation (count,pct) and "
-                            "genotype (HOM_REF,HET,HOM_ALT,UNKNONW) expected "
-                            "prior to '%s' ",
-                            names[ntoken]);
-                    return 1;
+                    errx(EX_USAGE,
+                         "GENOTYPE SYNTAX ERROR: "
+                         "Opperation (count,pct) expected "
+                         "genotype (HOM_REF,HET,HOM_ALT,UNKNOWN) "
+                         "prior to '%s' ",
+                         names[ntoken]);
                 } else if ( (q_props->variant_op == p_maf) &&
                             (state != OP_SET_START ) ) {
-                    fprintf(stderr, "SYNTAX ERROR: "
-                            "Opperation (maf) does not expect "
-                            "genotype (HOM_REF,HET,HOM_ALT,UNKNONW) "
-                            "prior to '%s' ",
-                            names[ntoken]);
-                    return 1;
+                    errx(EX_USAGE,
+                         "GENOTYPE SYNTAX ERROR: "
+                         "Opperation (maf) does not expect "
+                         "genotype (HOM_REF,HET,HOM_ALT,UNKNOWN) "
+                         "prior to '%s' ",
+                         names[ntoken]);
                 }
 
                 state |= OP_SET_END;
@@ -219,15 +258,14 @@ int parse_q(char *q_text, struct gqt_query *q_props)
 
     if (((state & OP_SET_START) == OP_SET_START) &&
         ((state & OP_SET_END) != OP_SET_END)) {
-        fprintf(stderr, "SYNTAX ERROR: Missing ')' ");
-        return 1;
+        errx(EX_USAGE, "GENOTYPE SYNTAX ERROR: Missing ')' ");
     }
 
     if (((state & COND_SET) == COND_SET) &&
         ((state & COND_VALUE_SET) != COND_VALUE_SET)) {
-        fprintf(stderr, "SYNTAX ERROR: Missing condition value "
-                "(after ==, <, etc.) ");
-        return 1;
+        errx(EX_USAGE,
+             "GENOTYPE SYNTAX ERROR: Missing condition value "
+             "(after ==, <, etc.) ");
     }
 
 
@@ -245,3 +283,11 @@ int parse_q(char *q_text, struct gqt_query *q_props)
     return 0;
 }
 //}}}
+
+void yyerror(char const *s)
+{
+    errx(EX_USAGE,
+         "GENOTYPE SYNTAX ERROR: Unknown parsing error '%s'", s);
+
+            
+}

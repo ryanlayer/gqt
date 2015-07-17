@@ -15,6 +15,30 @@
 #include <assert.h>
 #include "genotq.h"
 
+char *zerr(int ret)
+{
+    switch (ret) {
+        case Z_ERRNO:
+            if (ferror(stdin))
+                return "error reading stdin";
+            if (ferror(stdout))
+                return "error writing stdout";
+            break;
+        case Z_STREAM_ERROR:
+            return "invalid compression level";
+            break;
+        case Z_DATA_ERROR:
+            return "invalid or incomplete deflate data";
+            break;
+        case Z_MEM_ERROR:
+            return "out of memory";
+            break;
+        case Z_VERSION_ERROR:
+            return "zlib version mismatch";
+    }
+
+    return "undefined error";
+}
 
 void quick_file_init(char *filename, struct quick_file_info *qfile) {
     FILE *fp = NULL;
@@ -93,9 +117,8 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
         strm.avail_in = fread(in_buf, 1, CHUNK, fp);
         //check_file_read(filename, fp, CHUNK, strm.avail_in);
         if (ferror(fp)) {
-            fprintf(stderr, "error: Cannot read compressed file.\n");
             (void)inflateEnd(&strm);
-            exit(1);
+            err(EX_NOINPUT, "Cannot read compressed file \"%s\"", filename);
         }
         if (strm.avail_in == 0)
             break;
@@ -108,8 +131,10 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
                 ret = Z_DATA_ERROR;     /* and fall through */
             case Z_DATA_ERROR:
             case Z_MEM_ERROR:
+                //zerr(ret);
                 (void)inflateEnd(&strm);
-                exit(1);
+                errx(EX_NOINPUT, "Zlib error: %s: file %s",
+                    zerr(ret),filename);
         }
 
         strm.avail_out = -1;
@@ -117,7 +142,6 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
 
     /* clean up and return */
     (void)inflateEnd(&strm);
-
 
     qfile->file_len = u_size;
     qfile->header_len = h_size;

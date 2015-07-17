@@ -17,10 +17,11 @@
 "HET"               return p_het;
 "HOM_REF"          return p_homo_ref;
 "HOM_ALT"          return p_homo_alt;
-"UNKNOWN"           return p_unknown;
+"UNKNOWN"           return p_unknown_gt;
 "("                 return p_r_paren;
 ")"                 return p_l_paren;
 [0-9]+(\.[0-9]*)?   return p_number;
+[a-zA-Z][a-zA-Z0-9_]* return p_unknown;
 [ \t\n]             ;
 
 

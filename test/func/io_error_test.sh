@@ -89,3 +89,78 @@ assert_fail_to_stderr $EX_NOINPUT $LINENO
 assert_in_stderr Zlib $LINENO
 rm_index
 rm truncated.bin
+
+# empty PED file
+make_index
+echo "" > empty.ped
+run $GQT convert ped -i $BCF  -p empty.ped
+assert_fail_to_stderr $EX_NOINPUT $LINENO
+assert_in_stderr "gqt: Empty PED file 'empty.ped'." $LINENO
+rm empty.ped
+rm_index
+
+# PED with bad field
+make_index
+echo -e "A\tf()" > bad_field.ped
+run $GQT convert ped -i $BCF  -p bad_field.ped
+assert_fail_to_stderr $EX_NOINPUT $LINENO
+assert_in_stderr "gqt: Invalid character '(' in field name 'f()' from file 'bad_field.ped'" $LINENO
+rm bad_field.ped
+rm_index
+
+# PED with fields and no data
+make_index
+echo -e "A\tB" > bad_field.ped
+run $GQT convert ped -i $BCF  -p bad_field.ped
+assert_fail_to_stderr $EX_NOINPUT $LINENO
+assert_in_stderr "No data in PED file 'bad_field.ped'" $LINENO
+#rm bad_field.ped
+rm_index
+
+# PED with short line
+make_index
+echo -e "A\tB\n1\t2\n1\n" > bad_field.ped
+run $GQT convert ped -i $BCF  -p bad_field.ped
+assert_fail_to_stderr $EX_NOINPUT $LINENO
+assert_in_stderr "Missing field in file 'bad_field.ped' on line 3." $LINENO
+rm bad_field.ped
+rm_index
+
+# PED with long line
+make_index
+echo -e "A\tB\n1\t2\n1\t2\t3\n\n" > bad_field.ped
+run $GQT convert ped -i $BCF  -p bad_field.ped
+assert_fail_to_stderr $EX_NOINPUT $LINENO
+assert_in_stderr "Extra field in file 'bad_field.ped' on line 3." $LINENO
+rm bad_field.ped
+rm_index
+
+# PED file extra field in one row
+make_index
+echo -e "A\tB\n1\t2\n1\t2" > bad_field.ped
+run $GQT convert ped -i $BCF  -p bad_field.ped -c 3
+assert_fail_to_stderr $EX_NOINPUT $LINENO
+assert_in_stderr "gqt: Too few columns in PED file 'bad_field.ped'. Sample IDs column specified as 3,  but only 2 columns present." $LINENO
+rm bad_field.ped
+rm_index
+
+# PED file with extra record
+make_index
+echo -e "A\tB\tC" > test.ped
+echo -e "1\tI0\t1" >> test.ped
+echo -e "1\tI1\tx" >> test.ped
+echo -e "1\tI11\t1" >> test.ped
+run $GQT convert ped -i $BCF -p test.ped
+assert_in_stderr "gqt: WARNING: No match found for sample 'I11' from PED file." $LINENO
+rm_index
+
+# PED file with no matching records
+make_index
+echo -e "A\tB\tC" > test.ped
+echo -e "1\tI20\t1" >> test.ped
+echo -e "1\tI30\tx" >> test.ped
+echo -e "1\tI11\t1" >> test.ped
+run $GQT convert ped -i $BCF -p test.ped
+assert_in_stderr "gqt: WARNING: None of the samples names from column 2 in PED file test.ped matched sample names in VCF/BCF ../data/10.1e4.var.bcf'" $LINENO
+assert_in_stderr "0 of 3 PED samples matched VCF/BCF database records." $LINENO
+rm_index

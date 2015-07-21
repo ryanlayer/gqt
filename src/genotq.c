@@ -300,3 +300,44 @@ void check_file_read(char *file_name, FILE *fp, size_t exp, size_t obs)
     }
 }
 //}}}
+
+//{{{ int check_field_name(char *field_name)
+int check_field_name(char *field_name)
+{
+    // The first character cannot be a numer
+
+    if ((field_name[0] >= '0') && (field_name[0] <= '9'))
+        return 0;
+
+    int i;
+
+    for (i = 0; i < strlen(field_name); ++i) {
+        if ( (field_name[i] < '0') ||
+            ((field_name[i] >= ':') && (field_name[i] <= '@')) ||
+            ((field_name[i] >= '[') && (field_name[i] <= '`') &&
+                (field_name[i] != '_')) ||
+             (field_name[i] > 'z') )
+            return i;
+    }
+
+    return -1;
+}
+//}}}
+
+//{{{ int is_int(char *s, int *v)
+//base on http://rus.har.mn/blog/2014-05-19/strtol-error-checking/
+// 1: is an int
+// 0: is text
+int is_int(char *s, int *v)
+{
+    errno = 0;
+    char *endptr;
+    long val = strtol(s, &endptr, 10);
+    if ( ((errno != 0 ) ||(*endptr != '\0')) || (val>INT_MAX))
+        return 0;
+    else {
+        *v = (int) val;
+        return 1;
+    }
+}
+//}}}

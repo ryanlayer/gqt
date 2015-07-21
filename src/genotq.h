@@ -22,7 +22,7 @@
 #define CHUNK 16384
 
 #define PROGRAM_NAME  "gqt"
-#define VERSION "0.2.7"
+#define VERSION "0.2.8"
 
 struct uint_ll {
         uint32_t value;
@@ -95,4 +95,8 @@ int int_compare (const void * a, const void * b);
 int float_compare (const void * a, const void * b);
 
 void check_file_read(char *file_name, FILE *fp, size_t exp, size_t obs);
+
+int check_field_name(char *field_name);
+
+int is_int(char *s, int *v);
 #endif

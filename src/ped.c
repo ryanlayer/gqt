@@ -99,25 +99,31 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
 
     // Figure out which fields will be in the DB
     if (ped_file_name != NULL) {
+
         FILE *ped_f = fopen(ped_file_name, "r");
         if (!ped_f)
-            err(EX_NOINPUT, "Cannot open file \"%s\"", ped_file_name);
-
-        fprintf(stderr, "Creating sample database %s\n", ped_file_name);
-
-        fprintf(stderr, "Adding the following fields from %s\n",
-                ped_file_name);
+            err(EX_NOINPUT, "Cannot open file '%s'", ped_file_name);
 
         char *line = NULL, *tmp_line;
         size_t len = 0;
 
         ssize_t read = getline(&line, &len, ped_f);
+        if (read == -1) {
+            if (feof(ped_f))
+                errx(EX_NOINPUT,
+                     "Error reading file '%s': End of file",
+                     ped_file_name);
+            err(EX_NOINPUT, "Error reading file '%s'", ped_file_name);
+        }
+
+        // Scan the first line to get the names of the fields
         if (line[strlen(line) - 1] == '\n')
             line[strlen(line) - 1] = '\0';
 
         if (line[0] == '#'){
             line++;
         }
+
         char *word;
         tmp_line = (char *) malloc(strlen(line) * sizeof(char));
         if (!tmp_line )
@@ -130,7 +136,16 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
             word = strtok(NULL, "\t");
         }
 
-        if (num_ped_fields > 0) {
+        if (num_ped_fields == 0) {
+            errx(EX_NOINPUT, "Empty PED file '%s'.", ped_file_name);
+        } else if (num_ped_fields < col) {
+            errx(EX_NOINPUT,
+                 "Too few columns in PED file '%s'. Sample IDs column "
+                 "specified as %d,  but only %d columns present.",
+                 ped_file_name,
+                 col,
+                 num_ped_fields);
+        } else {
             ped_field_names = (char **) malloc(num_ped_fields * sizeof(char *));
             if (!ped_field_names )
                 err(EX_OSERR, "malloc error");
@@ -149,45 +164,83 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
                 }
             }
 
+            // Check for problems with field names
+            for (i = 0; i < num_ped_fields; ++i) {
+                int r = check_field_name(ped_field_names[i]);
+                if (r >= 0) {
+                    errx(EX_NOINPUT, 
+                         "Invalid character '%c' in field name '%s' from file "
+                         "'%s'",
+                         ped_field_names[i][r],
+                         ped_field_names[i],
+                         ped_file_name);
+                }
+            }
+
             // Set field types
             ped_field_types = (int *) malloc(num_ped_fields * sizeof(int));
             if (!ped_field_types )
                 err(EX_OSERR, "malloc error");
+
             for (i = 0; i < num_ped_fields; ++i)
                 ped_field_types[i] = 1;
 
             uint32_t line_no = 2;
+
             while ( (read = getline(&line, &len, ped_f)) != -1) {
                 if (line[strlen(line) - 1] == '\n')
                     line[strlen(line) - 1] = '\0';
 
                 uint32_t j;
-                //fprintf(stderr, "%s\n", line);
                 word = strtok(line, "\t");
+
                 for (i = 0; i < num_ped_fields; ++i) {
-                    //fprintf(stderr, "%s\n", word);
                     if (word == NULL) {
-                        fprintf(stderr,
-                                "ERROR: Missing field in file %s on line %u\n",
-                                ped_file_name,
-                                line_no);
-                        exit(1);
+                        errx(EX_NOINPUT,
+                             "Missing field in file '%s' on line %u.\n",
+                             ped_file_name,
+                             line_no);
                     }
-                    for (j = 0; j < strlen(word); ++j)
-                        ped_field_types[i] &= isdigit((int)word[j]);
+
+                    int v;
+                    ped_field_types[i] &= is_int(word, &v);
                     word = strtok(NULL, "\t");
                 }
+
+                // unparsed data on this line
+                if (word != NULL)
+                    errx(EX_NOINPUT,
+                         "Extra field in file '%s' on line %u.\n",
+                         ped_file_name,
+                         line_no);
+
                 line_no += 1;
             }
+
+            // check to see if no data is read
+            if (line_no == 2) 
+                errx(EX_NOINPUT, "No data in PED file '%s'", ped_file_name);
+
+            if (ferror(ped_f) != 0 )
+                err(EX_NOINPUT, "Error reading file '%s'", ped_file_name);
         }
         fclose(ped_f);
     }
 
-    for (i = 0; i < num_ped_fields; ++i)
+    fprintf(stderr, "Creating sample database %s\n", ped_file_name);
+
+    if (num_ped_fields > 0 ) {
         fprintf(stderr,
-                "%s\t%s\n",
-                ped_field_names[i],
-                ped_field_types[i] ? "INT" : "TEXT");
+                "Adding the following fields from %s\n",
+                ped_file_name);
+
+
+        for (i = 0; i < num_ped_fields; ++i)
+            fprintf(stderr,
+                    "%s\t%s\n",
+                    ped_field_names[i],
+                    ped_field_types[i] ? "INT" : "TEXT");
+    }
 
 
     fprintf(stderr, "Adding the following fields from %s\n",
@@ -235,19 +288,19 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
     int rc = sqlite3_open(db_name, &db);
     if( rc != SQLITE_OK )
         err(EX_SOFTWARE,
-            "SQL error \"%s\" for database \"%s\"",
+            "SQL error '%s' for database '%s'",
             err_msg, db_name);
 
 
     rc = sqlite3_exec(db, q_create_table, NULL, 0, &err_msg);
     if( rc != SQLITE_OK )
         err(EX_SOFTWARE,
-            "SQL error \"%s\" in query \"%s\"",
+            "SQL error '%s' in query '%s'",
             err_msg,
             q_create_table);
 
     // open BCF
-    htsFile *fp    = hts_open(bcf_file_name,"rb");
+    htsFile *fp = hts_open(bcf_file_name,"rb");
     if ( !fp ) 
         err(EX_DATAERR, "Could not read file: %s", bcf_file_name);
 
@@ -257,22 +310,52 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
 
     // Add the sample names and location from the BCF file
     char *q;
-    for (i = 0; i < hdr->n[BCF_DT_SAMPLE]; ++i) {
-        r = asprintf(&q,
-                     "INSERT INTO ped(BCF_ID, BCF_Sample)"
-                     "VALUES (%u, '%s');",
-                     i,
-                     hdr->samples[i]);
 
-        rc = sqlite3_exec(db, q, NULL, 0, &err_msg);
-        if( rc != SQLITE_OK )
-            err(EX_SOFTWARE,"SQL error \"%s\" in query \"%s\"", err_msg, q);
+    char *base_insert_txt = "INSERT INTO ped(BCF_ID, BCF_Sample)"
+                            "VALUES (?, ?);";
+    sqlite3_stmt *base_insert_stmt = NULL;
+    for (i = 0; i < hdr->n[BCF_DT_SAMPLE]; ++i) {
+        rc = sqlite3_prepare_v2(db,
+                                base_insert_txt,
+                                strlen(base_insert_txt),
+                                &base_insert_stmt,
+                                NULL);
+        if (rc != SQLITE_OK) 
+            errx(EX_SOFTWARE,
+                "Can't prepare insert statment %s (%i): %s",
+                base_insert_txt, rc, sqlite3_errmsg(db));
+
+        rc = sqlite3_bind_int(base_insert_stmt, 1, i);
+        if (rc != SQLITE_OK) 
+            errx(EX_SOFTWARE,
+                "Error binding value in insert (%i): %s",
+                rc, sqlite3_errmsg(db));
+
+
+        rc = sqlite3_bind_text(base_insert_stmt,
+                               2,
+                               hdr->samples[i],
+                               strlen(hdr->samples[i]),
+                               NULL);
+        if (rc != SQLITE_OK) 
+            errx(EX_SOFTWARE,
+                "Error binding value in insert (%i): %s",
+                rc, sqlite3_errmsg(db));
+
+        rc = sqlite3_step(base_insert_stmt);
+        if (rc != SQLITE_DONE)
+            errx(EX_SOFTWARE,
+                "Error on insert(%i): %s",
+                rc, sqlite3_errmsg(db));
+
+        rc = sqlite3_finalize(base_insert_stmt);
+        if (rc != SQLITE_OK)
+            errx(EX_SOFTWARE,
+                "Error finalizing insert(%i): %s",
+                rc, sqlite3_errmsg(db));
     }
-    bcf_hdr_destroy(hdr);
-    hts_close(fp);
 
     if (num_ped_fields > 0) {
-
         fprintf(stderr,
                 "Joining values based on BCF_Sample in %s and %s in %s.\n",
                 bcf_file_name,
@@ -281,66 +364,145 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
 
         FILE *ped_f = fopen(ped_file_name, "r");
         if (!ped_f)
-            err(EX_NOINPUT, "Cannot open file \"%s\"", ped_file_name);
+            err(EX_NOINPUT, "Cannot open file '%s'", ped_file_name);
 
         char *line = NULL;
         size_t len = 0;
 
         ssize_t read = getline(&line, &len, ped_f); // skip header
+        if (read == -1) {
+            if (feof(ped_f))
+                errx(EX_NOINPUT,
+                     "Error reading file '%s': End of file",
+                     ped_file_name);
+            err(EX_NOINPUT, "Error reading file '%s'", ped_file_name);
+        }
+
+        char *update_query_txt = "UPDATE ped SET ";
+        for (i = 0; i < num_ped_fields; ++i) {
+            if (i != 0)
+                r = asprintf(&update_query_txt,"%s,",update_query_txt);
+
+            r = asprintf(&update_query_txt,
+                         "%s %s=?",
+                         update_query_txt,
+                         ped_field_names[i]);
+        }
+
+        r = asprintf(&update_query_txt,
+                     "%s WHERE BCF_Sample == ?;",
+                     update_query_txt);
+
+        sqlite3_stmt *update_stmt = NULL;
+
         char **ped_values = (char **) malloc(num_ped_fields *sizeof(char *));
         if (!ped_values)
             err(EX_OSERR, "malloc error");
-        char *tmp_q;
+
+        int total_changes = 0, total_lines = 0;
 
         while ( (read = getline(&line, &len, ped_f)) != -1) {
             if (line[strlen(line) - 1] == '\n')
                 line[strlen(line) - 1] = '\0';
 
+            rc = sqlite3_prepare_v2(db,
+                                    update_query_txt,
+                                    strlen(update_query_txt),
+                                    &update_stmt,
+                                    NULL);
+
+            if (rc != SQLITE_OK) 
+                errx(EX_SOFTWARE,
+                    "Can't prepare insert statment %s (%i): %s",
+                    update_query_txt, rc, sqlite3_errmsg(db));
 
             ped_values[0] = strtok(line, "\t");
             for (i = 1; i < num_ped_fields; ++i)
                 ped_values[i] = strtok(NULL, "\t");
 
-            r = asprintf(&q, "UPDATE ped SET");
-
-            int first = 0;
             for (i = 0; i < num_ped_fields; ++i) {
-                if (first != 0) {
-                    r = asprintf(&tmp_q, "%s,", q);
-                    free(q);
-                    q = tmp_q;
+                if (ped_field_types[i] == 1) {
+                    int v;
+                    rc = is_int(ped_values[i], &v);
+
+                    // This should never happen
+                    if (rc == 0)
+                        errx(EX_SOFTWARE,
+                             "Value '%s' was erroneously identified as an "
+                             "int in %s.",
+                             ped_values[i],
+                             ped_file_name);
+
+                    rc = sqlite3_bind_int(update_stmt, i+1, v);
+                    if (rc != SQLITE_OK) 
+                        errx(EX_SOFTWARE,
+                             "Error binding value in insert (%i): %s",
+                             rc, sqlite3_errmsg(db));
+
+                } else {
+                    rc = sqlite3_bind_text(update_stmt,
+                                           i+1,
+                                           ped_values[i],
+                                           strlen(ped_values[i]),
+                                           NULL);
+                    if (rc != SQLITE_OK) 
+                        errx(EX_SOFTWARE,
+                             "Error binding value in insert (%i): %s",
+                             rc, sqlite3_errmsg(db));
                 }
-
-                if (ped_field_types[i] == 1)
-                    r = asprintf(&tmp_q,
-                                 "%s %s=%s",
-                                 q,
-                                ped_field_names[i],
-                                ped_values[i]);
-                else
-                     r = asprintf(&tmp_q,
-                                 "%s %s='%s'",
-                                 q,
-                                ped_field_names[i],
-                                ped_values[i]);
-
-                free(q);
-                q = tmp_q;
-                first = 1;
             }
 
-            r = asprintf(&tmp_q,
-                         "%s WHERE BCF_Sample == '%s';",
-                         q,
-                         ped_values[col - 1]);;
-            free(q);
-            q = tmp_q;
+            rc = sqlite3_bind_text(update_stmt,
+                                   num_ped_fields + 1,
+                                   ped_values[col - 1],
+                                   strlen(ped_values[col - 1]),
+                                   NULL);
+            if (rc != SQLITE_OK) 
+                errx(EX_SOFTWARE,
+                     "Error binding value in insert (%i): %s",
+                     rc, sqlite3_errmsg(db));
 
-            rc = sqlite3_exec(db, q, NULL, 0, &err_msg);
-            if( rc != SQLITE_OK )
-                err(EX_SOFTWARE,"SQL error \"%s\" in query \"%s\"", err_msg, q);
+            rc = sqlite3_step(update_stmt);
+            if (rc != SQLITE_DONE)
+                errx(EX_SOFTWARE,
+                     "Error on insert(%i): %s",
+                     rc, sqlite3_errmsg(db));
+
+            int changes = sqlite3_changes(db);
+
+            total_changes += changes;
+
+            if (changes > 1)
+                errx(EX_SOFTWARE,
+                     "Multiple rows (%d) changed by update query from "
+                     "'%s' and '%s'.",
+                     changes,
+                     bcf_file_name,
+                     ped_file_name);
+
+            if (changes == 0)
+                warnx("WARNING: No match found for sample '%s' from PED file.",
+                      ped_values[col - 1]);
+
+            rc = sqlite3_finalize(update_stmt);
+            if (rc != SQLITE_OK)
+                errx(EX_SOFTWARE,
+                     "Error finalizing insert(%i): %s",
+                     rc, sqlite3_errmsg(db));
+
+            total_lines += 1;
         }
 
+        if (total_changes == 0)
+            warnx("WARNING: None of the samples names from column %d in PED "
+                  "file %s matched sample names in VCF/BCF %s'",
+                  col,
+                  ped_file_name,
+                  bcf_file_name);
+
+        fprintf(stderr,
+                "%d of %d PED samples matched VCF/BCF database records.\n",
+                total_changes, total_lines);
         fclose(ped_f);
     }
 
@@ -358,7 +520,7 @@ uint32_t resolve_ind_query(uint32_t **R, char *query, char *ped_db_file)
     int rc = sqlite3_open(ped_db_file, &db);
     if( rc != SQLITE_OK )
         err(EX_NOINPUT,
-            "SQL error \"%s\" for database \"%s\"",
+            "SQL error '%s' for database '%s'",
             err_msg, ped_db_file);
 
     char *test_q;
@@ -370,6 +532,8 @@ uint32_t resolve_ind_query(uint32_t **R, char *query, char *ped_db_file)
                      "SELECT BCF_ID FROM ped WHERE %s ORDER BY BCF_ID;",
                      query);
 
+    //PRAGMA database.table_info(table-name);
+
     struct uint32_t_ll ll;
     ll.head = NULL;
     ll.tail = NULL;
@@ -377,7 +541,7 @@ uint32_t resolve_ind_query(uint32_t **R, char *query, char *ped_db_file)
 
     rc = sqlite3_exec(db, test_q, uint32_t_ll_callback, &ll, &err_msg);
     if( rc != SQLITE_OK )
-        err(EX_SOFTWARE,"SQL error \"%s\" in query \"%s\"", err_msg, test_q);
+        err(EX_SOFTWARE,"SQL error '%s' in query '%s'", err_msg, test_q);
 
     *R = (uint32_t *) malloc(ll.len * sizeof(uint32_t));
     if (!R)
@@ -408,7 +572,7 @@ uint32_t resolve_label_query(char ***R,
     int rc = sqlite3_open(ped_db_file, &db);
     if( rc != SQLITE_OK )
         err(EX_NOINPUT,
-            "SQL error \"%s\" for database \"%s\"",
+            "SQL error '%s' for database '%s'",
             err_msg, ped_db_file);
 
     char *test_q;
@@ -429,7 +593,7 @@ uint32_t resolve_label_query(char ***R,
 
     rc = sqlite3_exec(db, test_q, char_ll_callback, &ll, &err_msg);
     if( rc != SQLITE_OK )
-        err(EX_SOFTWARE,"SQL error \"%s\" in query \"%s\"", err_msg, test_q);
+        err(EX_SOFTWARE,"SQL error '%s' in query '%s'", err_msg, test_q);
 
     *R = (char **) malloc(ll.len * sizeof(char *));
     if (!R)

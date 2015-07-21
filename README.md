@@ -93,7 +93,23 @@ GQT requires a database that describes the samples in the target BCF file.
 This database is based on the samples in the BCF, and can be optionally
 augmented by file (typically called PED file) that contains tab separated
 fields, one line that gives the field name, and the subsequent lines give the
-field values for each sample.
+field values for each sample.  One column in this file must correspond to a
+sample in the BCF file.  By default column 2 is used, but this can be modified
+by using the `-c` option.  A warning will be generated for each record in the
+PED file that does not have a corresponding sample in the VCF/BCF.  NOTE: Each
+field in the first line will become a database column.  Given the naming
+restriction, many special characters are not allowed (e.g., %, $, :), and all
+spaces will be converted to underscores ("_").
+
+For example, the following file includes Family ID, Population and Gender
+information.  Using the default sample column (2), the each Individual ID will
+be matched with the Sample ID in the VCF/BCF.
+
+```
+Family ID   Individual ID   Population  Gender
+HG00096     HG00096         GBR         1
+HG00171     HG00171         FIN         2
+```
 
 Without a PED file the database can be created from the BCF file:
 ```

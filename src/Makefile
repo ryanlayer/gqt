@@ -24,6 +24,8 @@ LIB= timer.o \
      ped.o \
      pq.o \
      bcf.o \
+     variant_metadata.o \
+     bm.o \
      quick_file.o \
      output_buffer.o \
      pthread_pool.o \

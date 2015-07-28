@@ -2,7 +2,7 @@
 #define __WAHBM_COMPRESSED_IN_PLACE_H__
 
 #include <stdint.h>
-#include "genotq.h"
+#include "wah.h"
 
 /**
  * @brief   compressed in-place OR two WAH runs

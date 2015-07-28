@@ -11,7 +11,12 @@
 #include <sys/param.h>
 #include <math.h>
 #include <limits.h>
+#include <sysexits.h>
+
+#include "wah.h"
 #include "genotq.h"
+
+
 
 //{{{ struct wah_file init_wah_file(char *file_name)
 struct wah_file init_wah_file(char *file_name)

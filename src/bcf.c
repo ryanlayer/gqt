@@ -4,6 +4,12 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <zlib.h>
+#include <sys/stat.h>
+#include <sysexits.h>
+
+#include "bcf.h"
+#include "vid.h"
+#include "ubin.h"
 #include "genotq.h"
 #include "timer.h"
 
@@ -59,7 +65,8 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                                           char *wah_out,
                                           char *bim_out,
                                           char *vid_out,
-                                          char *tmp_dir)
+                                          char *tmp_dir,
+                                          char *full_cmd)
 {
     uint32_t num_inds = num_fields;
     uint32_t num_vars = num_records;
@@ -113,7 +120,8 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                gt_s_of_name,
                md_of_name,
                md_s_of_name,
-               vid_out);
+               vid_out,
+               full_cmd);
 
     /*
     compress_md(&bcf_f,
@@ -375,7 +383,8 @@ void sort_gt_md(pri_queue *q,
                 char *gt_s_of_name,
                 char *md_of_name,
                 char *md_s_of_name,
-                char *vid_out)
+                char *vid_out,
+                char *full_cmd)
 {
     // unsorted metadata
     //FILE *md_of = fopen(md_of_name,"r");
@@ -387,10 +396,18 @@ void sort_gt_md(pri_queue *q,
     // sorted genotypes
     //FILE *md_out = fopen(md_s_of_name,"w");
     // sorted variant row #s
+    
+    /*
     FILE *v_out = fopen(vid_out,"wb");
     if (!v_out)
         err(EX_CANTCREAT, "Cannot create file \"%s\"", vid_out);
+    */
 
+    struct vid_file *v_out = new_vid_file(vid_out,
+                                          full_cmd,
+                                          num_vars,
+                                          num_inds); 
+ 
     // sorted genotypes
     FILE *s_gt_of = fopen(gt_s_of_name,"wb");
     if (!s_gt_of)
@@ -455,8 +472,11 @@ void sort_gt_md(pri_queue *q,
             err(EX_IOERR, "Error writing to \"%s\"", gt_s_of_name); 
 
         //write out the variant ID
+        /*
         if (fwrite(d, sizeof(uint32_t), 1, v_out) != 1)
             err(EX_IOERR, "Error writing to \"%s\"", vid_out); 
+        */
+        write_vid(v_out, *d);
 
         var_i += 1;
     }
@@ -466,7 +486,8 @@ void sort_gt_md(pri_queue *q,
     free(packed_ints);
 
     //fclose(md_out);
-    fclose(v_out);
+    //fclose(v_out);
+    destroy_vid_file(v_out);
     //fclose(md_of);
     fclose(gt_of);
     fclose(s_gt_of);

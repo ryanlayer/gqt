@@ -12,7 +12,12 @@
 #include <sys/param.h>
 #include <math.h>
 #include <limits.h>
-#include "genotq.h"
+#include <sysexits.h>
+#include <err.h>
+
+#include "wahbm_compressed_in_place.h"
+#include "wahbm_in_place.h"
+
 #include "timer.h"
 
 // wahbm compressed in place

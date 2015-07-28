@@ -12,7 +12,11 @@
 #include <sys/param.h>
 #include <math.h>
 #include <limits.h>
-#include "genotq.h"
+
+#include "wahbm_in_place.h"
+#include "wah.h"
+#include "wahbm.h"
+
 #include "timer.h"
 #include "pthread_pool.h"
 

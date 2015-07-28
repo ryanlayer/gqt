@@ -4,7 +4,11 @@
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
-#include "genotq.h"
+
+
+#include "wahbm.h"
+#include "wahbm_in_place.h"
+#include "wahbm_compressed_in_place.h"
 #include "timer.h"
 #include "quick_file.h"
 #include "output_buffer.h"

@@ -1,5 +1,6 @@
 #include <immintrin.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,7 +8,13 @@
 #include <ctype.h>
 #include <inttypes.h>
 #include <time.h>
+
+#include "ped.h"
+#include "vid.h"
 #include "genotq.h"
+#include "wah.h"
+#include "wahbm.h"
+#include "wahbm_in_place.h"
 #include "timer.h"
 #include "quick_file.h"
 #include "output_buffer.h"
@@ -220,6 +227,7 @@ int pop(char *op, int argc, char **argv, char *full_cmd)
     struct wah_file wf = init_wahbm_file(wahbm_file_name);
 
     // open VID file
+    /*
     FILE *vid_f = fopen(vid_file_name, "rb");
     if (!vid_f)
         err(EX_NOINPUT, "Cannot read file\"%s\"", vid_file_name);
@@ -232,6 +240,10 @@ int pop(char *op, int argc, char **argv, char *full_cmd)
     check_file_read(vid_file_name, vid_f, wf.num_fields, fr);
 
     fclose(vid_f);
+    */
+
+    struct vid_file *vid_f = open_vid_file(vid_file_name);
+    load_vid_data(vid_f);
 
     uint32_t num_ints = (wf.num_fields + 32 - 1)/ 32;
     uint32_t len_ints;
@@ -256,11 +268,21 @@ int pop(char *op, int argc, char **argv, char *full_cmd)
                            label_file_name);
     }else if (strcmp("fst",op) == 0) {
         double *R;
-        len_R = fst(&wf, id_query_list, id_q_count, vids, db_file_name, &R);
+        len_R = fst(&wf,
+                    id_query_list,
+                    id_q_count,
+                    vid_f->vids,
+                    db_file_name,
+                    &R);
         print_pop_result(op, R, wf.num_fields, bim_file_name, full_cmd);
     } else if (strcmp("gst",op) == 0) {
         double *R;
-        len_R = gst(&wf, id_query_list, id_q_count, vids, db_file_name, &R);
+        len_R = gst(&wf,
+                    id_query_list,
+                    id_q_count,
+                    vid_f->vids,
+                    db_file_name,
+                    &R);
         print_pop_result(op, R, wf.num_fields, bim_file_name, full_cmd);
     } else if (strcmp("calpha",op) == 0) {
         /*
@@ -277,7 +299,8 @@ int pop(char *op, int argc, char **argv, char *full_cmd)
 
         len_R = calpha(&wf,
                        id_query_list,
-                       id_q_count, vids,
+                       id_q_count, 
+                       vid_f->vids,
                        db_file_name, 
                        &R,
                        &n_cases,
@@ -299,6 +322,8 @@ int pop(char *op, int argc, char **argv, char *full_cmd)
     }
 
 
+
+    destroy_vid_file(vid_f);
     destroy_wahbm_file(&wf);
     return 0;
 }

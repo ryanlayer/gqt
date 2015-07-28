@@ -3,7 +3,10 @@
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
-#include "genotq.h"
+
+#include "bcf.h"
+#include "ubin.h"
+#include "wahbm.h"
 
 int misc_help();
 int plt_ubin(char *in, char *out);

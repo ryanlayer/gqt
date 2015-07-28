@@ -6,7 +6,7 @@
 
 
 int gqt_help(int argc, char **argv);
-int convert(int argc, char **argv);
+int convert(int argc, char **argv, char *full_cmd);
 int view(int argc, char **argv);
 int gt(int argc, char **argv);
 int sort(int argc, char **argv);
@@ -37,7 +37,7 @@ int main(int argc, char **argv)
             quote_next = 1;
     }
 
-    if (strcmp(cmd,"convert") == 0) return convert(argc-2, argv+2);
+    if (strcmp(cmd,"convert") == 0) return convert(argc-2, argv+2, full_cmd);
     else if (strcmp(cmd,"view") == 0) return view(argc-2, argv+2);
     //else if (strcmp(cmd,"gt") == 0) return gt(argc-2, argv+2);
     //else if (strcmp(cmd,"sort") == 0) return sort(argc-2, argv+2);

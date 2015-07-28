@@ -3,7 +3,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
-#include "genotq.h"
+
+#include "plt.h"
 
 int sort_help();
 int plt_field_freq(char *in, char *out);

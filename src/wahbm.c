@@ -18,6 +18,9 @@
 #include <immintrin.h>
 #include <inttypes.h>
 #include <math.h>
+
+#include "wahbm.h"
+#include "wahbm_in_place.h"
 #include "genotq.h"
 #include "pthread_pool.h"
 #include "timer.h"

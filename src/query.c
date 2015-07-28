@@ -5,7 +5,14 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <inttypes.h>
+
 #include "genotq.h"
+#include "vid.h"
+#include "wahbm_in_place.h"
+#include "ped.h"
+#include "wahbm.h"
+#include "bcf.h"
+#include "parse_q.h"
 #include "timer.h"
 #include "quick_file.h"
 #include "output_buffer.h"
@@ -266,6 +273,7 @@ int query(int argc, char **argv, char *full_cmd)
     struct wah_file wf = init_wahbm_file(wahbm_file_name);
 
     // open VID file
+    /*
     FILE *vid_f = fopen(vid_file_name, "rb");
     if (!vid_f)
         err(EX_NOINPUT, "Cannot read file\"%s\"", vid_file_name);
@@ -278,6 +286,10 @@ int query(int argc, char **argv, char *full_cmd)
     check_file_read(vid_file_name, vid_f, wf.num_fields, fr);
 
     fclose(vid_f);
+    */
+
+    struct vid_file *vid_f = open_vid_file(vid_file_name);
+    load_vid_data(vid_f);
 
     uint32_t num_ints = (wf.num_fields + 32 - 1)/ 32;
     uint32_t len_ints;
@@ -402,7 +414,7 @@ int query(int argc, char **argv, char *full_cmd)
             mapped_counts[i] = (uint32_t *)calloc(len_count_R,
                                                   sizeof(uint32_t));
             for ( j = 0; j < len_count_R; ++j)
-                mapped_counts[i][vids[j]] = counts[i][j];
+                mapped_counts[i][vid_f->vids[j]] = counts[i][j];
 
             gt_mask[i] = (uint32_t *) malloc(num_ints * sizeof(uint32_t));
             if (!gt_mask[i])
@@ -508,7 +520,7 @@ int query(int argc, char **argv, char *full_cmd)
                     if (i*32 + leading_zeros + 1 > wf.num_fields)
                         break;
 
-                    hit = vids[leading_zeros + i*32];
+                    hit = vid_f->vids[leading_zeros + i*32];
 
                     mapped_mask[hit/32] |= 1 << (31-hit%32);
                     v &= ~(1 << (32 - leading_zeros - 1));
@@ -520,7 +532,7 @@ int query(int argc, char **argv, char *full_cmd)
 
         print_query_result(mapped_mask,
                            num_ints,
-                           vids,
+                           vid_f->vids,
                            q,
                            mapped_counts,
                            id_lens,
@@ -538,6 +550,7 @@ int query(int argc, char **argv, char *full_cmd)
             free(counts[j]);
     }
 
+    destroy_vid_file(vid_f);
     destroy_wahbm_file(&wf);
     return 0;
 }
@@ -562,6 +575,7 @@ void get_bcf_query_result(uint32_t *mask,
      * sorted list of line numbers we want.  So first we intersect the VID file
      * and the mask, then sort it.
      */
+    /*
     FILE *vid_f = fopen(vid_file_name, "rb");
     if (!vid_f)
         err(EX_NOINPUT, "Cannot read file\"%s\"", vid_file_name);
@@ -574,6 +588,9 @@ void get_bcf_query_result(uint32_t *mask,
     check_file_read(vid_file_name, vid_f, num_fields, fr);
 
     fclose(vid_f);
+    */
+    struct vid_file *vid_f = open_vid_file(vid_file_name);
+    load_vid_data(vid_f);
 
     uint32_t i, j, masked_vid_count = 0;
 
@@ -592,7 +609,7 @@ void get_bcf_query_result(uint32_t *mask,
             continue; /* skip a bunch of ops if you can */
         for (j = 0; j < 32; j++) {
             if (bytes & (1 << (31 - j))) {
-                masked_vids[masked_vid_i] = vids[i*32 + j];
+                masked_vids[masked_vid_i] = vid_f->vids[i*32 + j];
                 masked_vid_i+=1;
             }
         }
@@ -600,7 +617,7 @@ void get_bcf_query_result(uint32_t *mask,
             break;
     }
 
-    free(vids);
+    destroy_vid_file(vid_f);
 
     qsort(masked_vids, masked_vid_count, sizeof(uint32_t), compare_uint32_t);
 
@@ -629,6 +646,7 @@ void get_bcf_query_result(uint32_t *mask,
             break;
         bcf_line_i += 1;
     }
+
     hts_close(out);
     hts_close(fp);
 }

@@ -2,7 +2,7 @@
 #define __WAHBM_IN_PLACE_H__
 
 #include <stdint.h>
-#include "genotq.h"
+#include "wah.h"
 
 /**
  * @brief   in-place OR two WAH runs

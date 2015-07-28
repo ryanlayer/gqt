@@ -3,6 +3,14 @@
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <sysexits.h>
+#include <htslib/hts.h>
+#include <htslib/vcf.h>
+#include <htslib/tbx.h>
+#include <htslib/kstring.h>
+
+#include "bcf.h"
+#include "ped.h"
 #include "genotq.h"
 
 int convert_help();
@@ -12,10 +20,11 @@ int bcf_wahbm(char *in,
               char *vid_out,
               char *tmp_dir,
               uint32_t num_fields,
-              uint32_t num_records);
+              uint32_t num_records,
+              char *full_cmd);
 int ped_ped(char *in, char *ped, uint32_t col, char *out);
 
-int convert(int argc, char **argv)
+int convert(int argc, char **argv, char *full_cmd)
 {
     if (argc < 2) return convert_help();
 
@@ -193,7 +202,14 @@ int convert(int argc, char **argv)
             strcpy(tmp_dir,"./");
         }
 
-        int r = bcf_wahbm(in, out, bim, vid, tmp_dir, num_fields, num_records);
+        int r = bcf_wahbm(in,
+                          out,
+                          bim,
+                          vid,
+                          tmp_dir,
+                          num_fields,
+                          num_records,
+                          full_cmd);
 
         return r;
     } 
@@ -254,7 +270,8 @@ int bcf_wahbm(char *in,
               char *vid_out,
               char *tmp_dir,
               uint32_t num_fields,
-              uint32_t num_records)
+              uint32_t num_records,
+              char *full_cmd)
 {
     return convert_file_by_name_bcf_to_wahbm_bim(in,
                                                  num_fields,
@@ -262,5 +279,6 @@ int bcf_wahbm(char *in,
                                                  wah_out,
                                                  bim_out,
                                                  vid_out,
-                                                 tmp_dir);
+                                                 tmp_dir,
+                                                 full_cmd);
 }

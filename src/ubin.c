@@ -13,6 +13,10 @@
 #include <sys/param.h>
 #include <math.h>
 #include <limits.h>
+#include <sysexits.h>
+
+#include "ubin.h"
+#include "wah.h"
 #include "genotq.h"
 
 

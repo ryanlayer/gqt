@@ -13,6 +13,7 @@
 #include <math.h>
 #include <limits.h>
 #include "genotq.h"
+#include "ubin.h"
 #include "plt.h"
 
 

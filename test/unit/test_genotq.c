@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "parse_q.h"
+#include "bcf.h"
 #include "genotq.h"
 #include "unity.h"
 #include <math.h>

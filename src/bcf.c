@@ -9,6 +9,7 @@
 
 #include "bcf.h"
 #include "vid.h"
+#include "bim.h"
 #include "ubin.h"
 #include "genotq.h"
 #include "timer.h"
@@ -134,7 +135,9 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                 md_of_name,
                 bim_out,
                 md_index,
-                num_vars);
+                num_vars,
+                num_inds,
+                full_cmd);
 
     rotate_gt(num_inds,
               num_vars,
@@ -151,7 +154,7 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
     remove(md_of_name);
     remove(md_s_of_name);
 
-    free(md_index);
+    //free(md_index);
     free(md_s_index);
     return r;
 }
@@ -522,7 +525,9 @@ void compress_md(struct bcf_file *bcf_f,
                  char *md_s_of_name,
                  char *bim_out,
                  uint64_t *md_s_index,
-                 uint32_t num_vars)
+                 uint32_t num_vars,
+                 uint32_t num_inds,
+                 char *full_cmd)
 {
     fprintf(stderr, "Compressing metadata.");
 
@@ -548,6 +553,18 @@ void compress_md(struct bcf_file *bcf_f,
     uint64_t u_size = h_size;
     uint64_t h_i = 0;
 
+#if 1
+    struct bim_file *bim_f = new_bim_file(bim_out,
+                                          full_cmd,
+                                          num_vars,
+                                          num_inds,
+                                          u_size,
+                                          c_size,
+                                          h_size,
+                                          md_s_index);
+#endif
+
+#if 0
     FILE *fp_o = fopen(bim_out, "wb");
     if (!fp_o)
         err(EX_CANTCREAT, "Cannot create file \"%s\"", bim_out);
@@ -577,6 +594,7 @@ void compress_md(struct bcf_file *bcf_f,
 
     if (fwrite(md_s_index, sizeof(uint64_t), num_vars, fp_o) != num_vars)
             err(EX_IOERR, "Error writing to \"%s\"", bim_out); 
+#endif
 
     // in_buf will hold the uncompressed data and out_buf the compressed
     unsigned char *in_buf = (unsigned char *)
@@ -606,6 +624,8 @@ void compress_md(struct bcf_file *bcf_f,
 
     // have is used to store the size of the compressed data
     uint64_t have;
+
+    seek_bim_to_data(bim_f);
 
     //{{{ Compress header
     while (h_i < h_size) {
@@ -651,7 +671,8 @@ void compress_md(struct bcf_file *bcf_f,
 
             // Track the size of the compressed data
             c_size += have;
-            if (fwrite(out_buf, 1, have, fp_o) != have) 
+            //if (fwrite(out_buf, 1, have, fp_o) != have) 
+            if (fwrite(out_buf, 1, have, bim_f->file) != have) 
                 err(EX_IOERR, "Error writing compressed value 0.");
 
             //fwrite(in_buf, 1, CHUNK, fp_o);
@@ -709,7 +730,8 @@ void compress_md(struct bcf_file *bcf_f,
 
         // Track the size of the compressed data
         c_size += have;
-        if (fwrite(out_buf, 1, have, fp_o) != have) 
+        //if (fwrite(out_buf, 1, have, fp_o) != have) 
+        if (fwrite(out_buf, 1, have, bim_f->file) != have) 
             err(EX_IOERR, "Error writing compressed value 1.");
 
         in_buf_i = 0;
@@ -753,11 +775,13 @@ void compress_md(struct bcf_file *bcf_f,
 
         // Track the size of the compressed data
         c_size += have;
-        if (fwrite(out_buf, 1, have, fp_o) != have) 
+        //if (fwrite(out_buf, 1, have, fp_o) != have) 
+        if (fwrite(out_buf, 1, have, bim_f->file) != have) 
             err(EX_IOERR, "Error writing compressed value 1.");
     }
 
 
+#if 0
     // update the header values
     fseek(fp_o, 0, SEEK_SET);
     if (fwrite(&u_size, sizeof(uint64_t), 1, fp_o) != 1)
@@ -765,8 +789,13 @@ void compress_md(struct bcf_file *bcf_f,
 
     if (fwrite(&c_size, sizeof(uint64_t), 1, fp_o) != 1)
         err(EX_IOERR, "Error writing to \"%s\"", bim_out); 
-
     fclose(fp_o);
+#endif
+
+    update_bim_file_header(u_size, c_size, h_size, bim_f);
+
+    destroy_bim_file(bim_f);
+    
     fclose(fp);
     free(in_buf);
     free(out_buf);
@@ -902,6 +931,15 @@ void rotate_gt(uint32_t num_inds,
     free(I);
     fclose(s_gt_of);
     fclose(rs_gt_of);
+}
+//}}}
+
+//{{{void close_bcf_file(struct bcf_file *bcf_f)
+void close_bcf_file(struct bcf_file *bcf_f)
+{
+    bcf_hdr_destroy(bcf_f->hdr);
+    bcf_destroy1(bcf_f->line);
+    hts_close(bcf_f->fp);
 }
 //}}}
 
@@ -1082,11 +1120,3 @@ int read_unpack_next_bcf_line(struct bcf_file *bcf_f,
 //}}}
 #endif
 
-//{{{void close_bcf_file(struct bcf_file *bcf_f)
-void close_bcf_file(struct bcf_file *bcf_f)
-{
-    bcf_hdr_destroy(bcf_f->hdr);
-    bcf_destroy1(bcf_f->line);
-    hts_close(bcf_f->fp);
-}
-//}}}

@@ -173,7 +173,6 @@ int convert(int argc, char **argv, char *full_cmd)
                 tbx_destroy(tbx);
         }
 
-
         if (o_is_set == 0) {
             out  = (char*)malloc(strlen(in) + 5); // 5 for ext and \0
             if (!out)

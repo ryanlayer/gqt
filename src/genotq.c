@@ -284,6 +284,9 @@ struct gqt_file_header *read_gqt_file_header(char *file_name, FILE *f)
     struct gqt_file_header *h = (struct gqt_file_header *) 
             malloc(sizeof(struct gqt_file_header));
 
+    if (fseek(f, 0, SEEK_SET))
+        err(EX_IOERR, "Error seeking to header in VID file '%s'.", file_name);
+
     size_t fr = fread(h, sizeof(struct gqt_file_header), 1, f);
     check_file_read(file_name, f, 1, fr);
     return h;

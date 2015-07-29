@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
-#include <sysexits.h>
 #include <errno.h>
+#include <sysexits.h>
 
 #include "vid.h"
 
@@ -57,6 +57,15 @@ struct vid_file *open_vid_file(char *file_name)
 
     v->gqt_header = read_gqt_file_header(v->file_name, v->file);
 
+    if ( !((v->gqt_header->marker[0] == 'G') &&
+           (v->gqt_header->marker[1] == 'Q') && 
+           (v->gqt_header->marker[2] == 'T')) )
+        errx(EX_NOINPUT, "File '%s' is not a GQT file.", file_name);
+
+    if (v->gqt_header->type != 'v')
+        errx(EX_NOINPUT, "File '%s' is not a VID file.", file_name);
+
+
     v->vids = NULL;
 
     return v;
@@ -73,7 +82,6 @@ void load_vid_data(struct vid_file *v)
     v->vids = (uint32_t *) malloc(v->gqt_header->num_variants*sizeof(uint32_t));
     if (!v->vids)
         err(EX_OSERR, "malloc error");
-
 
     if (fseek(v->file, sizeof(struct gqt_file_header), SEEK_SET))
         err(EX_IOERR, "Error seeking to data in VID file '%s'.", v->file_name);

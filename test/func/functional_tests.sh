@@ -47,6 +47,7 @@ then
     echo "SUCCESS($LINENO): Fail to autodetect number records fields without index"
 else
     echo "ERROR($LINENO): Did not fail to autodetect number records fields without index"
+    exit
 fi
 
 $BCFTOOLS index $BCF
@@ -60,6 +61,7 @@ then
     echo "SUCCESS($LINENO): Autodetect number records fields with index"
 else
     echo "ERROR($LINENO): Fail to autodetect number records fields with index"
+    exit
 fi
 
 if [ -e "$BCF.gqt" ]
@@ -67,6 +69,7 @@ then
     echo "SUCCESS($LINENO): Autocomplete GQT index name from BCF nam"
 else
     echo "ERROR($LINENO): Did not autocomplete GQT index name from BCF name"
+    exit
 fi
 
 if [ -e "$BCF.vid" ]
@@ -74,6 +77,7 @@ then
     echo "SUCCESS($LINENO): Autocomplete VID index name from BCF nam"
 else
     echo "ERROR($LINENO): Did not autocomplete VID index name from BCF name"
+    exit
 fi
 
 if [ -e "$BCF.bim" ]
@@ -81,6 +85,7 @@ then
     echo "SUCCESS($LINENO): Autocomplete BIM index name from BCF nam"
 else
     echo "ERROR($LINENO): Did not autocomplete BIM index name from BCF name"
+    exit
 fi
 
 rm -f tmp.bcf.bim \
@@ -96,28 +101,34 @@ $GQT convert bcf \
     -o tmp.bcf.gqt \
     2> /dev/null
 
-if diff tmp.bcf.bim $BCF.bim > /dev/null
-then
-    echo "SUCCESS($LINENO): Auto output BIM matches specified BIM"
-    rm tmp.bcf.bim 
-else
-    echo "ERROR($LINENO): Auto output BIM does not match specified BIM"
-fi
+$GQT convert ped \
+    -i $BCF \
+    -o tmp.bcf.db \
+    2> /dev/null
 
-if diff tmp.bcf.vid $BCF.vid > /dev/null
-then
-    echo "SUCCESS($LINENO): Auto output VID matches specified VID"
-    rm tmp.bcf.vid 
-else
-    echo "ERROR($LINENO): Auto output VID does not match specified VID"
-fi
+$GQT convert bcf \
+    -r 43 \
+    -f 10 \
+    -i $BCF \
+    2> /dev/null
 
-if diff tmp.bcf.gqt $BCF.gqt > /dev/null
+$GQT convert ped \
+    -i $BCF \
+    2> /dev/null
+
+$GQT query -i tmp.bcf.gqt -b tmp.bcf.bim -v tmp.bcf.vid -d tmp.bcf.db\
+| grep -v "gqt_queryCommand" > tmp.spec
+
+$GQT query -i $BCF.gqt \
+| grep -v "gqt_queryCommand" > tmp.nospec
+
+if diff tmp.spec tmp.nospec > /dev/null
 then
-    echo "SUCCESS($LINENO): Auto output GQT matches specified GQT"
-    rm tmp.bcf.gqt 
+    echo "SUCCESS($LINENO): Auto output BIM, VID, PED  matches specified"
+    rm tmp.spec tmp.nospec
 else
-    echo "ERROR($LINENO): Auto output GQT does not match specified GQT"
+    echo "ERROR($LINENO): Auto output BIM, VID, PED does not matche specified "
+    exit
 fi
 
 $GQT convert ped \
@@ -150,6 +161,7 @@ then
     rm tmp.bcf.db
 else
     echo "ERROR($LINENO): Auto output PED DB does not match specified BED DB"
+    exit
 fi
 
 if [[ -f "`which $SQLITE`" ]]
@@ -161,6 +173,7 @@ then
         echo "SUCCESS($LINENO): Correct number of rows in PED db"
     else
         echo "ERROR($LINENO): 10 rows expect in PED db. $ROWS found."
+        exit
     fi 
 else
     echo "SKIP($LINENO): SQLITE3 not set"
@@ -188,6 +201,7 @@ then
     else
         echo "ERROR($LINENO): 10 rows expect in PED db. $ROWS found."
         $SQLITE $DATA_PATH/more_fields.ped.db "select * from ped"
+        exit
     fi 
 else
     echo "SKIP($LINENO): SQLITE3 not set"
@@ -206,6 +220,7 @@ then
         echo "SUCCESS($LINENO): Correct number of rows in PED db when PED has extra rows"
     else
         echo "ERROR($LINENO): 10 rows expect in PED db. $ROWS found."
+        exit
     fi 
 else
     echo "SKIP($LINENO): SQLITE3 not set"
@@ -244,6 +259,7 @@ else
         -g "HOM_REF" \
         | grep -v "#" \
         | wc -l"
+        exit
 fi 
 
 
@@ -271,6 +287,7 @@ then
     mv tmp.pct tmp.$L.pct
     mv tmp.count tmp.$L.count
     echo "ERROR($L): gqt query pct does not match gqt query count"
+    exit
 else
     echo "SUCCESS($LINENO): gqt query pct matches gqt query count"
     rm tmp.pct tmp.count 
@@ -303,6 +320,7 @@ then
     mv tmp.count tmp.$L.count
     mv tmp.gqt tmp.$L.gqt
     echo "ERROR($L): gqt multi query pct and count do not match"
+    exit
 else
     echo "SUCCESS($LINENO): gqt multi query pct and count match" 
     rm tmp.gqt tmp.count tmp.pct
@@ -331,6 +349,7 @@ else
     mv tmp.bcf tmp.$L.bcf
     mv tmp.gqt tmp.$L.gqt
     echo "ERROR($L): BCFTOOLS nref count does not match GQT maf"
+    exit
 fi
 
 
@@ -377,6 +396,7 @@ else
     cp tmp.bcf.gqt tmp.$L.bcf.gqt
     mv tmp.vcf.gqt tmp.$L.vcf.gqt
     echo "ERROR($L): BCF-based GQT does not matches VCF-based GQT"
+    exit
 fi
 
 $GQT query \
@@ -397,6 +417,7 @@ else
     cp tmp.bcf.gqt tmp.$L.bcf.gqt
     mv tmp.vcf.gz.gqt tmp.$L.vcf.gz.gqt
     echo "ERROR($L): BCF-based GQT does not matches VCF.GZ.-based GQT"
+    exit
 fi
 
 rm tmp.bcf.gqt
@@ -480,6 +501,7 @@ then
         rm  plink.out.frq plink.out.log plink.out.nosex
     else
         echo "ERROR($LINENO): GQT count does not matche PLINK count. $GQT_COUNT vs $PLINK_COUNT"
+        exit
     fi
 else
     echo "SKIP($LINENO): PLINK not set"
@@ -520,6 +542,7 @@ then
     echo "SUCCESS($LINENO): GQT count matches BCFTOOLS count"
 else
     echo "ERROR($LINENO): GQT count does not matche BCFTOOLS count. $GQT_COUNT vs $BCFTOOLS_COUNT"
+    exit
 fi
 
 if [[ -f "`which $VCFTOOLS`" ]]
@@ -565,6 +588,7 @@ then
             echo "ERROR($LINENO): GQT Fst does not match VCFTOOLS fst"
             cat $DATA_PATH/A_vs_B.weir.fst
             cat $DATA_PATH/gqt.fst.vcf
+            exit
         fi
         rm $DATA_PATH/A_vs_B.weir.fst \
             $DATA_PATH/gqt.fst.vcf \

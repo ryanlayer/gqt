@@ -162,7 +162,9 @@ uint32_t ubin_to_bitmap_wah(uint32_t *U,
  *      convert_file_by_name_ubin_to_wahbm(ubin_file_name, wah_file_name);
  * @endcode
  */
-uint32_t convert_file_by_name_ubin_to_wahbm(char *ubin_in, char *wah_out);
+uint32_t convert_file_by_name_ubin_to_wahbm(char *ubin_in,
+                                            char *wah_out,
+                                            char *full_cmd);
 
 /**
  * @brief convert an uncompressed binary file to a 16-bit WAH encoded bitmap

@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "wah.h"
+#include "wahbm.h"
 
 /**
  * @brief   in-place OR two WAH runs
@@ -103,10 +104,11 @@ uint32_t wah_in_place_xor(uint32_t *r_wah,
  * @endcode
  */
 uint32_t  wah_in_place_and(uint32_t *r_wah,
-                               uint32_t r_wah_size,
-                               uint32_t *wah,
-                               uint32_t wah_size);
+                           uint32_t r_wah_size,
+                           uint32_t *wah,
+                           uint32_t wah_size);
 
+#if 0
 /**
  * @brief Get a pointer to the bitmap of a particular WAH-encoded bitmap record.
  *
@@ -137,10 +139,10 @@ uint32_t  wah_in_place_and(uint32_t *r_wah,
  * @endcode
  */
 uint32_t get_wah_bitmap_in_place(struct wah_file wf,
-                                     uint32_t wah_record,
-                                     uint32_t bitmap,
-                                     uint32_t **wah_bitmap);
-
+                                 uint32_t wah_record,
+                                 uint32_t bitmap,
+                                 uint32_t **wah_bitmap);
+#endif
 
 /**
  * @brief Return records whose values are >= start_test_value and <
@@ -158,12 +160,12 @@ uint32_t get_wah_bitmap_in_place(struct wah_file wf,
  * @code
  * @endcode
  */
-uint32_t range_records_in_place_wahbm(struct wah_file wf,
-                                          uint32_t *record_ids,
-                                          uint32_t num_r,
-                                          uint32_t start_test_value,
-                                          uint32_t end_test_value,
-                                          uint32_t **R);
+uint32_t range_records_in_place_wahbm(struct wahbm_file *wf,
+                                      uint32_t *record_ids,
+                                      uint32_t num_r,
+                                      uint32_t start_test_value,
+                                      uint32_t end_test_value,
+                                      uint32_t **R);
 /**
  * @brief For each field, count that number of records that meet a certian
  * critera using in-place functions
@@ -183,12 +185,12 @@ uint32_t range_records_in_place_wahbm(struct wah_file wf,
  * @code
  * @endcode
  */
-uint32_t count_range_records_in_place_wahbm(struct wah_file wf,
-                                                uint32_t *record_ids,
-                                                uint32_t num_r,
-                                                uint32_t start_test_value,
-                                                uint32_t end_test_value,
-                                                uint32_t **R);
+uint32_t count_range_records_in_place_wahbm(struct wahbm_file *wf,
+                                            uint32_t *record_ids,
+                                            uint32_t num_r,
+                                            uint32_t start_test_value,
+                                            uint32_t end_test_value,
+                                            uint32_t **R);
 
 /**
  * @brief For each field, count the number of records that meet the criterea
@@ -206,11 +208,11 @@ uint32_t count_range_records_in_place_wahbm(struct wah_file wf,
  * @code
  * @endcode
  */
-uint32_t gt_count_records_in_place_wahbm(struct wah_file wf,
-                                             uint32_t *record_ids,
-                                             uint32_t num_r,
-                                             uint32_t test_value,
-                                             uint32_t **R) ;
+uint32_t gt_count_records_in_place_wahbm(struct wahbm_file *wf,
+                                         uint32_t *record_ids,
+                                         uint32_t num_r,
+                                         uint32_t test_value,
+                                         uint32_t **R) ;
 
 /**
  * @brief Return records whose value are greater than the test value using 
@@ -228,11 +230,11 @@ uint32_t gt_count_records_in_place_wahbm(struct wah_file wf,
  * @code
  * @endcode
  */
-uint32_t gt_records_in_place_wahbm(struct wah_file wf,
-                                       uint32_t *record_ids,
-                                       uint32_t num_r,
-                                       uint32_t test_value,
-                                       uint32_t **R);
+uint32_t gt_records_in_place_wahbm(struct wahbm_file *wf,
+                                   uint32_t *record_ids,
+                                   uint32_t num_r,
+                                   uint32_t test_value,
+                                   uint32_t **R);
 
 /**
  * @brief 
@@ -250,11 +252,11 @@ uint32_t gt_records_in_place_wahbm(struct wah_file wf,
  * @endcode
  */
 
-uint32_t gt_records_in_place_wahbm(struct wah_file wf,
-                                       uint32_t *record_ids,
-                                       uint32_t num_r,
-                                       uint32_t test_value,
-                                       uint32_t **R);
+uint32_t gt_records_in_place_wahbm(struct wahbm_file *wf,
+                                   uint32_t *record_ids,
+                                   uint32_t num_r,
+                                   uint32_t test_value,
+                                   uint32_t **R);
 
 /**
  * @brief For each field, sum the number of that meet a certian
@@ -275,7 +277,7 @@ uint32_t gt_records_in_place_wahbm(struct wah_file wf,
  * @code
  * @endcode
  */
-uint32_t sum_range_records_in_place_wahbm(struct wah_file wf,
+uint32_t sum_range_records_in_place_wahbm(struct wahbm_file *wf,
                                           uint32_t *record_ids,
                                           uint32_t num_r,
                                           uint32_t start_test_value,
@@ -283,20 +285,20 @@ uint32_t sum_range_records_in_place_wahbm(struct wah_file wf,
                                           uint32_t **R);
 
 
-uint32_t gt_sum_records_in_place_wahbm(struct wah_file wf,
+uint32_t gt_sum_records_in_place_wahbm(struct wahbm_file *wf,
                                        uint32_t *record_ids,
                                        uint32_t num_r,
                                        uint32_t test_value,
                                        uint32_t **R);
-/**
- * @breif Read in all 4 bitmaps at once
- */
+#if 0
 uint32_t get_wah_bitmaps_in_place(struct wah_file wf,
-                                      uint32_t wah_record,
-                                      uint32_t **wah_bitmap,
-                                      uint32_t *wah_sizes);
+                                  uint32_t wah_record,
+                                  uint32_t **wah_bitmap,
+                                  uint32_t *wah_sizes);
+#endif
+
 #ifdef __AVX2__
-uint32_t avx_gt_count_records_in_place_wahbm(struct wah_file wf,
+uint32_t avx_gt_count_records_in_place_wahbm(struct wahbm_file *wf,
                                              uint32_t *record_ids,
                                              uint32_t num_r,
                                              uint32_t test_value,
@@ -304,17 +306,16 @@ uint32_t avx_gt_count_records_in_place_wahbm(struct wah_file wf,
 #endif
 
 #ifdef __AVX2__
-uint32_t avx_count_range_records_in_place_wahbm(
-            struct wah_file wf,
-            uint32_t *record_ids,
-            uint32_t num_r,
-            uint32_t start_test_value,
-            uint32_t end_test_value,
-            uint32_t **R);
+uint32_t avx_count_range_records_in_place_wahbm(struct wahbm_file *wf,
+                                                uint32_t *record_ids,
+                                                uint32_t num_r,
+                                                uint32_t start_test_value,
+                                                uint32_t end_test_value,
+                                                uint32_t **R);
 #endif
 
 #ifdef __AVX2__
-uint32_t avx_sum_range_records_in_place_wahbm(struct wah_file wf,
+uint32_t avx_sum_range_records_in_place_wahbm(struct wahbm_file *wf,
                                               uint32_t *record_ids,
                                               uint32_t num_r,
                                               uint32_t start_test_value,

@@ -17,6 +17,7 @@
 
 #include "ubin.h"
 #include "wah.h"
+#include "wahbm.h"
 #include "genotq.h"
 
 
@@ -140,13 +141,87 @@ uint32_t convert_file_by_name_ubin_to_wahbm16(char *ubin_in,
  *   wah_out: a WAH bitmap file that encodes the genotypes listed in
  *            ubin_in as compressed bit maps
  */
-uint32_t convert_file_by_name_ubin_to_wahbm(char *ubin_in, char *wah_out)
+uint32_t convert_file_by_name_ubin_to_wahbm(char *ubin_in,
+                                            char *wah_out,
+                                            char *full_cmd)
 {
+    struct ubin_file uf = init_ubin_file(ubin_in);
+
+    int num_ints_per_record = 1 + ((uf.num_fields - 1) / 16);
+
+    struct wahbm_file *wf = new_wahbm_file(wah_out,
+                                           full_cmd,
+                                           uf.num_fields,
+                                           uf.num_records);
+    uint32_t *c = (uint32_t *) malloc(num_ints_per_record*sizeof(uint32_t));
+    if (!c)
+        err(EX_OSERR, "malloc error");
+
+    int i,j,wah_i = 0;
+    uint64_t offset_total  = 0;
+
+    // skip to the target record and read in the full record
+    fseek(uf.file, uf.header_offset, SEEK_SET);
+
+    uint32_t tenth_num_records = uf.num_records / 10;
+    fprintf(stderr,"Compressing genotypes");
+
+    for (i = 0; i < uf.num_records; ++i) {
+        if ( (tenth_num_records == 0) || (i % tenth_num_records == 0))
+            fprintf(stderr, ".");
+
+        size_t fr = fread(c, sizeof(uint32_t), num_ints_per_record, uf.file);
+        check_file_read(ubin_in, uf.file, num_ints_per_record, fr);
+
+        append_ubin_to_wahbm_file(wf, wah_i, c, num_ints_per_record);
+
+        /*
+        uint32_t *wah;
+        uint32_t *wah_sizes;
+        uint32_t wah_len = ubin_to_bitmap_wah(c,
+                                              num_ints_per_record,
+                                              uf.num_fields,
+                                              &wah,
+                                              &wah_sizes);
+
+        // Jump to the correct point in the WAH header
+        fseek(wf, 
+              2*sizeof(uint32_t) + // num fields and records
+              sizeof(uint64_t)*(4*wah_i), SEEK_SET);
+        // Write the end offset of all 4
+        for (j = 0; j < 4; ++j) {
+            offset_total += wah_sizes[j];
+            if (fwrite(&offset_total, sizeof(uint64_t), 1, wf) != 1)
+                err(EX_IOERR, "Error writing to \"%s\"", wah_out); 
+        }
+
+        // Jump to the end of the file
+        fseek(wf, 0, SEEK_END);
+        // Write out the compressed WAH bitmap
+        if (fwrite(wah, sizeof(uint32_t), wah_len, wf) != wah_len)
+                err(EX_IOERR, "Error writing to \"%s\"", wah_out); 
+        */
+        wah_i+=1;
+        //free(wah);
+        //free(wah_sizes);
+    }
+
+    write_record_offsets(wf);
+
+    fprintf(stderr, "Done\n");
+
+    free(c);
+
+    //fclose(wf);
+    fclose(uf.file);
+    destroy_wahbm_file(wf);
+
+ 
+#if 0
     FILE *wf = fopen(wah_out,"wb");
     if (!wf)
         err(EX_CANTCREAT, "Cannot open file \"%s\"", wah_out);
 
-    struct ubin_file uf = init_ubin_file(ubin_in);
 
     //write header for WAH bitmap index file
     if (fwrite(&(uf.num_fields), sizeof(uint32_t), 1, wf) != 1)
@@ -222,6 +297,9 @@ uint32_t convert_file_by_name_ubin_to_wahbm(char *ubin_in, char *wah_out)
 
     fclose(wf);
     fclose(uf.file);
+    return 0;
+#endif
+
     return 0;
 }
 //}}}

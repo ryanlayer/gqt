@@ -146,7 +146,9 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 
     close_bcf_file(&bcf_f);
 
-    int r = convert_file_by_name_ubin_to_wahbm(gt_s_r_of_name, wah_out);
+    int r = convert_file_by_name_ubin_to_wahbm(gt_s_r_of_name,
+                                               wah_out,
+                                               full_cmd);
 
     remove(gt_of_name);
     remove(gt_s_of_name);

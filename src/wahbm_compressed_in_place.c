@@ -492,7 +492,7 @@ uint32_t wah_compressed_in_place_and(uint32_t *r_wah,
 
 //{{{ uint32_t range_records_compressed_in_place_wahbm(struct wah_file wf,
 uint32_t range_records_compressed_in_place_wahbm(
-            struct wah_file wf,
+            struct wahbm_file *wf,
             uint32_t *record_ids,
             uint32_t num_r,
             uint32_t start_test_value,
@@ -501,7 +501,8 @@ uint32_t range_records_compressed_in_place_wahbm(
 
 {
 
-    uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    //uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    uint32_t max_wah_size = (wf->gqt_header->num_variants + 31 - 1)/ 31;
     uint32_t *record_new_bm = (uint32_t *)
                         malloc(sizeof(uint32_t)*max_wah_size);
     if (!record_new_bm )
@@ -529,12 +530,19 @@ uint32_t range_records_compressed_in_place_wahbm(
 
         for (j = start_test_value; j < end_test_value; ++j) {
 
+            /*
             record_new_bm_size = get_wah_bitmap_in_place(wf,
                                                          record_ids[i],
                                                          j,
                                                          &record_new_bm);
+            */
 
-            or_result_bm_size = 
+           record_new_bm_size = get_wahbm_bitmap(wf,
+                                                 record_ids[i],
+                                                 j,
+                                                 &record_new_bm);
+
+           or_result_bm_size = 
                     wah_compressed_in_place_or(or_result_bm,
                                                max_wah_size,
                                                record_new_bm,
@@ -561,7 +569,7 @@ uint32_t range_records_compressed_in_place_wahbm(
 
 //{{{ uint32_t count_range_records_compressed_in_place_wahbm(struct
 uint32_t count_range_records_compressed_in_place_wahbm(
-            struct wah_file wf,
+            struct wahbm_file *wf,
             uint32_t *record_ids,
             uint32_t num_r,
             uint32_t start_test_value,
@@ -569,9 +577,10 @@ uint32_t count_range_records_compressed_in_place_wahbm(
             uint32_t **R) 
 
 {
-    *R = (uint32_t *) calloc(wf.num_fields,sizeof(uint32_t));
+    //*R = (uint32_t *) calloc(wf.num_fields,sizeof(uint32_t));
+    *R = (uint32_t *) calloc(wf->gqt_header->num_variants,sizeof(uint32_t));
 
-    uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    uint32_t max_wah_size = (wf->gqt_header->num_variants + 31 - 1)/ 31;
     uint32_t *record_new_bm = (uint32_t *)
                         malloc(sizeof(uint32_t)*max_wah_size);
     if (!record_new_bm )
@@ -599,10 +608,16 @@ uint32_t count_range_records_compressed_in_place_wahbm(
 #ifdef time_count_range_records_compressed_in_place_wahbm
             start();
 #endif
+            /*
             record_new_bm_size = get_wah_bitmap_in_place(wf,
                                                          record_ids[i],
                                                          j,
                                                          &record_new_bm);
+            */
+            record_new_bm_size = get_wahbm_bitmap(wf,
+                                                  record_ids[i],
+                                                  j,
+                                                  &record_new_bm);
 #ifdef time_count_range_records_compressed_in_place_wahbm
             stop();
             t1+=report();
@@ -626,7 +641,7 @@ uint32_t count_range_records_compressed_in_place_wahbm(
         start();
 #endif
         r_size = add_compressed_in_place_wahbm(*R,
-                                               wf.num_fields,
+                                               wf->gqt_header->num_variants,
                                                or_result_bm,
                                                or_result_bm_size);
 #ifdef time_count_range_records_compressed_in_place_wahbm
@@ -657,20 +672,20 @@ uint32_t count_range_records_compressed_in_place_wahbm(
 
 //{{{ uint32_t add_compressed_in_place_wahbm(uint32_t *R,
 uint32_t add_compressed_in_place_wahbm(uint32_t *R,
-                                           uint32_t r_size,
-                                           uint32_t *wah,
-                                           uint32_t wah_size)
+                                       uint32_t r_size,
+                                       uint32_t *wah,
+                                       uint32_t wah_size)
 {
 
     uint32_t wah_i,
-                 wah_v,
-                 num_words,
-                 fill_bit,
-                 bits,
-                 bit,
-                 bit_i,
-                 word_i,
-                 field_i;
+             wah_v,
+             num_words,
+             fill_bit,
+             bits,
+             bit,
+             bit_i,
+             word_i,
+             field_i;
     field_i = 0;
 
     for (wah_i = 0; wah_i < wah_size;) {
@@ -710,12 +725,11 @@ uint32_t add_compressed_in_place_wahbm(uint32_t *R,
 //}}}
 
 //{{{ uint32_t gt_count_records_compressed_in_place_wahbm(
-uint32_t gt_count_records_compressed_in_place_wahbm(
-                                             struct wah_file wf,
-                                             uint32_t *record_ids,
-                                             uint32_t num_r,
-                                             uint32_t test_value,
-                                             uint32_t **R) 
+uint32_t gt_count_records_compressed_in_place_wahbm(struct wahbm_file *wf,
+                                                    uint32_t *record_ids,
+                                                    uint32_t num_r,
+                                                    uint32_t test_value,
+                                                    uint32_t **R) 
 
 {
     // TODO: need constants for upper bound.
@@ -728,12 +742,12 @@ uint32_t gt_count_records_compressed_in_place_wahbm(
 }
 //}}}
 
-//{{{ uint32_t gt_records_compressed_in_place_wahbm(struct wah_file wf,
-uint32_t gt_records_compressed_in_place_wahbm(struct wah_file wf,
-                                       uint32_t *record_ids,
-                                       uint32_t num_r,
-                                       uint32_t test_value,
-                                       uint32_t **R) 
+//{{{ uint32_t gt_records_compressed_in_place_wahbm(struct wahbm_file *wf,
+uint32_t gt_records_compressed_in_place_wahbm(struct wahbm_file *wf,
+                                              uint32_t *record_ids,
+                                              uint32_t num_r,
+                                              uint32_t test_value,
+                                              uint32_t **R) 
 
 {
     // TODO: need constants for upper bound.
@@ -748,8 +762,8 @@ uint32_t gt_records_compressed_in_place_wahbm(struct wah_file wf,
 
 //{{{ uint32_t compressed_in_place_wah_to_ints(uint32_t *W,
 uint32_t compressed_in_place_wah_to_ints(uint32_t *W,
-                                             uint32_t W_len,
-                                             uint32_t **O)
+                                         uint32_t W_len,
+                                         uint32_t **O)
 {
 
     uint32_t wah_i;

@@ -464,7 +464,7 @@ int sum_in_place_wahbm(char *in,
         print_sum_result(wf_R, wf.num_fields, bim);
 
     free(wf_R);
-    destroy_wahbm_file(&wf);
+    destroy_wah_file(&wf);
 
     return 0;
 

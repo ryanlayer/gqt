@@ -8,6 +8,146 @@
 #include "wah.h"
 #include "pthread_pool.h"
 
+struct wahbm_file {
+    FILE *file;
+    char *file_name;
+    uint32_t word_size;
+    uint64_t *record_offsets;
+    long header_offset;
+    struct gqt_file_header *gqt_header;
+};
+
+/**
+ * @brief open a WAHBM file with the standard GQT header and the WAHBM header
+ *
+ * @param file_name path to the WAHBM file
+ *
+ * @retval WAHBM data structure containing a handle to an open file
+ *
+ * Example Usage:
+ * @code
+ *      struct wahbm_file *o = open_wahbm_file(file_name);
+ *      destroy_wahbm_file(o);
+ * @endcode
+ * 
+ */
+struct wahbm_file *open_wahbm_file(char *file_name);
+
+/**
+ * @brief add a new uncompressed binary array (assuming two bits per value
+ * and 16 bits per element for a total of 32 bits) to a WAHBM file
+ *
+ * This fucntion will create the bitmap of the array, compressed each bitmap,
+ * update the in-memory record offsets, and write the compressed values to a
+ * file.  NOTE, the write_record_offsets must be called before destory_wahbm to
+ * make any changes to the record_offsets persistent.
+ *
+ * Example Usage:
+ * @code
+ *      char *file_name = "test_gqt";
+ *      char *full_cmd = "gqt convert bcf -i bcf";
+ *      uint32_t num_variants = 60;
+ *      uint32_t num_samples = 1;
+ *
+ *      struct wahbm_file *wf = new_wahbm_file(file_name,
+ *                                             full_cmd,
+ *                                             num_variants,
+ *                                             num_samples);
+ *
+ *      char *plt_0 = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+ *                    "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+ *                    "0 0 0 0 0 0 0 0";
+ *
+ *      uint32_t *ubin_0;
+ *      uint32_t ubin_len_0 = plt_line_to_packed_ints(plt_0, 60, &ubin_0);
+ *      append_ubin_to_wahbm_file(wf, 0, ubin_0, ubin_len_0);
+ *      write_record_offsets(wf);
+ *      destroy_wahbm_file(wf);
+ * @endcode
+ */
+void append_ubin_to_wahbm_file(struct wahbm_file *wf,
+                               uint32_t wah_i,
+                               uint32_t *ubin,
+                               uint32_t ubin_len);
+
+/**
+ * @brief get a single WAH encoded bit array for a bitmap within a WAHBM file. 
+ *
+ * wah_bitmap must either be large enough to handle the largest possible value
+ * or set to NULL, in which case the function will allocate the enough space to
+ * hold the largest possible value.  The idea is that the first call will
+ * allocate the space and subsequent calls will reuse the space.
+ *
+ * @param wf an open WAHBM 
+ * @param bitmap_i the zero-based index of the target bitmap
+ * @param bitarray_i the zero-based index of the bit array withing the bitmap
+ * @param wah_bitmap the resulting compressed bit array (if NULL mem will be
+ * allocated)
+ *
+ * @retval the number of elements in wah_bitmap, the size allocated to
+ * wah_bitmap will very often be much larger than this value
+ *
+ * Example Usage:
+ * @code
+ *      struct wahbm_file *wf = new_wahbm_file(file_name,
+ *                                             full_cmd,
+ *                                             num_variants,
+ *                                             num_samples);
+ *      uint32_t *wah_bitmap = NULL;;
+ *      uint32_t wah_size = get_wahbm_bitmap(wf, 0, 0, &wah_bitmap);
+ *
+ *      wah_size = get_wahbm_bitmap(wf, 1, 1, &wah_bitmap);
+ *
+ *      free(wah_bitmap);
+ *      destroy_wahbm_file(wf);
+ * @endcode
+ */
+uint32_t get_wahbm_bitmap(struct wahbm_file *wf,
+                          uint32_t bitmap_i,
+                          uint32_t bitarray_i,
+                          uint32_t **wah_bitmap);
+
+/**
+ * @brief create a new WAHBM file with the standard GQT header and the WAHBM
+ * header
+ *
+ * @param file_name
+ * @param full_cmd,
+ * @param num_variants,
+ * @param num_samples
+ *
+ * @retval WAHBM data structure containing a handle to an open file
+ *
+ * Example Usage:
+ * @code
+ *      char *file_name = "test_gqt";
+ *      char *full_cmd = "gqt convert bcf -i bcf";
+ *      uint32_t num_variants = 4;
+ *      uint32_t num_samples = 4;
+ *      struct wahbm_file *w = new_wahbm_file(file_name,
+ *                                            full_cmd,
+ *                                            num_variants,
+ *                                            num_samples);
+ *      destroy_wahbm_file(w);
+ * @endcode
+ */
+struct wahbm_file *new_wahbm_file(char *file_name,
+                                  char *full_cmd,
+                                  uint32_t num_variants,
+                                  uint32_t num_samples);
+
+void append_wahbm_to_wahbm_file(struct wahbm_file *wahbm_f,
+                                uint32_t wah_i,
+                                uint32_t *wah,
+                                uint32_t wah_len,
+                                uint32_t *wah_sizes);
+
+void write_record_offsets(struct wahbm_file *wahbm_f);
+
+void destroy_wahbm_file(struct wahbm_file *wahbm_f);
+
+
+#if 0
 /**
  * @brief Open a WAH-encoded bitmap index and initialize the wah_file data
  * structure.
@@ -28,11 +168,7 @@
  * @endcode
  */
 struct wah_file init_wahbm_file(char *file_name);
-
-/*
- * Calls  destroy_wah_file
- */
-void destroy_wahbm_file(struct wah_file *wf);
+#endif
 
 /**
  * @brief Print a WAH encoded bitmap file.
@@ -51,7 +187,7 @@ void destroy_wahbm_file(struct wah_file *wf);
  * @retval number of records printed 
  */
 
-uint32_t print_wahbm(struct wah_file wf,
+uint32_t print_wahbm(struct wahbm_file *wf,
                      uint32_t *record_ids,
                      uint32_t num_r,
                      uint32_t format);
@@ -78,6 +214,7 @@ uint32_t print_by_name_wahbm(char *wahbm_file_name,
                              uint32_t num_r,
                              uint32_t format);
 
+#if 0
 /**
  * @brief Get a pointer to the bitmap of a particular WAH-encoded bitmap record
  *
@@ -108,6 +245,7 @@ uint32_t get_wah_bitmap(struct wah_file wf,
                         uint32_t wah_record,
                         uint32_t bitmap,
                         uint32_t **wah_bitmap);
+#endif
 
 /**
  * @brief Return records whose values are >= start_test_value and <
@@ -128,7 +266,7 @@ uint32_t get_wah_bitmap(struct wah_file wf,
  * @code
  * @endcode
  */
- uint32_t range_records_wahbm(struct wah_file wf,
+ uint32_t range_records_wahbm(struct wahbm_file *wf,
                               uint32_t *record_ids,
                               uint32_t num_r,
                               uint32_t start_test_value,
@@ -155,7 +293,7 @@ uint32_t get_wah_bitmap(struct wah_file wf,
  * @endcode
  */
 
-uint32_t count_range_records_wahbm(struct wah_file wf,
+uint32_t count_range_records_wahbm(struct wahbm_file *wf,
                                    uint32_t *record_ids,
                                    uint32_t num_r,
                                    uint32_t start_test_value,
@@ -213,7 +351,7 @@ void avx_add(uint32_t bits,
  * @code
  * @endcode
  */
-uint32_t eq_records_wahbm(struct wah_file wf,
+uint32_t eq_records_wahbm(struct wahbm_file *wf,
                           uint32_t *record_ids,
                           uint32_t num_r,
                           uint32_t test_value,
@@ -234,7 +372,7 @@ uint32_t eq_records_wahbm(struct wah_file wf,
  * @code
  * @endcode
  */
-uint32_t ne_records_wahbm(struct wah_file wf,
+uint32_t ne_records_wahbm(struct wahbm_file *wf,
                           uint32_t *record_ids,
                           uint32_t num_r,
                           uint32_t test_value,
@@ -255,7 +393,7 @@ uint32_t ne_records_wahbm(struct wah_file wf,
  * @code
  * @endcode
  */
-uint32_t gt_records_wahbm(struct wah_file wf,
+uint32_t gt_records_wahbm(struct wahbm_file *wf,
                           uint32_t *record_ids,
                           uint32_t num_r,
                           uint32_t test_value,
@@ -276,7 +414,7 @@ uint32_t gt_records_wahbm(struct wah_file wf,
  * @code
  * @endcode
  */
-uint32_t gte_records_wahbm(struct wah_file wf,
+uint32_t gte_records_wahbm(struct wahbm_file *wf,
                            uint32_t *record_ids,
                            uint32_t num_r,
                            uint32_t test_value,
@@ -297,7 +435,7 @@ uint32_t gte_records_wahbm(struct wah_file wf,
  * @code
  * @endcode
  */
-uint32_t lt_records_wahbm(struct wah_file wf,
+uint32_t lt_records_wahbm(struct wahbm_file *wf,
                           uint32_t *record_ids,
                           uint32_t num_r,
                           uint32_t test_value,
@@ -318,7 +456,7 @@ uint32_t lt_records_wahbm(struct wah_file wf,
  * @code
  * @endcode
  */
-uint32_t lte_records_wahbm(struct wah_file wf,
+uint32_t lte_records_wahbm(struct wahbm_file *wf,
                            uint32_t *record_ids,
                            uint32_t num_r,
                            uint32_t test_value,
@@ -340,7 +478,7 @@ uint32_t lte_records_wahbm(struct wah_file wf,
  * @code
  * @endcode
  */
- uint32_t range_records_w_exclude_wahbm(struct wah_file wf,
+ uint32_t range_records_w_exclude_wahbm(struct wahbm_file *wf,
                                         uint32_t *record_ids,
                                         uint32_t num_r,
                                         uint32_t start_test_value,
@@ -363,7 +501,7 @@ uint32_t lte_records_wahbm(struct wah_file wf,
  * @code
  * @endcode
  */
-uint32_t gt_count_records_wahbm(struct wah_file wf,
+uint32_t gt_count_records_wahbm(struct wahbm_file *wf,
                                 uint32_t *record_ids,
                                 uint32_t num_r,
                                 uint32_t test_value,
@@ -416,7 +554,7 @@ uint32_t wahbm_hamm_dist_by_name(char *in, char *out);
 
 uint32_t wahbm_shared_by_name(char *in, char *out);
 
-uint32_t wahbm_shared_by_name_subpop(struct wah_file *wf,
+uint32_t wahbm_shared_by_name_subpop(struct wahbm_file *wf,
                                      uint32_t *record_ids,
                                      uint32_t num_records);
 #endif

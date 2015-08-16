@@ -23,27 +23,27 @@ void permute(uint32_t *R, uint32_t len_R);
 
 int pop_help(char *op);
 
-uint32_t pca_shared(struct wah_file *wf,
+uint32_t pca_shared(struct wahbm_file *wf,
                     char **id_query_list,
                     char *label_field_name,
                     char *db_file_name,
                     char *id_out_file);
 
-uint32_t fst(struct wah_file *wf,
+uint32_t fst(struct wahbm_file *wf,
              char **id_query_list,
              uint32_t id_q_count,
              uint32_t *vids,
              char *db_file_name,
              double **mapped_fst);
 
-uint32_t gst(struct wah_file *wf,
+uint32_t gst(struct wahbm_file *wf,
              char **id_query_list,
              uint32_t id_q_count,
              uint32_t *vids,
              char *db_file_name,
              double **mapped_gst);
 
-uint32_t calpha(struct wah_file *wf,
+uint32_t calpha(struct wahbm_file *wf,
                 char **id_query_list,
                 uint32_t id_q_count,
                 uint32_t *vids,
@@ -224,28 +224,13 @@ int pop(char *op, int argc, char **argv, char *full_cmd)
     //}}}
 
     // open WAH/GQT file
-    struct wah_file wf = init_wahbm_file(wahbm_file_name);
+    struct wahbm_file *wf = open_wahbm_file(wahbm_file_name);
 
     // open VID file
-    /*
-    FILE *vid_f = fopen(vid_file_name, "rb");
-    if (!vid_f)
-        err(EX_NOINPUT, "Cannot read file\"%s\"", vid_file_name);
-
-    uint32_t *vids = (uint32_t *) malloc(wf.num_fields*sizeof(uint32_t));
-    if (!vids)
-        err(EX_OSERR, "malloc error");
-
-    size_t fr = fread(vids, sizeof(uint32_t), wf.num_fields, vid_f);
-    check_file_read(vid_file_name, vid_f, wf.num_fields, fr);
-
-    fclose(vid_f);
-    */
-
     struct vid_file *vid_f = open_vid_file(vid_file_name);
     load_vid_data(vid_f);
 
-    uint32_t num_ints = (wf.num_fields + 32 - 1)/ 32;
+    uint32_t num_ints = (wf->gqt_header->num_variants + 32 - 1)/ 32;
     uint32_t len_ints;
 
     uint32_t len_R;
@@ -261,29 +246,37 @@ int pop(char *op, int argc, char **argv, char *full_cmd)
             return pop_help(op);
         }
 
-        int r = pca_shared(&wf,
+        int r = pca_shared(wf,
                            id_query_list,
                            label_field_name,
                            db_file_name,
                            label_file_name);
     }else if (strcmp("fst",op) == 0) {
         double *R;
-        len_R = fst(&wf,
+        len_R = fst(wf,
                     id_query_list,
                     id_q_count,
                     vid_f->vids,
                     db_file_name,
                     &R);
-        print_pop_result(op, R, wf.num_fields, bim_file_name, full_cmd);
+        print_pop_result(op,
+                         R,
+                         wf->gqt_header->num_variants,
+                         bim_file_name,
+                         full_cmd);
     } else if (strcmp("gst",op) == 0) {
         double *R;
-        len_R = gst(&wf,
+        len_R = gst(wf,
                     id_query_list,
                     id_q_count,
                     vid_f->vids,
                     db_file_name,
                     &R);
-        print_pop_result(op, R, wf.num_fields, bim_file_name, full_cmd);
+        print_pop_result(op,
+                         R,
+                         wf->gqt_header->num_variants,
+                         bim_file_name,
+                         full_cmd);
     } else if (strcmp("calpha",op) == 0) {
         /*
         if (N_is_set == 0) {
@@ -297,7 +290,7 @@ int pop(char *op, int argc, char **argv, char *full_cmd)
         // the remaining hold the permutation results
         uint32_t *R;
 
-        len_R = calpha(&wf,
+        len_R = calpha(wf,
                        id_query_list,
                        id_q_count, 
                        vid_f->vids,
@@ -311,7 +304,7 @@ int pop(char *op, int argc, char **argv, char *full_cmd)
                             n_cases,
                             n_ctrls,
                             0,
-                            wf.num_fields,
+                            wf->gqt_header->num_variants,
                             bim_file_name,
                             full_cmd);
         free(R);
@@ -324,13 +317,13 @@ int pop(char *op, int argc, char **argv, char *full_cmd)
 
 
     destroy_vid_file(vid_f);
-    destroy_wahbm_file(&wf);
+    destroy_wahbm_file(wf);
     return 0;
 }
 //}}}
 
 //{{{int gst(uint32_t id_q_count,
-uint32_t gst(struct wah_file *wf,
+uint32_t gst(struct wahbm_file *wf,
              char **id_query_list,
              uint32_t id_q_count,
              uint32_t *vids,
@@ -341,8 +334,8 @@ uint32_t gst(struct wah_file *wf,
     uint32_t id_lens[id_q_count];
     uint32_t *sums[id_q_count];
 
-    uint32_t num_variants = wf->num_fields;
-    uint32_t num_samples = wf->num_records;
+    uint32_t num_variants = wf->gqt_header->num_variants;
+    uint32_t num_samples = wf->gqt_header->num_samples;
 
     for (i = 0; i < id_q_count; ++i) {
         uint32_t len_count_R;
@@ -357,14 +350,16 @@ uint32_t gst(struct wah_file *wf,
 
         // Enforce that the offsets of the relevant samples is 
         // within the number of samples in the GQT index.
-        if (id_lens[i] > wf->num_records) {
+        //if (id_lens[i] > wf->num_records) {
+        if (id_lens[i] > wf->gqt_header->num_samples) {
             fprintf(stderr, 
                     "ERROR: there are more samples in the PED database (%d) "
                     "that match this condition \nthan there are in the GQT "
                     "index (%d).  Perhaps your PED file is a superset of "
                     "the\nsamples in your VCF/BCF file?\n", 
                     id_lens[i], 
-                    wf->num_records);
+                    //wf->num_records);
+                    wf->gqt_header->num_samples);
             return 1;
         }
 
@@ -373,14 +368,14 @@ uint32_t gst(struct wah_file *wf,
         high_v = 3;
 
 #ifdef __AVX2__
-        len_count_R = avx_sum_range_records_in_place_wahbm(*wf,
+        len_count_R = avx_sum_range_records_in_place_wahbm(wf,
                                                            R,
                                                            id_lens[i],
                                                            low_v,
                                                            high_v,
                                                            &(sums[i]));
 #else
-        len_count_R = sum_range_records_in_place_wahbm(*wf,
+        len_count_R = sum_range_records_in_place_wahbm(wf,
                                                        R,
                                                        id_lens[i],
                                                        low_v,
@@ -432,7 +427,7 @@ uint32_t gst(struct wah_file *wf,
 }
 //}}}
 
-//{{{ uint32_t calpha(struct wah_file *wf,
+//{{{ uint32_t calpha(struct wahbm_file *wf,
 /*
  * case_ctrl_counts is an array of arrays the following values:
  * there is one array per variants
@@ -444,7 +439,7 @@ uint32_t gst(struct wah_file *wf,
  * ...
  *
  */
-uint32_t calpha(struct wah_file *wf,
+uint32_t calpha(struct wahbm_file *wf,
                 char **id_query_list,
                 uint32_t id_q_count,
                 uint32_t *vids,
@@ -462,8 +457,10 @@ uint32_t calpha(struct wah_file *wf,
     uint32_t i,j;
     uint32_t *sums[id_q_count];
 
-    uint32_t num_variants = wf->num_fields;
-    uint32_t num_samples = wf->num_records;
+    //uint32_t num_variants = wf->num_fields;
+    uint32_t num_variants = wf->gqt_header->num_variants;
+    //uint32_t num_samples = wf->num_records;
+    uint32_t num_samples = wf->gqt_header->num_samples;
 
 
     uint32_t *case_ids;
@@ -494,33 +491,33 @@ uint32_t calpha(struct wah_file *wf,
     uint32_t *sum_cases;
 
 #ifdef __AVX2__
-    uint32_t len_sum_cases = avx_sum_range_records_in_place_wahbm(*wf,
+    uint32_t len_sum_cases = avx_sum_range_records_in_place_wahbm(wf,
                                                                   case_ids,
                                                                   num_cases,
                                                                   low_v,
                                                                   high_v,
                                                                   &sum_cases);
 #else
-    uint32_t len_sum_cases = sum_range_records_in_place_wahbm(*wf,
-                                                             case_ids,
-                                                             num_cases,
-                                                             low_v,
-                                                             high_v,
-                                                             &sum_cases);
+    uint32_t len_sum_cases = sum_range_records_in_place_wahbm(wf,
+                                                              case_ids,
+                                                              num_cases,
+                                                              low_v,
+                                                              high_v,
+                                                              &sum_cases);
 #endif
     case_ctrl_counts[0] = sum_cases;
 
     uint32_t *sum_ctrls;
 
 #ifdef __AVX2__
-    uint32_t len_sum_ctrls = avx_sum_range_records_in_place_wahbm(*wf,
+    uint32_t len_sum_ctrls = avx_sum_range_records_in_place_wahbm(wf,
                                                                   ctrl_ids,
                                                                   num_ctrls,
                                                                   low_v,
                                                                   high_v,
                                                                   &sum_ctrls);
 #else
-    uint32_t len_sum_ctrls = sum_range_records_in_place_wahbm(*wf,
+    uint32_t len_sum_ctrls = sum_range_records_in_place_wahbm(wf,
                                                               ctrl_ids,
                                                               num_ctrls,
                                                               low_v,
@@ -551,20 +548,20 @@ uint32_t calpha(struct wah_file *wf,
 
 #ifdef __AVX2__
         uint32_t P_len_sum_cases = 
-                avx_sum_range_records_in_place_wahbm(*wf,
-                                                P_case_ids,
-                                                num_cases,
-                                                low_v,
-                                                high_v,
-                                                &P_sum_cases);
+                avx_sum_range_records_in_place_wahbm(wf,
+                                                     P_case_ids,
+                                                     num_cases,
+                                                     low_v,
+                                                     high_v,
+                                                     &P_sum_cases);
 #else
         uint32_t P_len_sum_cases = 
-                sum_range_records_in_place_wahbm(*wf,
-                                                P_case_ids,
-                                                num_cases,
-                                                low_v,
-                                                high_v,
-                                                &P_sum_cases);
+                sum_range_records_in_place_wahbm(wf,
+                                                 P_case_ids,
+                                                 num_cases,
+                                                 low_v,
+                                                 high_v,
+                                                 &P_sum_cases);
 #endif
 
         case_ctrl_counts[ccc_i] = P_sum_cases;
@@ -574,7 +571,7 @@ uint32_t calpha(struct wah_file *wf,
 
 #ifdef __AVX2__
         uint32_t P_len_sum_ctrls = 
-                avx_sum_range_records_in_place_wahbm(*wf,
+                avx_sum_range_records_in_place_wahbm(wf,
                                                      P_ctrl_ids,
                                                      num_ctrls,
                                                      low_v,
@@ -582,7 +579,7 @@ uint32_t calpha(struct wah_file *wf,
                                                      &P_sum_ctrls);
 #else
         uint32_t P_len_sum_ctrls = 
-                sum_range_records_in_place_wahbm(*wf,
+                sum_range_records_in_place_wahbm(wf,
                                                  P_ctrl_ids,
                                                  num_ctrls,
                                                  low_v,
@@ -663,8 +660,8 @@ void permute(uint32_t *R, uint32_t len_R)
 }
 //}}}
 
-//{{{ int fst(struct wah_file *wf,
-uint32_t fst(struct wah_file *wf,
+//{{{ uint32_t fst(struct wahbm_file *wf,
+uint32_t fst(struct wahbm_file *wf,
              char **id_query_list,
              uint32_t id_q_count,
              uint32_t *vids,
@@ -676,8 +673,9 @@ uint32_t fst(struct wah_file *wf,
     uint32_t *sums[id_q_count];
     uint32_t *counts[id_q_count];
 
-    uint32_t num_variants = wf->num_fields;
-    uint32_t num_samples = wf->num_records;
+    //uint32_t num_variants = wf->num_fields;
+    uint32_t num_variants = wf->gqt_header->num_variants;
+    uint32_t num_samples = wf->gqt_header->num_samples;
 
     for (i = 0; i < id_q_count; ++i) {
         uint32_t len_count_R, len_sum_R;
@@ -692,14 +690,14 @@ uint32_t fst(struct wah_file *wf,
 
         // Enforce that the offsets of the relevant samples is 
         // within the number of samples in the GQT index.
-        if (id_lens[i] > wf->num_records) {
+        if (id_lens[i] > wf->gqt_header->num_samples) {
             fprintf(stderr, 
                     "ERROR: there are more samples in the PED database (%d) "
                     "that match this condition \nthan there are in the GQT "
                     "index (%d).  Perhaps your PED file is a superset of "
                     "the\nsamples in your VCF/BCF file?\n", 
                     id_lens[i], 
-                    wf->num_records);
+                    wf->gqt_header->num_samples);
             return 1;
         }
 
@@ -708,14 +706,14 @@ uint32_t fst(struct wah_file *wf,
         high_v = 3;
 
 #ifdef __AVX2__
-        len_sum_R = avx_sum_range_records_in_place_wahbm(*wf,
+        len_sum_R = avx_sum_range_records_in_place_wahbm(wf,
                                                          R,
                                                          id_lens[i],
                                                          low_v,
                                                          high_v,
                                                          &(sums[i]));
 #else
-        len_sum_R = sum_range_records_in_place_wahbm(*wf,
+        len_sum_R = sum_range_records_in_place_wahbm(wf,
                                                      R,
                                                      id_lens[i],
                                                      low_v,
@@ -726,14 +724,14 @@ uint32_t fst(struct wah_file *wf,
         high_v = 2;
 
 #ifdef __AVX2__
-        len_count_R = avx_count_range_records_in_place_wahbm(*wf,
+        len_count_R = avx_count_range_records_in_place_wahbm(wf,
                                                              R,
                                                              id_lens[i],
                                                              low_v,
                                                              high_v,
                                                              &(counts[i]));
 #else
-        len_count_R = count_range_records_in_place_wahbm(*wf,
+        len_count_R = count_range_records_in_place_wahbm(wf,
                                                          R,
                                                          id_lens[i],
                                                          low_v,
@@ -839,8 +837,8 @@ uint32_t fst(struct wah_file *wf,
 }
 //}}}
 
-//{{{ uint32_t shared(struct wah_file *wf,
-uint32_t pca_shared(struct wah_file *wf,
+//{{{ uint32_t shared(struct wahbm_file *wf,
+uint32_t pca_shared(struct wahbm_file *wf,
                     char **id_query_list,
                     char *label_field_name,
                     char *db_file_name,

@@ -270,7 +270,8 @@ int query(int argc, char **argv, char *full_cmd)
     }
 
     // open WAH/GQT file
-    struct wah_file wf = init_wahbm_file(wahbm_file_name);
+    //struct wah_file wf = init_wahbm_file(wahbm_file_name);
+    struct wahbm_file *wf = open_wahbm_file(wahbm_file_name);
 
     // open VID file
     /*
@@ -291,7 +292,8 @@ int query(int argc, char **argv, char *full_cmd)
     struct vid_file *vid_f = open_vid_file(vid_file_name);
     load_vid_data(vid_f);
 
-    uint32_t num_ints = (wf.num_fields + 32 - 1)/ 32;
+    //uint32_t num_ints = (wf.num_fields + 32 - 1)/ 32;
+    uint32_t num_ints = (wf->gqt_header->num_variants + 32 - 1)/ 32;
     uint32_t len_ints;
 
     for (i = 0; i < gt_q_count; ++i) {
@@ -307,14 +309,15 @@ int query(int argc, char **argv, char *full_cmd)
 
         // Enforce that the offsets of the relevant samples is 
         // within the number of samples in the GQT index.
-        if (id_lens[i] > wf.num_records) {
+        //if (id_lens[i] > wf.num_records) {
+        if (id_lens[i] > wf->gqt_header->num_samples) {
             fprintf(stderr, 
                     "ERROR: there are more samples in the PED database (%d) "
                     "that match this condition \nthan there are in the GQT "
                     "index (%d).  Perhaps your PED file is a superset of "
                     "the\nsamples in your VCF/BCF file?\n", 
                     id_lens[i], 
-                    wf.num_records);
+                    wf->gqt_header->num_samples);
             return 1;
         }
 
@@ -489,10 +492,10 @@ int query(int argc, char **argv, char *full_cmd)
         for (i = 0; i < num_ints; ++i) 
             masked_vid_count += popcount(final_mask[i]);
 
-        if (masked_vid_count <= wf.num_fields)
+        if (masked_vid_count <= wf->gqt_header->num_variants)
             printf("%u\n", masked_vid_count);
         else
-            printf("%u\n", wf.num_fields);
+            printf("%u\n", wf->gqt_header->num_variants);
 
     } else if ((v_is_set == 1) && (s_is_set == 1)) {
         get_bcf_query_result(final_mask,
@@ -501,7 +504,7 @@ int query(int argc, char **argv, char *full_cmd)
                              id_query_list,
                              id_lens,
                              gt_q_count,
-                             wf.num_fields,
+                             wf->gqt_header->num_variants,
                              vid_file_name,
                              src_bcf_file_name,
                              bcf_output);
@@ -517,7 +520,7 @@ int query(int argc, char **argv, char *full_cmd)
                 for (j = 0; j < p; ++j) {
                     leading_zeros = __builtin_clz(v);
 
-                    if (i*32 + leading_zeros + 1 > wf.num_fields)
+                    if (i*32 + leading_zeros + 1 > wf->gqt_header->num_variants)
                         break;
 
                     hit = vid_f->vids[leading_zeros + i*32];
@@ -526,7 +529,7 @@ int query(int argc, char **argv, char *full_cmd)
                     v &= ~(1 << (32 - leading_zeros - 1));
                 }
             }
-            if (i*32 + leading_zeros + 1 > wf.num_fields)
+            if (i*32 + leading_zeros + 1 > wf->gqt_header->num_variants)
                 break;
         }
 
@@ -537,7 +540,7 @@ int query(int argc, char **argv, char *full_cmd)
                            mapped_counts,
                            id_lens,
                            gt_q_count,
-                           wf.num_fields,
+                           wf->gqt_header->num_variants,
                            bim_file_name,
                            full_cmd);
     }
@@ -551,7 +554,7 @@ int query(int argc, char **argv, char *full_cmd)
     }
 
     destroy_vid_file(vid_f);
-    destroy_wahbm_file(&wf);
+    destroy_wahbm_file(wf);
     return 0;
 }
 //}}}

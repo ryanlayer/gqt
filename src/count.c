@@ -379,7 +379,8 @@ int count_in_place_wahbm(char *in,
     if (time != 0 )
         start();
 
-    struct wah_file wf = init_wahbm_file(in);
+    //struct wah_file wf = init_wahbm_file(in);
+    struct wahbm_file *wf = open_wahbm_file(in);
     __attribute__((aligned(64)))uint32_t *wf_R;
     //__declspec(align(64)) uint32_t *wf_R;
     uint32_t len_wf_R;
@@ -409,10 +410,12 @@ int count_in_place_wahbm(char *in,
     }
 
     if (quiet == 0)
-        print_count_result(wf_R, wf.num_fields, bim);
+        //print_count_result(wf_R, wf.num_fields, bim);
+        print_count_result(wf_R, wf->gqt_header->num_variants, bim);
 
     free(wf_R);
-    destroy_wahbm_file(&wf);
+    //destroy_wah_file(&wf);
+    destroy_wahbm_file(wf);
     return 0;
 }
 
@@ -427,7 +430,8 @@ int count_compressed_in_place_wahbm(char *in,
 
 {
     start();
-    struct wah_file wf = init_wahbm_file(in);
+    //struct wah_file wf = init_wahbm_file(in);
+    struct wahbm_file *wf = open_wahbm_file(in);
     uint32_t *wf_R;
     uint32_t len_wf_R;
 
@@ -446,10 +450,11 @@ int count_compressed_in_place_wahbm(char *in,
         fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
-        print_count_result(wf_R, wf.num_fields, bim);
+        print_count_result(wf_R, wf->gqt_header->num_variants, bim);
 
     free(wf_R);
-    destroy_wahbm_file(&wf);
+    //destroy_wah_file(&wf);
+    destroy_wahbm_file(wf);
 
     return 0;
 }
@@ -465,7 +470,8 @@ int count_wahbm(char *in,
 
 {
     start();
-    struct wah_file wf = init_wahbm_file(in);
+    //struct wah_file wf = init_wahbm_file(in);
+    struct wahbm_file *wf = open_wahbm_file(in);
     uint32_t *wf_R;
     uint32_t len_wf_R;
 
@@ -484,10 +490,12 @@ int count_wahbm(char *in,
         fprintf(stderr,"%lu\n", report());
 
     if (quiet == 0)
-        print_count_result(wf_R, wf.num_fields, bim);
+        //print_count_result(wf_R, wf.num_fields, bim);
+        print_count_result(wf_R, wf->gqt_header->num_variants, bim);
 
     free(wf_R);
-    destroy_wahbm_file(&wf);
+    //destroy_wah_file(&wf);
+    destroy_wahbm_file(wf);
 
     return 0;
 }

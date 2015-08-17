@@ -50,23 +50,6 @@ struct gqt_file_header *new_gqt_file_header(char type,
 
 struct gqt_file_header *read_gqt_file_header(char *file_name, FILE *f);
 
-#if 0
-struct uint_ll {
-<<<<<<< HEAD
-        uint32_t value;
-        struct uint_ll *next;
-};
-
-
-struct uint_p_ll {
-        uint32_t *value;
-        struct uint_ll *next;
-=======
-    uint32_t value;
-    struct uint_ll *next;
->>>>>>> hotfix-0.2.9
-};
-#endif
 struct uint_ll {
         uint32_t value;
         struct uint_ll *next;

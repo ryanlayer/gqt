@@ -518,3 +518,72 @@ uint32_t avx_gt_count_records_in_place_wahbm(struct wahbm_file *wf,
 //}}}
 #endif
 
+#if 0
+//{{{ uint32_t get_wah_bitmaps_in_place(struct wah_file wf,
+uint32_t get_wah_bitmaps_in_place(struct wah_file wf,
+                                      uint32_t wah_record,
+                                      uint32_t **wah_bitmap,
+                                      uint32_t *wah_sizes)
+{
+    // get the size of the WAH-encoded bitmap
+    uint64_t wah_size = 0, wah_offset = 0;
+    if (wah_record == 0) {
+        wah_size = wf.record_offsets[wah_record + 3];
+        wah_offset = wf.header_offset;
+    } else {
+
+        wah_size = wf.record_offsets[wah_record*4 + 3] - 
+                   wf.record_offsets[wah_record*4 - 1];
+
+        wah_offset = wf.header_offset +
+                     sizeof(uint32_t) * 
+                        (wf.record_offsets[wah_record*4 - 1]);
+    }
+
+    uint32_t i;
+    for (i = 0; i < 4; ++i) {
+        if ((wah_record == 0) && (i == 0)) 
+            wah_sizes[i] = wf.record_offsets[wah_record];
+        else
+            wah_sizes[i] = wf.record_offsets[wah_record*4 + i] - 
+                   wf.record_offsets[wah_record*4 + i - 1];
+    }
+
+
+    fseek(wf.file, wah_offset, SEEK_SET);
+    size_t fr = fread(*wah_bitmap,sizeof(uint32_t),wah_size,wf.file);
+    check_file_read(wf.file_name, wf.file, wah_size, fr);
+
+    return (uint32_t)wah_size;
+}
+//}}}
+
+//{{{ uint32_t get_wah_bitmap_in_place(struct wah_file wf,
+uint32_t get_wah_bitmap_in_place(struct wah_file wf,
+                                     uint32_t wah_record,
+                                     uint32_t bitmap,
+                                     uint32_t **wah_bitmap)
+{
+    // get the size of the WAH-encoded bitmap
+    uint64_t wah_size = 0;
+    uint64_t wah_offset = 0;
+    if ((wah_record == 0) && (bitmap == 0)) {
+        wah_size = wf.record_offsets[wah_record + bitmap];
+        wah_offset = wf.header_offset;
+    } else {
+        wah_size = wf.record_offsets[wah_record*4 + bitmap] - 
+                   wf.record_offsets[wah_record*4 + bitmap - 1];
+
+        wah_offset = wf.header_offset +
+                     sizeof(uint32_t) * 
+                        (wf.record_offsets[wah_record*4 + bitmap] - wah_size);
+    }
+
+    fseek(wf.file, wah_offset, SEEK_SET);
+    size_t fr = fread(*wah_bitmap,sizeof(uint32_t),wah_size,wf.file);
+    check_file_read(wf.file_name, wf.file, wah_size, fr);
+
+    return (uint32_t)wah_size;
+}
+//}}}
+#endif

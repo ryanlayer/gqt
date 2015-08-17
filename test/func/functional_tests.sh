@@ -530,12 +530,8 @@ then
         echo "SUCCESS($LINENO): GQT count matches PLINK count"
         rm  plink.out.frq plink.out.log plink.out.nosex
     else
-<<<<<<< HEAD
         echo "ERROR($LINENO): GQT count does not match PLINK count. $GQT_COUNT vs $PLINK_COUNT"
-=======
-        echo "ERROR($LINENO): GQT count does not matche PLINK count. $GQT_COUNT vs $PLINK_COUNT"
         exit
->>>>>>> hotfix-0.2.9
     fi
 else
     echo "SKIP($LINENO): PLINK not set"

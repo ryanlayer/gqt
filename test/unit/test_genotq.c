@@ -81,7 +81,6 @@ void tearDown(void) { }
  *                    gt_s_r_of_name);
  *          convert_file_by_name_ubin_to_wahbm(gt_s_r_of_name, wah_out);
  */
-
 //{{{void test_init_bcf_file(void)
 void test_init_bcf_file(void)
 {

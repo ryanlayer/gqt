@@ -167,25 +167,40 @@ rm_index
 
 # Test VID without VID header
 make_index
-run $GQT 
+run $GQT query -i $BCF.gqt -v $BCF.gqt
+assert_fail_to_stderr $EX_NOINPUT $LINENO
+assert_in_stderr "gqt: File '../data/10.1e4.var.bcf.gqt' is not a VID file." $LINENO
 rm_index
+
 
 # Test VID with VID header
 make_index
+run $GQT query -i $BCF.gqt -v $BCF.vid
+assert_exit_code $EX_OK $LINENO
 rm_index
 
 # Test BIM without BIM header
 make_index
+run $GQT query -i $BCF.gqt -b $BCF.gqt
+assert_fail_to_stderr $EX_NOINPUT $LINENO
+assert_in_stderr "gqt: File '../data/10.1e4.var.bcf.gqt' is not a BIM file." $LINENO
 rm_index
 
 # Test BIM with BIM header
 make_index
+run $GQT query -i $BCF.gqt -b $BCF.bim
+assert_exit_code $EX_OK $LINENO
 rm_index
 
 # Test WAHBM without WAHBM header
 make_index
+run $GQT query -i $BCF -b $BCF.bim -v $BCF.vid -d $BCF.db
+assert_fail_to_stderr $EX_NOINPUT $LINENO
+assert_in_stderr "gqt: File '../data/10.1e4.var.bcf' is not a GQT file." $LINENO
 rm_index
 
 # Test WAHBM with WAHBM header
 make_index
+run $GQT query -i $BCF.gqt -b $BCF.bim -v $BCF.vid -d $BCF.db
+assert_exit_code $EX_OK $LINENO
 rm_index

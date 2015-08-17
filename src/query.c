@@ -184,6 +184,7 @@ int query(int argc, char **argv, char *full_cmd)
         int auto_bim_file_name_size = asprintf(&bim_file_name,
                                                "%s",
                                                wahbm_file_name);
+        if (auto_bim_file_name_size == -1) err(EX_OSERR, "asprintf error");
         strcpy(bim_file_name + strlen(bim_file_name) - 3, "bim");
 
         if ( access( bim_file_name, F_OK) != -1 ) {
@@ -201,6 +202,7 @@ int query(int argc, char **argv, char *full_cmd)
         int auto_vid_file_name_size = asprintf(&vid_file_name,
                                                "%s",
                                                wahbm_file_name);
+        if (auto_vid_file_name_size   == -1) err(EX_OSERR, "asprintf error");
         strcpy(vid_file_name + strlen(vid_file_name) - 3, "vid");
 
         if ( access( vid_file_name, F_OK) != -1 ) {
@@ -219,6 +221,7 @@ int query(int argc, char **argv, char *full_cmd)
         int auto_db_file_name_size = asprintf(&db_file_name,
                                               "%s",
                                               wahbm_file_name);
+        if ( auto_db_file_name_size == -1) err(EX_OSERR, "asprintf error");
         strcpy(db_file_name + strlen(db_file_name) - 3, "db\0");
 
         if ( access( db_file_name, F_OK) != -1 ) {
@@ -684,32 +687,36 @@ void print_query_result(uint32_t *mask,
 
     char *info_s = NULL;;
 
-    asprintf(&info_s, 
-            "##%s_queryVersion=%s\n"
-            "##%s_queryCommand=%s\n",
-            PROGRAM_NAME, VERSION,
-            PROGRAM_NAME, full_cmd);
+    int r = asprintf(&info_s, 
+                     "##%s_queryVersion=%s\n"
+                     "##%s_queryCommand=%s\n",
+                     PROGRAM_NAME, VERSION,
+                     PROGRAM_NAME, full_cmd);
+    if (r == -1) err(EX_OSERR, "asprintf error");
                       
     append_out_buf(&outbuf, info_s, strlen(info_s));
 
     for (k=0; k < num_qs; k++) {
         if ( q[k].variant_op == p_count ) {
-            asprintf(&info_s, "##INFO=<ID=GQT_%u,Number=1,Type=Integer,"
-                              "Description=\"GQT count result from query "
-                              "%u\">\n",
-                              k, k);
+            r = asprintf(&info_s, "##INFO=<ID=GQT_%u,Number=1,Type=Integer,"
+                         "Description=\"GQT count result from query "
+                         "%u\">\n",
+                         k, k);
+            if (r == -1) err(EX_OSERR, "asprintf error");
             append_out_buf(&outbuf, info_s, strlen(info_s));
         } else if ( q[k].variant_op == p_pct ) {
-            asprintf(&info_s, "##INFO=<ID=GQT_%u,Number=1,Type=Float,"
-                              "Description=\"GQT percent result from query "
-                              "%u\">\n",
-                              k, k);
+            r = asprintf(&info_s, "##INFO=<ID=GQT_%u,Number=1,Type=Float,"
+                         "Description=\"GQT percent result from query "
+                         "%u\">\n",
+                         k, k);
+            if (r == -1) err(EX_OSERR, "asprintf error");
             append_out_buf(&outbuf, info_s, strlen(info_s));
         } else if ( q[k].variant_op == p_maf ) {
-            asprintf(&info_s, "##INFO=<ID=GQT_%u,Number=1,Type=Float,"
-                              "Description=\"GQT maf result from query "
-                              "%u\">\n",
-                              k, k);
+            r = asprintf(&info_s, "##INFO=<ID=GQT_%u,Number=1,Type=Float,"
+                         "Description=\"GQT maf result from query "
+                         "%u\">\n",
+                         k, k);
+            if (r == -1) err(EX_OSERR, "asprintf error");
             append_out_buf(&outbuf, info_s, strlen(info_s));
         }
 
@@ -733,9 +740,12 @@ void print_query_result(uint32_t *mask,
                                qfile.line_lens[line_idx]-1);
                 for (k=0; k < num_qs; k++) {
                     if ( q[k].variant_op == p_count ) {
-                        asprintf(&info_s, ";GQT_%u=%u", k,
-                                counts[k][line_idx]);
+                        r = asprintf(&info_s,
+                                     ";GQT_%u=%u",
+                                     k,
+                                     counts[k][line_idx]);
                                 //counts[k][vids[line_idx]]);
+                        if (r == -1) err(EX_OSERR, "asprintf error");
                         append_out_buf(&outbuf, info_s, strlen(info_s));
 
                     } else if (q[k].variant_op == p_pct) {

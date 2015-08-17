@@ -28,9 +28,11 @@ int main(int argc, char **argv)
     for (i = 1; i < argc; ++i) {
         if (quote_next == 1) {
             r = asprintf(&full_cmd, "%s \"%s\"", full_cmd, argv[i]);
+            if (r == -1) err(EX_OSERR, "asprintf error");
             quote_next = 0;
         } else {
             r = asprintf(&full_cmd, "%s %s", full_cmd, argv[i]);
+            if (r == -1) err(EX_OSERR, "asprintf error");
         }
 
         if ( (strcmp(argv[i], "-p") == 0) || (strcmp(argv[i], "-g") == 0))

@@ -86,11 +86,16 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
          *md_of_name,
          *md_s_of_name;
 
-    asprintf(&gt_of_name, "%s/.gt.tmp.packed", tmp_dir);
-    asprintf(&gt_s_of_name, "%s/.s.gt.tmp.packed", tmp_dir);
-    asprintf(&gt_s_r_of_name, "%s/.r.s.gt.tmp.packed", tmp_dir);
-    asprintf(&md_of_name, "%s/.md.tmp", tmp_dir);
-    asprintf(&md_s_of_name, "%s/.s.md.tmp", tmp_dir);
+    int r = asprintf(&gt_of_name, "%s/.gt.tmp.packed", tmp_dir);
+    if (r == -1) err(EX_OSERR, "asprintf error");
+    r = asprintf(&gt_s_of_name, "%s/.s.gt.tmp.packed", tmp_dir);
+    if (r == -1) err(EX_OSERR, "asprintf error");
+    r = asprintf(&gt_s_r_of_name, "%s/.r.s.gt.tmp.packed", tmp_dir);
+    if (r == -1) err(EX_OSERR, "asprintf error");
+    r = asprintf(&md_of_name, "%s/.md.tmp", tmp_dir);
+    if (r == -1) err(EX_OSERR, "asprintf error");
+    r = asprintf(&md_s_of_name, "%s/.s.md.tmp", tmp_dir);
+    if (r == -1) err(EX_OSERR, "asprintf error");
 
 
     struct bcf_file bcf_f = init_bcf_file(in);
@@ -146,7 +151,7 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 
     close_bcf_file(&bcf_f);
 
-    int r = convert_file_by_name_ubin_to_wahbm(gt_s_r_of_name,
+    r = convert_file_by_name_ubin_to_wahbm(gt_s_r_of_name,
                                                wah_out,
                                                full_cmd);
 

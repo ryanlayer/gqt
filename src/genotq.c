@@ -12,6 +12,7 @@
 #include <sys/param.h>
 #include <math.h>
 #include <limits.h>
+#include <sysexits.h>
 #include "genotq.h"
 #ifdef __SSE4_2__
 #include <nmmintrin.h>
@@ -240,5 +241,68 @@ int is_int(char *s, int *v)
         *v = (int) val;
         return 1;
     }
+}
+//}}}
+
+//{{{struct gqt_file_header new_gqt_file_header(char type)
+struct gqt_file_header *new_gqt_file_header(char type,
+                                            char *full_cmd,
+                                            uint32_t num_variants,
+                                            uint32_t num_samples)
+{
+    struct gqt_file_header *h = (struct gqt_file_header *) 
+            malloc(sizeof(struct gqt_file_header));
+
+    h->marker[0] = 'G';
+    h->marker[1] = 'Q';
+    h->marker[2] = 'T';
+
+    if ( !((type != 'g') || (type != 'v') || (type != 'b')) )
+        errx(EX_UNAVAILABLE,
+             "Cannot create header for unknown file type '%c'.",
+             type);
+
+    h->type = type;
+
+    h->major = atoi(MAJOR_VERSION);
+    h->minor = atoi(MINOR_VERSION);
+    h->revision = atoi(REVISION_VERSION);
+    h->build = atoi(BUILD_VERSION);
+    h->magic  = 0x11223344;
+    h->num_variants = num_variants;
+    h->num_samples = num_samples;
+    h->id_hash = hash_cmd(full_cmd);
+    memset(h->more, 0, MORE_SIZE*sizeof(uint32_t));
+
+    return h;
+}
+//}}}
+
+//{{{struct gqt_file_header read_gqt_file_header(FILE *f)
+struct gqt_file_header *read_gqt_file_header(char *file_name, FILE *f)
+{
+    struct gqt_file_header *h = (struct gqt_file_header *) 
+            malloc(sizeof(struct gqt_file_header));
+
+    if (fseek(f, 0, SEEK_SET))
+        err(EX_IOERR, "Error seeking to header in VID file '%s'.", file_name);
+
+    size_t fr = fread(h, sizeof(struct gqt_file_header), 1, f);
+    check_file_read(file_name, f, 1, fr);
+    return h;
+}
+//}}}
+
+//{{{ char *hash_cmd(char *full_cmd)
+unsigned long hash_cmd(char *full_cmd)
+{
+    //djb2
+    unsigned long hash = 5381;
+    int c;
+
+    while ((c = *full_cmd++))
+        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+
+    return hash;
 }
 //}}}

@@ -5,7 +5,6 @@
  *      Author: nek3d
  */
 
-#include "quick_file.h"
 #include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -14,6 +13,8 @@
 #include <zlib.h>
 #include <assert.h>
 #include "genotq.h"
+#include "quick_file.h"
+#include "bim.h"
 
 char *zerr(int ret)
 {
@@ -45,6 +46,7 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
     uint64_t i = 0;
     uint64_t pos = 0;
 
+#if 0
     /* Open the file */
     fp = fopen(filename, "rb");
     if (!fp)
@@ -78,7 +80,10 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
 
     fr = fread(md_lens, sizeof(uint64_t), num_r, fp);
     check_file_read(filename, fp, num_r, fr);
-
+#endif
+    
+    struct bim_file *bim_f = open_bim_file(filename);
+    
     /* allocate inflate state */
     z_stream strm;
     strm.zalloc = Z_NULL;
@@ -98,7 +103,7 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
     unsigned char in_buf[CHUNK];
             
 
-    char *final_out_buf = (char *) malloc(u_size);
+    char *final_out_buf = (char *) malloc(bim_f->bim_header->u_size);
     if (!final_out_buf )
         err(EX_OSERR, "malloc error");
     qfile->main_buf = final_out_buf;
@@ -112,13 +117,17 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
     strm.avail_out = -1;
     strm.next_out = (Bytef *)final_out_buf;
 
+    seek_bim_to_data(bim_f);
+
     /* decompress until deflate stream ends or end of file */
     do {
-        strm.avail_in = fread(in_buf, 1, CHUNK, fp);
+        strm.avail_in = fread(in_buf, 1, CHUNK, bim_f->file);
         //check_file_read(filename, fp, CHUNK, strm.avail_in);
-        if (ferror(fp)) {
+        if (ferror(bim_f->file)) {
             (void)inflateEnd(&strm);
-            err(EX_NOINPUT, "Cannot read compressed file \"%s\"", filename);
+            err(EX_NOINPUT,
+                "Cannot read compressed file '%s'",
+                bim_f->file_name);
         }
         if (strm.avail_in == 0)
             break;
@@ -143,14 +152,14 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
     /* clean up and return */
     (void)inflateEnd(&strm);
 
-    qfile->file_len = u_size;
-    qfile->header_len = h_size;
+    qfile->file_len = bim_f->bim_header->u_size;
+    qfile->header_len = bim_f->bim_header->h_size;
 
     /* 
      * Count how many lines you have.  Starting after the header
      * 
      */
-    qfile->num_lines = num_r;
+    qfile->num_lines = bim_f->gqt_header->num_variants;
 
 #if 0
     for(i = qfile->header_len; i < qfile->file_len; i++) {
@@ -190,12 +199,17 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
      * Store the calculated length of the line as well. */
     i = 0;
     qfile->lines[0] = qfile->main_buf + qfile->header_len;
-    qfile->line_lens[0] = md_lens[0];
+    //qfile->line_lens[0] = md_lens[0];
+    qfile->line_lens[0] = bim_f->bim_header->md_line_lens[0];
 
     for(i = 1; i < qfile->num_lines; i++) {
-        qfile->line_lens[i] = md_lens[i] - md_lens[i-1];
+        qfile->line_lens[i] = 
+                bim_f->bim_header->md_line_lens[i] - 
+                bim_f->bim_header->md_line_lens[i-1];
         qfile->lines[i] = qfile->lines[i-1] + qfile->line_lens[i-1];
     }
+
+    destroy_bim_file(bim_f);
 
 #if 0
     uint64_t prevPos = qfile->header_len;

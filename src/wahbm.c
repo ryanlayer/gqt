@@ -18,6 +18,9 @@
 #include <immintrin.h>
 #include <inttypes.h>
 #include <math.h>
+
+#include "wahbm.h"
+#include "wahbm_in_place.h"
 #include "genotq.h"
 #include "pthread_pool.h"
 #include "timer.h"
@@ -28,6 +31,7 @@ const int tab32[32] = {
     8, 12, 20, 28, 15, 17, 24,  7,
     19, 27, 23,  6, 26,  5,  4, 31};
 
+//{{{ int log2_32 (uint32_t value)
 int log2_32 (uint32_t value)
 {
     value |= value >> 1;
@@ -37,8 +41,236 @@ int log2_32 (uint32_t value)
     value |= value >> 16;
     return tab32[(uint32_t)(value*0x07C4ACDD) >> 27];
 }
+//}}}
 
 // wahbm
+//{{{ struct wahbm_file *new_wahbm_file(char *file_name,
+struct wahbm_file *new_wahbm_file(char *file_name,
+                                  char *full_cmd,
+                                  uint32_t num_variants,
+                                  uint32_t num_samples)
+{
+    struct wahbm_file *wf = (struct wahbm_file *) 
+            malloc(sizeof(struct wahbm_file));
+
+    wf->file_name = strdup(file_name);
+
+    wf->file = fopen(file_name,"wb");
+    if (!wf->file)
+        err(EX_CANTCREAT, "Cannot create WAHBM file '%s'", file_name);
+
+    wf->gqt_header = new_gqt_file_header('w', 
+                                              full_cmd,
+                                              num_variants,
+                                              num_samples);
+
+    //wf->word_size = 31;
+
+    if (fwrite(wf->gqt_header,
+               sizeof(struct gqt_file_header),
+               1,
+               wf->file) != 1)
+        err(EX_IOERR, "Error writing header to WAHBM file '%s'", file_name);
+
+    // 4 BM for each individual
+    wf->record_offsets = 
+            (uint64_t *) calloc(4*num_samples, sizeof(uint64_t));
+
+
+    if (fwrite(wf->record_offsets,
+               sizeof(uint64_t),
+               4*num_samples,
+               wf->file) != 4*num_samples)
+        err(EX_IOERR, "Error writing header to WAHBM file '%s'", file_name);
+
+    wf->header_offset = ftell(wf->file);
+
+    return wf;
+}
+//}}}
+
+//{{{void append_ubin_to_wahbm_file(struct wahbm_file *wf,
+void append_ubin_to_wahbm_file(struct wahbm_file *wf,
+                               uint32_t wah_i,
+                               uint32_t *ubin,
+                               uint32_t ubin_len)
+{
+    uint32_t *wah;
+    uint32_t *wah_sizes;
+    uint32_t wah_len = ubin_to_bitmap_wah(ubin,
+                                          ubin_len,
+                                          wf->gqt_header->num_variants,
+                                          &wah,
+                                          &wah_sizes);
+
+
+    uint64_t offset_total = 0;
+    if (wah_i > 0)
+        offset_total = wf->record_offsets[wah_i*4 - 1];
+
+    uint32_t i;
+    
+    // Update index 
+    for (i = 0; i < 4; ++i) {
+        offset_total += wah_sizes[i];
+        wf->record_offsets[wah_i*4 + i] = offset_total;
+    }
+
+    // Jump to the end of the file
+    if( fseek(wf->file, 0, SEEK_END) )
+        err(EX_IOERR,
+            "Error seeking to record offsets in WAH BM file '%s'.",
+            wf->file_name);
+
+    // Write out the compressed WAH bitmaps
+    if (fwrite(wah, 
+               sizeof(uint32_t), 
+               wah_len,
+               wf->file) != wah_len)
+        err(EX_IOERR, "Error writing WAH to '%s'.", wf->file_name); 
+
+    free(wah);
+    free(wah_sizes);
+}
+//}}}
+
+//{{{void append_wahbm_to_wahbm_file(struct wahbm_file *wf,
+void append_wahbm_to_wahbm_file(struct wahbm_file *wf,
+                                uint32_t wah_i,
+                                uint32_t *wah,
+                                uint32_t wah_len,
+                                uint32_t *wah_sizes)
+{
+    uint64_t offset_total = 0;
+    if (wah_i > 0)
+        offset_total = wf->record_offsets[wah_i*4 - 1];
+
+    uint32_t i;
+    
+    // Update index 
+    for (i = 0; i < 4; ++i) {
+        offset_total += wah_sizes[i];
+        wf->record_offsets[wah_i*4 + i] = offset_total;
+    }
+
+    // Jump to the end of the file
+    if( fseek(wf->file, 0, SEEK_END) )
+        err(EX_IOERR,
+            "Error seeking to record offsets in WAH BM file '%s'.",
+            wf->file_name);
+
+    // Write out the compressed WAH bitmaps
+    if (fwrite(wah, 
+               sizeof(uint32_t), 
+               wah_len,
+               wf->file) != wah_len)
+        err(EX_IOERR, "Error writing WAH to '%s'.", wf->file_name); 
+}
+//}}}
+
+//{{{void write_record_offsets(struct wahbm_file *wf)
+void write_record_offsets(struct wahbm_file *wf)
+{
+    // Jump to the correct point in the WAH header
+    if ( fseek(wf->file, sizeof(struct gqt_file_header), SEEK_SET) )
+        err(EX_IOERR,
+            "Error seeking to record offsets in WAH BM file '%s'.",
+            wf->file_name);
+
+    if (fwrite(wf->record_offsets,
+               sizeof(uint64_t),
+               4*(wf->gqt_header->num_samples),
+               wf->file) != 4*(wf->gqt_header->num_samples))
+        err(EX_IOERR,
+            "Error writing header to WAHBM file '%s'",
+            wf->file_name);
+}
+//}}}
+
+//{{{void destroy_wahbm_file(struct wahbm_file *wf)
+void destroy_wahbm_file(struct wahbm_file *wf)
+{
+    fclose(wf->file);
+    free(wf->record_offsets);
+    free(wf);
+}
+//}}}
+
+//{{{ struct wahbm_file *open_wahbm_file(char *file_name)
+struct wahbm_file *open_wahbm_file(char *file_name)
+{
+    struct wahbm_file *wf = (struct wahbm_file *) 
+            malloc(sizeof(struct wahbm_file));
+
+    wf->file_name = strdup(file_name);
+    wf->file = fopen(file_name,"rb");
+
+    if (!(wf->file))
+        err(EX_NOINPUT, "Cannot open WAHBM file \"%s\"", file_name);
+
+    wf->gqt_header = read_gqt_file_header(wf->file_name, wf->file);
+
+    if ( !((wf->gqt_header->marker[0] == 'G') &&
+           (wf->gqt_header->marker[1] == 'Q') && 
+           (wf->gqt_header->marker[2] == 'T')) )
+        errx(EX_NOINPUT, "File '%s' is not a GQT file.", file_name);
+
+    if (wf->gqt_header->type != 'w')
+        errx(EX_NOINPUT, "File '%s' is not a WAHBM file.", file_name);
+
+    // 4 BM for each individual
+    wf->record_offsets = (uint64_t *) 
+            malloc(4*wf->gqt_header->num_samples*sizeof(uint64_t));
+
+    size_t fr = fread(wf->record_offsets,
+                      sizeof(uint64_t),
+                      4*wf->gqt_header->num_samples,
+                      wf->file);
+    check_file_read(wf->file_name, wf->file, 4*wf->gqt_header->num_samples, fr);
+
+    wf->header_offset = ftell(wf->file);
+
+    return wf;
+}
+//}}}
+
+//{{{ uint32_t get_wahbm_bitmap(struct wfile *wf,
+uint32_t get_wahbm_bitmap(struct wahbm_file *wf,
+                          uint32_t bitmap_i,
+                          uint32_t bitarray_i,
+                          uint32_t **wah_bitmap)
+{
+
+    if (*wah_bitmap == NULL) {
+        uint32_t max_wah_size = (wf->gqt_header->num_variants + 31 - 1)/ 31;
+        *wah_bitmap = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
+        if (!(*wah_bitmap))
+            err(EX_OSERR, "malloc error");
+    }
+
+    // get the size of the WAH-encoded bitmap
+    uint64_t wah_size = 0;
+    uint64_t wah_offset = 0;
+    if ((bitmap_i == 0) && (bitarray_i == 0)) {
+        wah_size = wf->record_offsets[bitmap_i + bitarray_i];
+        wah_offset = wf->header_offset;
+    } else {
+        wah_size = wf->record_offsets[bitmap_i*4 + bitarray_i] - 
+                wf->record_offsets[bitmap_i*4 + bitarray_i - 1];
+
+        wah_offset = wf->header_offset + sizeof(uint32_t) * 
+                (wf->record_offsets[bitmap_i*4 + bitarray_i] - wah_size);
+    }
+
+    fseek(wf->file, wah_offset, SEEK_SET);
+    size_t fr = fread(*wah_bitmap,sizeof(uint32_t),wah_size,wf->file);
+    check_file_read(wf->file_name, wf->file, wah_size, fr);
+
+    return (uint32_t)wah_size;
+}
+//}}}
+
+#if 0
 //{{{ struct wah_file init_wahbm_file(char *file_name)
 struct wah_file init_wahbm_file(char *file_name)
 {
@@ -56,7 +288,7 @@ struct wah_file init_wahbm_file(char *file_name)
     size_t fr = fread(&wf.num_fields,sizeof(uint32_t),1,wf.file);
     check_file_read(file_name, wf.file, 1, fr);
 
-    fr = fread(&wf.num_records,sizeof(uint32_t),1,wf.file);
+    fr = fread(wf.num_records,sizeof(uint32_t),1,wf.file);
     check_file_read(file_name, wf.file, 1, fr);
 
     wf.record_offsets = (uint64_t *) 
@@ -76,20 +308,15 @@ struct wah_file init_wahbm_file(char *file_name)
     return wf;
 }
 //}}}
-
-//{{{ void destroy_wahbm_file(struct wah_file *wf)
-void destroy_wahbm_file(struct wah_file *wf)
-{
-    destroy_wah_file(wf);
-}
-//}}}
+#endif
 
 //{{{ uint32_t wahbm_speed_check(char *in)
 uint32_t wahbm_speed_check(char *in)
 {
-    struct wah_file wf = init_wahbm_file(in);
+    //struct wah_file wf = init_wahbm_file(in);
+    struct wahbm_file *wf = open_wahbm_file(in);
 
-    uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    uint32_t max_wah_size = (wf->gqt_header->num_variants + 31 - 1)/ 31;
 
     uint32_t i_0_s, i_1_s, i_2_s;
     uint32_t *i_0 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
@@ -144,9 +371,12 @@ uint32_t wahbm_speed_check(char *in)
     uint32_t i,j,k, i_to_j_d;
 
         
-    i_0_s = get_wah_bitmap_in_place(wf, 0, 0, &i_0);
-    i_1_s = get_wah_bitmap_in_place(wf, 0, 1, &i_1);
-    i_2_s = get_wah_bitmap_in_place(wf, 0, 2, &i_2);
+    //i_0_s = get_wah_bitmap_in_place(wf, 0, 0, &i_0);
+    i_0_s = get_wahbm_bitmap(wf, 0, 0, &i_0);
+    //i_1_s = get_wah_bitmap_in_place(wf, 0, 1, &i_1);
+    i_1_s = get_wahbm_bitmap(wf, 0, 1, &i_1);
+    //i_2_s = get_wah_bitmap_in_place(wf, 0, 2, &i_2);
+    i_2_s = get_wahbm_bitmap(wf, 0, 2, &i_2);
 
     memset(x_0_c, 0, sizeof(uint32_t)*max_wah_size);
     memset(x_1_c, 0, sizeof(uint32_t)*max_wah_size);
@@ -160,7 +390,7 @@ uint32_t wahbm_speed_check(char *in)
     printf("\nXOR\n");
     for (i = 0; i < 5; ++i) {
     start();
-    for (j = 1; j < wf.num_records; ++j) {
+    for (j = 1; j < wf->gqt_header->num_variants; ++j) {
 
         memcpy(x_0, x_0_c, x_0_sc * sizeof(uint32_t));
         memcpy(x_1, x_1_c, x_1_sc * sizeof(uint32_t));
@@ -170,9 +400,12 @@ uint32_t wahbm_speed_check(char *in)
         x_2_s = x_2_sc;
 
         //load in the jth record
-        j_0_s = get_wah_bitmap_in_place(wf, j, 0, &j_0);
-        j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
-        j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
+        //j_0_s = get_wah_bitmap_in_place(wf, j, 0, &j_0);
+        j_0_s = get_wahbm_bitmap(wf, j, 0, &j_0);
+        //j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
+        j_1_s = get_wahbm_bitmap(wf, j, 1, &j_1);
+        //j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
+        j_2_s = get_wahbm_bitmap(wf, j, 2, &j_2);
         //find the xor of all 4
         
         x_0_s =  wah_in_place_xor(x_0, x_0_s, j_0, j_0_s);
@@ -186,7 +419,7 @@ uint32_t wahbm_speed_check(char *in)
     printf("\nAND\n");
     for (i = 0; i < 5; ++i) {
     start();
-    for (j = 1; j < wf.num_records; ++j) {
+    for (j = 1; j < wf->gqt_header->num_variants; ++j) {
 
         memcpy(x_0, x_0_c, x_0_sc * sizeof(uint32_t));
         memcpy(x_1, x_1_c, x_1_sc * sizeof(uint32_t));
@@ -196,9 +429,12 @@ uint32_t wahbm_speed_check(char *in)
         x_2_s = x_2_sc;
 
         //load in the jth record
-        j_0_s = get_wah_bitmap_in_place(wf, j, 0, &j_0);
-        j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
-        j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
+        //j_0_s = get_wah_bitmap_in_place(wf, j, 0, &j_0);
+        j_0_s = get_wahbm_bitmap(wf, j, 0, &j_0);
+        //j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
+        j_1_s = get_wahbm_bitmap(wf, j, 1, &j_1);
+        //j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
+        j_2_s = get_wahbm_bitmap(wf, j, 2, &j_2);
         //find the xor of all 4
         
         x_0_s =  wah_in_place_and(x_0, x_0_s, j_0, j_0_s);
@@ -212,7 +448,7 @@ uint32_t wahbm_speed_check(char *in)
     printf("\nOR\n");
     for (i = 0; i < 5; ++i) {
     start();
-    for (j = 1; j < wf.num_records; ++j) {
+    for (j = 1; j < wf->gqt_header->num_variants; ++j) {
 
         memcpy(x_0, x_0_c, x_0_sc * sizeof(uint32_t));
         memcpy(x_1, x_1_c, x_1_sc * sizeof(uint32_t));
@@ -222,9 +458,12 @@ uint32_t wahbm_speed_check(char *in)
         x_2_s = x_2_sc;
 
         //load in the jth record
-        j_0_s = get_wah_bitmap_in_place(wf, j, 0, &j_0);
-        j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
-        j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
+        //j_0_s = get_wah_bitmap_in_place(wf, j, 0, &j_0);
+        j_0_s = get_wahbm_bitmap(wf, j, 0, &j_0);
+        //j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
+        j_1_s = get_wahbm_bitmap(wf, j, 1, &j_1);
+        //j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
+        j_2_s = get_wahbm_bitmap(wf, j, 2, &j_2);
         //find the xor of all 4
         
         x_0_s =  wah_in_place_or(x_0, x_0_s, j_0, j_0_s);
@@ -238,7 +477,7 @@ uint32_t wahbm_speed_check(char *in)
     printf("\nOR\n");
     for (i = 0; i < 5; ++i) {
     start();
-    for (j = 1; j < wf.num_records; ++j) {
+    for (j = 1; j < wf->gqt_header->num_variants; ++j) {
 
         //memcpy(x_0, x_0_c, x_0_sc * sizeof(uint32_t));
         //memcpy(x_1, x_1_c, x_1_sc * sizeof(uint32_t));
@@ -248,9 +487,12 @@ uint32_t wahbm_speed_check(char *in)
         //x_2_s = x_2_sc;
 
         //load in the jth record
-        j_0_s = get_wah_bitmap_in_place(wf, j, 0, &j_0);
-        j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
-        j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
+        //j_0_s = get_wah_bitmap_in_place(wf, j, 0, &j_0);
+        j_0_s = get_wahbm_bitmap(wf, j, 0, &j_0);
+        //j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
+        j_1_s = get_wahbm_bitmap(wf, j, 1, &j_1);
+        //j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
+        j_2_s = get_wahbm_bitmap(wf, j, 2, &j_2);
         //find the xor of all 4
         
         x_0_s =  wah_or_b(x_0, i_0, i_0_s, j_0, j_0_s);
@@ -261,7 +503,8 @@ uint32_t wahbm_speed_check(char *in)
     printf("%lu\n", report());
     }
 
-    destroy_wahbm_file(&wf);
+    //destroy_wah_file(&wf);
+    destroy_wahbm_file(wf);
 
     return 0;
 }
@@ -271,9 +514,11 @@ uint32_t wahbm_speed_check(char *in)
 uint32_t wahbm_pca_by_name(char *in, char *out)
 {
 
-    struct wah_file wf = init_wahbm_file(in);
+    //struct wah_file wf = init_wahbm_file(in);
+    struct wahbm_file *wf = open_wahbm_file(in);
 
-    uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    //uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    uint32_t max_wah_size = (wf->gqt_header->num_variants + 31 - 1)/ 31;
 
     uint32_t i_0_s, i_1_s, i_2_s;
     uint32_t *i_0 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
@@ -340,16 +585,20 @@ uint32_t wahbm_pca_by_name(char *in, char *out)
                   t_j_print                     = 0;
 #endif
 
-    for (i = 0; i < wf.num_records; ++i) {
+    //for (i = 0; i < wf.num_records; ++i) {
+    for (i = 0; i < wf->gqt_header->num_variants; ++i) {
         //load in the ith record
 
 #ifdef time_wahbm_pca_by_name
         start();
 #endif
 
-        i_0_s = get_wah_bitmap_in_place(wf, i, 0, &i_0);
-        i_1_s = get_wah_bitmap_in_place(wf, i, 1, &i_1);
-        i_2_s = get_wah_bitmap_in_place(wf, i, 2, &i_2);
+        //i_0_s = get_wah_bitmap_in_place(wf, i, 0, &i_0);
+        i_0_s = get_wahbm_bitmap(wf, i, 0, &i_0);
+        //i_1_s = get_wah_bitmap_in_place(wf, i, 1, &i_1);
+        i_1_s = get_wahbm_bitmap(wf, i, 1, &i_1);
+        //i_2_s = get_wah_bitmap_in_place(wf, i, 2, &i_2);
+        i_2_s = get_wahbm_bitmap(wf, i, 2, &i_2);
 
 #ifdef time_wahbm_pca_by_name
         stop();
@@ -383,7 +632,8 @@ uint32_t wahbm_pca_by_name(char *in, char *out)
         t_i_wah_in_place_or += report();
 #endif
 
-        for (j = i+1; j < wf.num_records; ++j) {
+        //for (j = i+1; j < wf.num_records; ++j) {
+        for (j = i+1; j < wf->gqt_header->num_variants; ++j) {
 
 #ifdef time_wahbm_pca_by_name
             start();
@@ -406,9 +656,12 @@ uint32_t wahbm_pca_by_name(char *in, char *out)
 #endif
 
             //load in the jth record
-            j_0_s = get_wah_bitmap_in_place(wf, j, 0, &j_0);
-            j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
-            j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
+            //j_0_s = get_wah_bitmap_in_place(wf, j, 0, &j_0);
+            j_0_s = get_wahbm_bitmap(wf, j, 0, &j_0);
+            //j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
+            j_1_s = get_wahbm_bitmap(wf, j, 1, &j_1);
+            //j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
+            j_2_s = get_wahbm_bitmap(wf, j, 2, &j_2);
             //find the xor of all 4
             
 #ifdef time_wahbm_pca_by_name
@@ -492,7 +745,9 @@ uint32_t wahbm_pca_by_name(char *in, char *out)
 
             if (j!=i+1)
                 printf("\t");
-            printf("%f", ((float)i_to_j_d)/((float)wf.num_fields));
+            //printf("%f", ((float)i_to_j_d)/((float)wf.num_fields));
+            printf("%f",
+                   ((float)i_to_j_d)/((float)wf->gqt_header->num_variants));
 
 #ifdef time_wahbm_pca_by_name
             stop();
@@ -547,7 +802,8 @@ uint32_t wahbm_pca_by_name(char *in, char *out)
 #endif
 
 
-    destroy_wahbm_file(&wf);
+    //destroy_wah_file(&wf);
+    destroy_wahbm_file(wf);
 
     return 0;
 }
@@ -561,9 +817,11 @@ uint32_t wahbm_hamm_dist_by_name(char *in, char *out)
     if (!f)
         err(EX_CANTCREAT, "Cannot open file \"%s\"", out);
 
-    struct wah_file wf = init_wahbm_file(in);
+    //struct wah_file wf = init_wahbm_file(in);
+    struct wahbm_file *wf = open_wahbm_file(in);
 
-    uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    //uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    uint32_t max_wah_size = (wf->gqt_header->num_variants + 31 - 1)/ 31;
 
     uint32_t i_0_s, i_1_s, i_2_s, i_a_s;
     uint32_t *i_0 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
@@ -608,22 +866,30 @@ uint32_t wahbm_hamm_dist_by_name(char *in, char *out)
 
     uint32_t i,j,k, i_to_j_d;
 
-    for (i = 0; i < wf.num_records; ++i) {
+    //for (i = 0; i < wf.num_records; ++i) {
+    for (i = 0; i < wf->gqt_header->num_variants; ++i) {
         //load in the ith record
 
-        i_0_s = get_wah_bitmap_in_place(wf, i, 0, &i_0);
-        i_1_s = get_wah_bitmap_in_place(wf, i, 1, &i_1);
-        i_2_s = get_wah_bitmap_in_place(wf, i, 2, &i_2);
+        //i_0_s = get_wah_bitmap_in_place(wf, i, 0, &i_0);
+        i_0_s = get_wahbm_bitmap(wf, i, 0, &i_0);
+        //i_1_s = get_wah_bitmap_in_place(wf, i, 1, &i_1);
+        i_1_s = get_wahbm_bitmap(wf, i, 1, &i_1);
+        //i_2_s = get_wah_bitmap_in_place(wf, i, 2, &i_2);
+        i_2_s = get_wahbm_bitmap(wf, i, 2, &i_2);
 
         memset(i_a, 0, sizeof(uint32_t)*max_wah_size);
         i_a_s = wah_in_place_or(i_a, max_wah_size, i_1, i_1_s);
         i_a_s = wah_in_place_or(i_a, max_wah_size, i_2, i_2_s);
 
-        for (j = i+1; j < wf.num_records; ++j) {
+        //for (j = i+1; j < wf.num_records; ++j) {
+        for (j = i+1; j < wf->gqt_header->num_variants; ++j) {
             //load in the jth record
-            j_0_s = get_wah_bitmap_in_place(wf, j, 0, &j_0);
-            j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
-            j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
+            //j_0_s = get_wah_bitmap_in_place(wf, j, 0, &j_0);
+            j_0_s = get_wahbm_bitmap(wf, j, 0, &j_0);
+            //j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
+            j_1_s = get_wahbm_bitmap(wf, j, 1, &j_1);
+            //j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
+            j_2_s = get_wahbm_bitmap(wf, j, 2, &j_2);
 
 
             memset(j_r,   0, sizeof(uint32_t)*max_wah_size);
@@ -690,7 +956,8 @@ uint32_t wahbm_hamm_dist_by_name(char *in, char *out)
     }
 
     fclose(f);
-    destroy_wahbm_file(&wf);
+    //destroy_wah_file(&wf);
+    destroy_wahbm_file(wf);
 
     return 0;
 }
@@ -704,9 +971,10 @@ uint32_t wahbm_shared_by_name(char *in, char *out)
     if (!f)
         err(EX_CANTCREAT, "Cannot open file \"%s\"", out);
 
-    struct wah_file wf = init_wahbm_file(in);
+    //struct wah_file wf = init_wahbm_file(in);
+    struct wahbm_file *wf = open_wahbm_file(in);
 
-    uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    uint32_t max_wah_size = (wf->gqt_header->num_variants + 31 - 1)/ 31;
 
     uint32_t i_1_s, i_2_s, i_a_s, i_a_c_s;
     uint32_t *i_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
@@ -736,19 +1004,25 @@ uint32_t wahbm_shared_by_name(char *in, char *out)
 
     uint32_t i,j,k, i_to_j_d;
 
-    for (i = 0; i < wf.num_records; ++i) {
+    //for (i = 0; i < wf.num_records; ++i) {
+    for (i = 0; i < wf->gqt_header->num_variants; ++i) {
         //load in the ith record
-        i_1_s = get_wah_bitmap_in_place(wf, i, 1, &i_1);
-        i_2_s = get_wah_bitmap_in_place(wf, i, 2, &i_2);
+        //i_1_s = get_wah_bitmap_in_place(wf, i, 1, &i_1);
+        i_1_s = get_wahbm_bitmap(wf, i, 1, &i_1);
+        //i_2_s = get_wah_bitmap_in_place(wf, i, 2, &i_2);
+        i_2_s = get_wahbm_bitmap(wf, i, 2, &i_2);
 
         memset(i_a, 0, sizeof(uint32_t)*max_wah_size);
         i_a_s = wah_in_place_or(i_a, max_wah_size, i_1, i_1_s);
         i_a_s = wah_in_place_or(i_a, max_wah_size, i_2, i_2_s);
 
-        for (j = i+1; j < wf.num_records; ++j) {
+        //for (j = i+1; j < wf.num_records; ++j) {
+        for (j = i+1; j < wf->gqt_header->num_variants; ++j) {
             //load in the jth record
-            j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
-            j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
+            //j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
+            j_1_s = get_wahbm_bitmap(wf, j, 1, &j_1);
+            //j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
+            j_2_s = get_wahbm_bitmap(wf, j, 2, &j_2);
 
             memset(j_a,   0, sizeof(uint32_t)*max_wah_size);
 
@@ -775,20 +1049,21 @@ uint32_t wahbm_shared_by_name(char *in, char *out)
     }
 
     fclose(f);
-    destroy_wahbm_file(&wf);
+    //destroy_wah_file(&wf);
+    destroy_wahbm_file(wf);
 
     return 0;
 }
 //}}}
 
 //{{{ uint32_t wahbm_shared_by_name(char *in, char *out)
-uint32_t wahbm_shared_by_name_subpop(struct wah_file *wf,
+uint32_t wahbm_shared_by_name_subpop(struct wahbm_file *wf,
                                      uint32_t *record_ids,
                                      uint32_t num_records)
 {
     //struct wah_file wf = init_wahbm_file(in);
 
-    uint32_t max_wah_size = (wf->num_fields + 31 - 1)/ 31;
+    uint32_t max_wah_size = (wf->gqt_header->num_variants + 31 - 1)/ 31;
 
     uint32_t i_1_s, i_2_s, i_a_s, i_a_c_s;
     uint32_t *i_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
@@ -820,8 +1095,10 @@ uint32_t wahbm_shared_by_name_subpop(struct wah_file *wf,
 
     for (i = 0; i < num_records; ++i) {
         //load in the ith record
-        i_1_s = get_wah_bitmap_in_place(*wf, record_ids[i], 1, &i_1);
-        i_2_s = get_wah_bitmap_in_place(*wf, record_ids[i], 2, &i_2);
+        //i_1_s = get_wah_bitmap_in_place(*wf, record_ids[i], 1, &i_1);
+        i_1_s = get_wahbm_bitmap(wf, record_ids[i], 1, &i_1);
+        //i_2_s = get_wah_bitmap_in_place(*wf, record_ids[i], 2, &i_2);
+        i_2_s = get_wahbm_bitmap(wf, record_ids[i], 2, &i_2);
 
         memset(i_a, 0, sizeof(uint32_t)*max_wah_size);
         i_a_s = wah_in_place_or(i_a, max_wah_size, i_1, i_1_s);
@@ -829,8 +1106,10 @@ uint32_t wahbm_shared_by_name_subpop(struct wah_file *wf,
 
         for (j = i+1; j < num_records; ++j) {
             //load in the jth record
-            j_1_s = get_wah_bitmap_in_place(*wf, record_ids[j], 1, &j_1);
-            j_2_s = get_wah_bitmap_in_place(*wf, record_ids[j], 2, &j_2);
+            //j_1_s = get_wah_bitmap_in_place(*wf, record_ids[j], 1, &j_1);
+            j_1_s = get_wahbm_bitmap(wf, record_ids[j], 1, &j_1);
+            //j_2_s = get_wah_bitmap_in_place(*wf, record_ids[j], 2, &j_2);
+            j_2_s = get_wahbm_bitmap(wf, record_ids[j], 2, &j_2);
 
             memset(j_a,   0, sizeof(uint32_t)*max_wah_size);
 
@@ -863,9 +1142,9 @@ uint32_t wahbm_shared_by_name_subpop(struct wah_file *wf,
 //{{{ uint32_t wahbm_top_n_matches_by_name(char *in, uint32_t n)
 uint32_t wahbm_top_n_matches_by_name(char *in, uint32_t num_matches)
 {
-    struct wah_file wf = init_wahbm_file(in);
+    struct wahbm_file *wf = open_wahbm_file(in);
 
-    uint32_t max_wah_size = (wf.num_fields + 31 - 1)/ 31;
+    uint32_t max_wah_size = (wf->gqt_header->num_variants + 31 - 1)/ 31;
 
     uint32_t i_0_s, i_1_s, i_2_s;
     uint32_t *i_1 = (uint32_t *) malloc(sizeof(uint32_t)*max_wah_size);
@@ -908,11 +1187,13 @@ uint32_t wahbm_top_n_matches_by_name(char *in, uint32_t num_matches)
     uint32_t i,j,k,l, i_to_j_d;
     uint32_t leading_zeros, v;
 
-    for (i = 0; i < wf.num_records; ++i) {
+    for (i = 0; i < wf->gqt_header->num_variants; ++i) {
         //load in the ith record
 
-        i_1_s = get_wah_bitmap_in_place(wf, i, 1, &i_1);
-        i_2_s = get_wah_bitmap_in_place(wf, i, 2, &i_2);
+        //i_1_s = get_wah_bitmap_in_place(wf, i, 1, &i_1);
+        i_1_s = get_wahbm_bitmap(wf, i, 1, &i_1);
+        //i_2_s = get_wah_bitmap_in_place(wf, i, 2, &i_2);
+        i_2_s = get_wahbm_bitmap(wf, i, 2, &i_2);
 
         memset(x_1_c, 0, sizeof(uint32_t)*max_wah_size);
         memset(x_2_c, 0, sizeof(uint32_t)*max_wah_size);
@@ -920,7 +1201,7 @@ uint32_t wahbm_top_n_matches_by_name(char *in, uint32_t num_matches)
         x_1_sc = wah_in_place_or(x_1_c, max_wah_size, i_1, i_1_s);
         x_2_sc = wah_in_place_or(x_2_c, max_wah_size, i_2, i_2_s);
         
-        for (j = i+1; j < wf.num_records; ++j) {
+        for (j = i+1; j < wf->gqt_header->num_variants; ++j) {
             memcpy(x_1, x_1_c, x_1_sc * sizeof(uint32_t));
             memcpy(x_2, x_2_c, x_2_sc * sizeof(uint32_t));
             x_1_s = x_1_sc;
@@ -929,8 +1210,10 @@ uint32_t wahbm_top_n_matches_by_name(char *in, uint32_t num_matches)
             memset(j_1, 0, sizeof(uint32_t)*max_wah_size);
             memset(j_2, 0, sizeof(uint32_t)*max_wah_size);
             //load in the jth record
-            j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
-            j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
+            //j_1_s = get_wah_bitmap_in_place(wf, j, 1, &j_1);
+            j_1_s = get_wahbm_bitmap(wf, j, 1, &j_1);
+            //j_2_s = get_wah_bitmap_in_place(wf, j, 2, &j_2);
+            j_2_s = get_wahbm_bitmap(wf, j, 2, &j_2);
             //find the xor of all 4
             
             x_1_s =  wah_in_place_and(x_1, x_1_s, j_1, j_1_s);
@@ -957,7 +1240,7 @@ uint32_t wahbm_top_n_matches_by_name(char *in, uint32_t num_matches)
                         //printf(" %u ", leading_zeros);
                         score = score + 
                             pow((((double)(k*31 + leading_zeros))/
-                            ((double)wf.num_fields)),2);
+                            ((double)wf->gqt_header->num_variants)),2);
                         //printf("L%u:", leading_zeros);
                         v &= ~(1 << (32 - leading_zeros - 1));
                         num_hits += 1;
@@ -982,13 +1265,14 @@ uint32_t wahbm_top_n_matches_by_name(char *in, uint32_t num_matches)
         printf("\n");
     }
 
-    destroy_wahbm_file(&wf);
+    //destroy_wah_file(&wf);
+    destroy_wahbm_file(wf);
     return 0;
 }
 //}}}
 
-//{{{ uint32_t print_wahbm(struct wah_file wf,
-uint32_t print_wahbm(struct wah_file wf,
+//{{{ uint32_t print_wahbm(struct wahbm_file *wf,
+uint32_t print_wahbm(struct wahbm_file *wf,
                      uint32_t *record_ids,
                      uint32_t num_r,
                      uint32_t format)
@@ -996,29 +1280,30 @@ uint32_t print_wahbm(struct wah_file wf,
     uint32_t i,j,k,l, bm_size, to_print = num_r;
     uint32_t *bm = NULL;
 
-    uint32_t num_ints_per_record = 1 + ((wf.num_fields - 1) / 16);
+    uint32_t num_ints_per_record = 1 + ((wf->gqt_header->num_variants-1)/ 16);
 
-    uint32_t *output = (uint32_t *)malloc(wf.num_fields*sizeof(uint32_t));
+    uint32_t *output = (uint32_t *)
+            malloc((wf->gqt_header->num_variants)*sizeof(uint32_t));
     if (!output )
         err(EX_OSERR, "malloc error");
 
     if (num_r == 0)
-        to_print = wf.num_records;
+        to_print = wf->gqt_header->num_samples;
 
     for (i = 0; i < to_print; ++i) {
-        memset(output, 0, wf.num_fields*sizeof(uint32_t));
+        memset(output, 0, (wf->gqt_header->num_variants)*sizeof(uint32_t));
         for (j = 0; j < 4; ++j) {
             // get the compressed bitmap
             if (num_r > 0)
-                bm_size = get_wah_bitmap(wf,
-                                         record_ids[i],
-                                         j,
-                                         &bm);
+                bm_size = get_wahbm_bitmap(wf,
+                                           record_ids[i],
+                                           j,
+                                           &bm);
             else
-                bm_size = get_wah_bitmap(wf,
-                                         i,
-                                         j,
-                                         &bm);
+                bm_size = get_wahbm_bitmap(wf,
+                                           i,
+                                           j,
+                                           &bm);
 
             // decompress 
             uint32_t *ints = NULL;
@@ -1035,17 +1320,17 @@ uint32_t print_wahbm(struct wah_file wf,
 
                     output_i += 1;
 
-                    if (output_i >= wf.num_fields)
+                    if (output_i >= wf->gqt_header->num_variants)
                         break;
                 }
-                if (output_i >= wf.num_fields)
+                if (output_i >= wf->gqt_header->num_variants)
                     break;
             }
 
             free(ints);
         }
 
-        for (j = 0; j < wf.num_fields; ++j) {
+        for (j = 0; j < wf->gqt_header->num_variants; ++j) {
             if (j != 0)
                 printf(" ");
             printf("%u", output[j]);
@@ -1122,14 +1407,17 @@ uint32_t print_by_name_wahbm(char *wahbm_file_name,
                                uint32_t num_r,
                                uint32_t format)
 {
-    struct wah_file wf = init_wahbm_file(wahbm_file_name);
+    //struct wah_file wf = init_wahbm_file(wahbm_file_name);
+    struct wahbm_file *wf = open_wahbm_file(wahbm_file_name);
     uint32_t r = print_wahbm(wf, record_ids, num_r, format);
-    destroy_wahbm_file(&wf);
+    //destroy_wah_file(&wf);
+    destroy_wahbm_file(wf);
     return r;
 }
 //}}} 
 
-//{{{ uint32_t get_wah_bitmap(struct wah_file wf,
+#if 0
+//{{{ uint32_t get_wah_bitmap(struct wahbm_file *wf,
 uint32_t get_wah_bitmap(struct wah_file wf,
                         uint32_t wah_record,
                         uint32_t bitmap,
@@ -1186,9 +1474,10 @@ uint32_t get_wah_bitmap(struct wah_file wf,
     return (uint32_t)wah_size;
 }
 //}}}
+#endif
 
-//{{{ uint32_t range_records_w_exclude_wahbm(struct wah_file wf,
-uint32_t range_records_w_exclude_wahbm(struct wah_file wf,
+//{{{ uint32_t range_records_w_exclude_wahbm(struct wahbm_file *wf,
+uint32_t range_records_w_exclude_wahbm(struct wahbm_file *wf,
                                            uint32_t *record_ids,
                                            uint32_t num_r,
                                            uint32_t start_test_value,
@@ -1229,10 +1518,10 @@ uint32_t range_records_w_exclude_wahbm(struct wah_file wf,
                 continue;
             }
 
-            record_new_bm_size = get_wah_bitmap(wf,
-                                                record_ids[i],
-                                                j,
-                                                &record_new_bm);
+            record_new_bm_size = get_wahbm_bitmap(wf,
+                                                  record_ids[i],
+                                                  j,
+                                                  &record_new_bm);
 
             if (record_curr_bm == NULL) {
                 record_curr_bm = record_new_bm;
@@ -1279,8 +1568,8 @@ uint32_t range_records_w_exclude_wahbm(struct wah_file wf,
 }
 //}}}
 
-//{{{ uint32_t count_range_records_wahbm(struct wah_file wf,
-uint32_t count_range_records_wahbm(struct wah_file wf,
+//{{{ uint32_t count_range_records_wahbm(struct wahbm_file *wf,
+uint32_t count_range_records_wahbm(struct wahbm_file *wf,
                                        uint32_t *record_ids,
                                        uint32_t num_r,
                                        uint32_t start_test_value,
@@ -1288,7 +1577,8 @@ uint32_t count_range_records_wahbm(struct wah_file wf,
                                        uint32_t **R) 
 
 {
-    *R = (uint32_t *) calloc(wf.num_fields,sizeof(uint32_t));
+    //*R = (uint32_t *) calloc(wf.num_fields,sizeof(uint32_t));
+    *R = (uint32_t *) calloc(wf->gqt_header->num_variants,sizeof(uint32_t));
 
     uint32_t *record_curr_bm = NULL,
                  *record_new_bm = NULL,
@@ -1310,10 +1600,16 @@ uint32_t count_range_records_wahbm(struct wah_file wf,
 
         for (j = start_test_value; j < end_test_value; ++j) {
 
+            /*
             record_new_bm_size = get_wah_bitmap(wf,
                                                 record_ids[i],
                                                 j,
                                                 &record_new_bm);
+            */
+            record_new_bm_size = get_wahbm_bitmap(wf,
+                                                  record_ids[i],
+                                                  j,
+                                                  &record_new_bm);
 
             if (record_curr_bm == NULL) {
                 record_curr_bm = record_new_bm;
@@ -1336,30 +1632,30 @@ uint32_t count_range_records_wahbm(struct wah_file wf,
         }
 
         r_size = add_wahbm(*R,
-                           wf.num_fields,
+                           wf->gqt_header->num_variants,
                            record_curr_bm,
                            record_curr_bm_size);
     }
-    return wf.num_fields;
+    return wf->gqt_header->num_variants;
 }
 //}}}
 
-//{{{ uint32_t sum_range_records_wahbm(struct wah_file wf,
-uint32_t sum_range_records_wahbm(struct wah_file wf,
-                                     uint32_t *record_ids,
-                                     uint32_t num_r,
-                                     uint32_t **R) 
+//{{{ uint32_t sum_range_records_wahbm(struct wahbm_file *wf,
+uint32_t sum_range_records_wahbm(struct wahbm_file *wf,
+                                 uint32_t *record_ids,
+                                 uint32_t num_r,
+                                 uint32_t **R) 
 
 {
-    *R = (uint32_t *) calloc(wf.num_fields,sizeof(uint32_t));
+    *R = (uint32_t *) calloc(wf->gqt_header->num_variants,sizeof(uint32_t));
 
     uint32_t *record_curr_bm = NULL,
-                 *record_new_bm = NULL,
-                 *record_tmp_bm = NULL;
+             *record_new_bm = NULL,
+             *record_tmp_bm = NULL;
 
     uint32_t record_curr_bm_size,
-                 record_new_bm_size,
-                 record_tmp_bm_size;
+             record_new_bm_size,
+             record_tmp_bm_size;
 
     uint32_t i,j, r_size;
 
@@ -1373,11 +1669,17 @@ uint32_t sum_range_records_wahbm(struct wah_file wf,
 
         for (j = 0; j < 4; ++j) {
 
+            /*
             record_new_bm_size = get_wah_bitmap(wf,
                                                 record_ids[i],
                                                 j,
                                                 &record_new_bm);
-
+            */
+            record_new_bm_size = get_wahbm_bitmap(wf,
+                                                  record_ids[i],
+                                                  j,
+                                                  &record_new_bm);
+  
             if (record_curr_bm == NULL) {
                 record_curr_bm = record_new_bm;
                 record_curr_bm_size = record_new_bm_size;
@@ -1399,16 +1701,16 @@ uint32_t sum_range_records_wahbm(struct wah_file wf,
         }
 
         r_size = add_wahbm(*R,
-                           wf.num_fields,
+                           wf->gqt_header->num_variants,
                            record_curr_bm,
                            record_curr_bm_size);
     }
-    return wf.num_fields;
+    return wf->gqt_header->num_variants;
 }
 //}}}
 
-//{{{ uint32_t range_records_wahbm(struct wah_file wf,
-uint32_t range_records_wahbm(struct wah_file wf,
+//{{{ uint32_t range_records_wahbm(struct wahbm_file *wf,
+uint32_t range_records_wahbm(struct wahbm_file *wf,
                               uint32_t *record_ids,
                               uint32_t num_r,
                               uint32_t start_test_value,
@@ -1443,10 +1745,16 @@ uint32_t range_records_wahbm(struct wah_file wf,
 
         for (j = start_test_value; j < end_test_value; ++j) {
 
+            /*
             record_new_bm_size = get_wah_bitmap(wf,
                                                 record_ids[i],
                                                 j,
                                                 &record_new_bm);
+            */
+            record_new_bm_size = get_wahbm_bitmap(wf,
+                                                  record_ids[i],
+                                                  j,
+                                                  &record_new_bm);
 
             if (record_curr_bm == NULL) {
                 record_curr_bm = record_new_bm;
@@ -1495,20 +1803,21 @@ uint32_t range_records_wahbm(struct wah_file wf,
 
 //{{{ uint32_t add_wahbm(uint32_t *R,
 uint32_t add_wahbm(uint32_t *R,
-                       uint32_t r_size,
-                       uint32_t *wah,
-                       uint32_t wah_size)
+                   uint32_t r_size,
+                   uint32_t *wah,
+                   uint32_t wah_size)
 {
 
     uint32_t wah_c,
-                 wah_i,
-                 num_words,
-                 fill_bit,
-                 bits,
-                 bit,
-                 bit_i,
-                 word_i,
-                 field_i;
+             wah_i,
+             num_words,
+             fill_bit,
+             bits,
+             bit,
+             bit_i,
+             word_i,
+             field_i;
+
     field_i = 0;
 
     uint32_t v;
@@ -2205,8 +2514,8 @@ uint32_t p_pool_add_n_wahbm(uint32_t *R,
 //}}}
 
 //{{{ eq, ne, gt, gte, lt, lte :records_wahbm
-//{{{ uint32_t eq_records_wahbm(struct wah_file wf,
-uint32_t eq_records_wahbm(struct wah_file wf,
+//{{{ uint32_t eq_records_wahbm(struct wahbm_file *wf,
+uint32_t eq_records_wahbm(struct wahbm_file *wf,
                               uint32_t *record_ids,
                               uint32_t num_r,
                               uint32_t test_value,
@@ -2218,8 +2527,8 @@ uint32_t eq_records_wahbm(struct wah_file wf,
 }
 //}}}
 
-//{{{ uint32_t ne_records_wahbm(struct wah_file wf,
-uint32_t ne_records_wahbm(struct wah_file wf,
+//{{{ uint32_t ne_records_wahbm(struct wahbm_file *wf,
+uint32_t ne_records_wahbm(struct wahbm_file *wf,
                               uint32_t *record_ids,
                               uint32_t num_r,
                               uint32_t test_value,
@@ -2232,8 +2541,8 @@ uint32_t ne_records_wahbm(struct wah_file wf,
 }
 //}}}
 
-//{{{ uint32_t gt_records_wahbm(struct wah_file wf,
-uint32_t gt_records_wahbm(struct wah_file wf,
+//{{{ uint32_t gt_records_wahbm(struct wahbm_file *wf,
+uint32_t gt_records_wahbm(struct wahbm_file *wf,
                               uint32_t *record_ids,
                               uint32_t num_r,
                               uint32_t test_value,
@@ -2245,8 +2554,8 @@ uint32_t gt_records_wahbm(struct wah_file wf,
 }
 //}}}
 
-//{{{ uint32_t gte_records_wahbm(struct wah_file wf,
-uint32_t gte_records_wahbm(struct wah_file wf,
+//{{{ uint32_t gte_records_wahbm(struct wahbm_file *wf,
+uint32_t gte_records_wahbm(struct wahbm_file *wf,
                               uint32_t *record_ids,
                               uint32_t num_r,
                               uint32_t test_value,
@@ -2258,8 +2567,8 @@ uint32_t gte_records_wahbm(struct wah_file wf,
 }
 //}}}
 
-//{{{ uint32_t lt_records_wahbm(struct wah_file wf,
-uint32_t lt_records_wahbm(struct wah_file wf,
+//{{{ uint32_t lt_records_wahbm(struct wahbm_file *wf,
+uint32_t lt_records_wahbm(struct wahbm_file *wf,
                               uint32_t *record_ids,
                               uint32_t num_r,
                               uint32_t test_value,
@@ -2271,8 +2580,8 @@ uint32_t lt_records_wahbm(struct wah_file wf,
 }
 //}}}
 
-//{{{ uint32_t lte_records_wahbm(struct wah_file wf,
-uint32_t lte_records_wahbm(struct wah_file wf,
+//{{{ uint32_t lte_records_wahbm(struct wahbm_file *wf,
+uint32_t lte_records_wahbm(struct wahbm_file *wf,
                               uint32_t *record_ids,
                               uint32_t num_r,
                               uint32_t test_value,
@@ -2285,8 +2594,8 @@ uint32_t lte_records_wahbm(struct wah_file wf,
 //}}}
 //}}}
 
-//{{{ uint32_t gt_count_records_wahbm(struct wah_file wf,
-uint32_t gt_count_records_wahbm(struct wah_file wf,
+//{{{ uint32_t gt_count_records_wahbm(struct wahbm_file *wf,
+uint32_t gt_count_records_wahbm(struct wahbm_file *wf,
                                     uint32_t *record_ids,
                                     uint32_t num_r,
                                     uint32_t test_value,

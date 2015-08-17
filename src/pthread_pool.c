@@ -5,7 +5,8 @@
 #include <stdio.h>
 
 void * pool_start(void * (*thread_func)(void *), uint32_t threads) {
-	struct pool *p = (struct pool *) malloc(sizeof(struct pool) + (threads-1) * sizeof(pthread_t));
+	struct pool *p = (struct pool *) malloc(
+                sizeof(struct pool) + (threads-1) * sizeof(pthread_t));
         if (!p)
             err(EX_OSERR, "malloc error");
 	int i;
@@ -20,7 +21,8 @@ void * pool_start(void * (*thread_func)(void *), uint32_t threads) {
 	p->q = NULL;
 
 	for (i = 0; i < threads; i++) {
-		pthread_create(&p->threads[i], NULL, &thread, p);
+            ;
+		//pthread_create(&p->threads[i], NULL, &thread, p);
 	}
 
 	return p;

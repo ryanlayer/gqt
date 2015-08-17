@@ -28,6 +28,8 @@ all: clean $(TEST_NAMES) test
 	    $(SRC)/pthread_pool.c \
 	    $(SRC)/timer.c \
 	    $(SRC)/plt.c \
+	    $(SRC)/vid.c \
+	    $(SRC)/bim.c \
 	    $(SRC)/pq.c \
 	    $(SRC)/bcf.c \
 	    $(SRC)/ubin.c \

@@ -1,13 +1,17 @@
 #ifndef __WAH_H__
 #define __WAH_H__
 
+#if 0
 struct wah_file {
     FILE *file;
     char *file_name;
     uint32_t num_fields, num_records;
+    uint32_t word_size;
     uint64_t *record_offsets;
     long header_offset;
+    struct gqt_file_header *gqt_header;
 };
+#endif
 
 struct wah_active_word {
     uint32_t value, nbits;
@@ -36,6 +40,8 @@ struct wah_run {
                  num_words, // number of words in the run
                  is_fill; //is it a fill run
 };
+
+#if 0
 /**
  * @brief Open a WAH-encoded (non-bitmap) index and initialize the wah_file
  * data structure.
@@ -58,6 +64,7 @@ struct wah_run {
 struct wah_file init_wah_file(char *file_name);
 
 void destroy_wah_file(struct wah_file *wf);
+#endif
 
 /**
  * @brief   AND two WAH runs
@@ -438,6 +445,7 @@ uint32_t wah_to_ints(uint32_t *W,
                          uint32_t W_len,
                          uint32_t **O);
 
+#if 0
 /**
  * @brief Print a WAH encoded (non-bitmap) file.
  *
@@ -459,6 +467,7 @@ uint32_t print_wah(struct wah_file wf,
                        uint32_t *record_ids,
                        uint32_t num_r,
                        uint32_t format);
+#endif
 
 int append_active_word_b(uint32_t *R,
                          uint32_t R_len,

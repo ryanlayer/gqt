@@ -6,7 +6,7 @@
 
 
 int gqt_help(int argc, char **argv);
-int convert(int argc, char **argv);
+int convert(int argc, char **argv, char *full_cmd);
 int view(int argc, char **argv);
 int gt(int argc, char **argv);
 int sort(int argc, char **argv);
@@ -14,7 +14,7 @@ int count(int argc, char **argv);
 //int sum(int argc, char **argv);
 int query(int argc, char **argv, char *full_cmd);
 int sandbox(int argc, char **argv);
-int misc(int argc, char **argv);
+int misc(int argc, char **argv, char *full_cmd);
 int pop(char *op, int argc, char **argv, char *full_cmd);
 
 int main(int argc, char **argv)
@@ -37,7 +37,7 @@ int main(int argc, char **argv)
             quote_next = 1;
     }
 
-    if (strcmp(cmd,"convert") == 0) return convert(argc-2, argv+2);
+    if (strcmp(cmd,"convert") == 0) return convert(argc-2, argv+2, full_cmd);
     else if (strcmp(cmd,"view") == 0) return view(argc-2, argv+2);
     //else if (strcmp(cmd,"gt") == 0) return gt(argc-2, argv+2);
     //else if (strcmp(cmd,"sort") == 0) return sort(argc-2, argv+2);
@@ -54,7 +54,7 @@ int main(int argc, char **argv)
     else if (strcmp(cmd,"query") == 0) 
         return query(argc-1, argv+1, full_cmd);
     else if (strcmp(cmd,"sandbox") == 0) return sandbox(argc-2, argv+2);
-    else if (strcmp(cmd,"misc") == 0) return misc(argc-2, argv+2);
+    else if (strcmp(cmd,"misc") == 0) return misc(argc-2, argv+2, full_cmd);
     else {
         fprintf(stderr, "Unknown command\n");
         return gqt_help(argc, argv);

@@ -164,3 +164,28 @@ run $GQT convert ped -i $BCF -p test.ped
 assert_in_stderr "gqt: WARNING: None of the samples names from column 2 in PED file test.ped matched sample names in VCF/BCF ../data/10.1e4.var.bcf'" $LINENO
 assert_in_stderr "0 of 3 PED samples matched VCF/BCF database records." $LINENO
 rm_index
+
+# Test VID without VID header
+make_index
+run $GQT 
+rm_index
+
+# Test VID with VID header
+make_index
+rm_index
+
+# Test BIM without BIM header
+make_index
+rm_index
+
+# Test BIM with BIM header
+make_index
+rm_index
+
+# Test WAHBM without WAHBM header
+make_index
+rm_index
+
+# Test WAHBM with WAHBM header
+make_index
+rm_index

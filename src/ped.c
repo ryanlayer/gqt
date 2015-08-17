@@ -253,26 +253,32 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
     char *q_create_table, *q_create_table_tmp;
     int r = asprintf(&q_create_table,
                      "CREATE TABLE ped(BCF_ID INTEGER, BCF_Sample TEXT");
+    if (r == -1) err(EX_OSERR, "asprintf error");
 
     // Add fields from PED
     for (i = 0; i < num_ped_fields; ++i) {
-        if (ped_field_types[i] == 1)
+        if (ped_field_types[i] == 1) {
             r = asprintf(&q_create_table_tmp,
                          "%s, %s INTEGER",
                          q_create_table,
                          ped_field_names[i]);
 
-        else
+            if (r == -1) err(EX_OSERR, "asprintf error");
+
+        } else {
             r = asprintf(&q_create_table_tmp,
                          "%s, %s TEXT",
                          q_create_table,
                          ped_field_names[i]);
+            if (r == -1) err(EX_OSERR, "asprintf error");
+        }
 
         free(q_create_table);
         q_create_table = q_create_table_tmp;
     }
 
     r = asprintf(&q_create_table_tmp, "%s);", q_create_table);
+    if (r == -1) err(EX_OSERR, "asprintf error");
     free(q_create_table);
     q_create_table = q_create_table_tmp;
 
@@ -382,18 +388,23 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
 
         char *update_query_txt = "UPDATE ped SET ";
         for (i = 0; i < num_ped_fields; ++i) {
-            if (i != 0)
+            if (i != 0) {
                 r = asprintf(&update_query_txt,"%s,",update_query_txt);
+                if (r == -1) err(EX_OSERR, "asprintf error");
+            }
 
             r = asprintf(&update_query_txt,
                          "%s %s=?",
                          update_query_txt,
                          ped_field_names[i]);
+            if (r == -1) err(EX_OSERR, "asprintf error");
         }
 
         r = asprintf(&update_query_txt,
                      "%s WHERE BCF_Sample == ?;",
                      update_query_txt);
+
+        if (r == -1) err(EX_OSERR, "asprintf error");
 
         sqlite3_stmt *update_stmt = NULL;
 
@@ -527,12 +538,15 @@ uint32_t resolve_ind_query(uint32_t **R, char *query, char *ped_db_file)
 
     char *test_q;
     int r;
-    if (strlen(query) == 0)
+    if (strlen(query) == 0) {
         r = asprintf(&test_q, "SELECT BCF_ID FROM ped ORDER BY BCF_ID");
-    else
+        if (r == -1) err(EX_OSERR, "asprintf error");
+    } else {
         r = asprintf(&test_q,
                      "SELECT BCF_ID FROM ped WHERE %s ORDER BY BCF_ID;",
                      query);
+        if (r == -1) err(EX_OSERR, "asprintf error");
+    }
 
     //PRAGMA database.table_info(table-name);
 
@@ -579,14 +593,17 @@ uint32_t resolve_label_query(char ***R,
 
     char *test_q;
     int r;
-    if (strlen(query) == 0)
+    if (strlen(query) == 0) {
         r = asprintf(&test_q, "SELECT BCF_ID,%s FROM ped ORDER BY BCF_ID",
                 label_id);
-    else
+        if (r == -1) err(EX_OSERR, "asprintf error");
+    } else {
         r = asprintf(&test_q,
                      "SELECT BCF_ID,%s FROM ped WHERE %s ORDER BY BCF_ID;",
                      label_id,
                      query);
+        if (r == -1) err(EX_OSERR, "asprintf error");
+    }
 
     struct char_ll ll;
     ll.head = NULL;

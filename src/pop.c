@@ -157,6 +157,7 @@ int pop(char *op, int argc, char **argv, char *full_cmd)
         int auto_bim_file_name_size = asprintf(&bim_file_name,
                                                "%s",
                                                wahbm_file_name);
+        if ( auto_bim_file_name_size == -1) err(EX_OSERR, "asprintf error");
         strcpy(bim_file_name + strlen(bim_file_name) - 3, "bim");
 
         if ( access( bim_file_name, F_OK) != -1 ) {
@@ -174,6 +175,7 @@ int pop(char *op, int argc, char **argv, char *full_cmd)
         int auto_vid_file_name_size = asprintf(&vid_file_name,
                                                "%s",
                                                wahbm_file_name);
+        if ( auto_vid_file_name_size == -1) err(EX_OSERR, "asprintf error");
         strcpy(vid_file_name + strlen(vid_file_name) - 3, "vid");
 
         if ( access( vid_file_name, F_OK) != -1 ) {
@@ -191,6 +193,7 @@ int pop(char *op, int argc, char **argv, char *full_cmd)
         int auto_db_file_name_size = asprintf(&db_file_name,
                                               "%s",
                                               wahbm_file_name);
+        if (auto_db_file_name_size == -1) err(EX_OSERR, "asprintf error");
         strcpy(db_file_name + strlen(db_file_name) - 3, "db\0");
 
         if ( access( db_file_name, F_OK) != -1 ) {
@@ -896,17 +899,21 @@ void print_pop_result(char *op,
 
     char *info_s;
 
-    asprintf(&info_s, 
-            "##%s_%sVersion=%s\n"
-            "##%s_%sCommand=%s\n",
-            PROGRAM_NAME, op, VERSION,
-            PROGRAM_NAME, op, full_cmd);
+    int r = asprintf(&info_s, 
+                     "##%s_%sVersion=%s\n"
+                     "##%s_%sCommand=%s\n",
+                     PROGRAM_NAME, op, VERSION,
+                     PROGRAM_NAME, op, full_cmd);
+    if (r == -1) err(EX_OSERR, "asprintf error");
+
     append_out_buf(&outbuf, info_s, strlen(info_s));
 
-    asprintf(&info_s,
+    r = asprintf(&info_s,
              "##INFO=<ID=GQT_%s,Number=1,Type=Float,"
              "Description=\"GQT %s\">\n",
              op,op);
+    if (r == -1) err(EX_OSERR, "asprintf error");
+
     append_out_buf(&outbuf, info_s, strlen(info_s));
 
     char last_header_line[]="#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n";
@@ -917,10 +924,13 @@ void print_pop_result(char *op,
         append_out_buf(&outbuf,
                        qfile.lines[i],
                        qfile.line_lens[i]-1);
-        asprintf(&info_s,
-                 ";GQT_%s=%f",
-                 op,
-                 R[i]);
+        r = asprintf(&info_s,
+                     ";GQT_%s=%f",
+                     op,
+                     R[i]);
+     
+        if (r == -1) err(EX_OSERR, "asprintf error");
+
         append_out_buf(&outbuf, info_s, strlen(info_s));
 	append_out_buf(&outbuf,"\n",1);
     }
@@ -973,31 +983,37 @@ void print_calpha_result(uint32_t *R,
     char *info_s;
 
 
-    asprintf(&info_s, 
-            "##%s_calphaVersion=%s\n"
-            "##%s_calphaCommand=%s\n",
-            PROGRAM_NAME, VERSION,
-            PROGRAM_NAME, full_cmd);
+    int r = asprintf(&info_s, 
+                     "##%s_calphaVersion=%s\n"
+                     "##%s_calphaCommand=%s\n",
+                     PROGRAM_NAME, VERSION,
+                     PROGRAM_NAME, full_cmd);
+    if (r == -1) err(EX_OSERR, "asprintf error");
+
     append_out_buf(&outbuf, info_s, strlen(info_s));
 
-    asprintf(&info_s,
-             "##INFO=<ID=N_CASE,Number=1,Type=Integer,"
-             "Description=\"Number of cases\">\n");
+    r = asprintf(&info_s,
+                 "##INFO=<ID=N_CASE,Number=1,Type=Integer,"
+                 "Description=\"Number of cases\">\n");
+    if (r == -1) err(EX_OSERR, "asprintf error");
     append_out_buf(&outbuf, info_s, strlen(info_s));
 
-    asprintf(&info_s,
-             "##INFO=<ID=N_CTRL,Number=1,Type=Integer,"
-             "Description=\"Number of controls\">\n");
+    r = asprintf(&info_s,
+                 "##INFO=<ID=N_CTRL,Number=1,Type=Integer,"
+                 "Description=\"Number of controls\">\n");
+    if (r == -1) err(EX_OSERR, "asprintf error");
     append_out_buf(&outbuf, info_s, strlen(info_s));
 
-    asprintf(&info_s,
-             "##INFO=<ID=O_CASE,Number=1,Type=Integer,"
-             "Description=\"Number of variants observed in cases\">\n");
+    r = asprintf(&info_s,
+                 "##INFO=<ID=O_CASE,Number=1,Type=Integer,"
+                 "Description=\"Number of variants observed in cases\">\n");
+    if (r == -1) err(EX_OSERR, "asprintf error");
     append_out_buf(&outbuf, info_s, strlen(info_s));
 
-    asprintf(&info_s,
-             "##INFO=<ID=O_CTRL,Number=1,Type=Integer,"
-             "Description=\"Number of variants observed in controls\">\n");
+    r = asprintf(&info_s,
+                 "##INFO=<ID=O_CTRL,Number=1,Type=Integer,"
+                 "Description=\"Number of variants observed in controls\">\n");
+    if (r == -1) err(EX_OSERR, "asprintf error");
     append_out_buf(&outbuf, info_s, strlen(info_s));
 
     /*
@@ -1039,17 +1055,18 @@ void print_calpha_result(uint32_t *R,
         }
         */
 
-        asprintf(&info_s,
-                ";N_CASE=%u;"
-                "N_CTRL=%u;"
-                "O_CASE=%u;"
-                "O_CTRL=%u\n",
-                //"P_CASE_CTRL=%s\n",
-                n_cases,
-                n_ctrls,
-                R[i*(N*2+2) + 0],
-                R[i*(N*2+2) + 1]);
-                //P_csv);
+        r = asprintf(&info_s,
+                     ";N_CASE=%u;"
+                     "N_CTRL=%u;"
+                     "O_CASE=%u;"
+                     "O_CTRL=%u\n",
+                     //"P_CASE_CTRL=%s\n",
+                     n_cases,
+                     n_ctrls,
+                     R[i*(N*2+2) + 0],
+                     R[i*(N*2+2) + 1]);
+                     //P_csv);
+        if (r == -1) err(EX_OSERR, "asprintf error");
         append_out_buf(&outbuf, info_s, strlen(info_s));
     }
     free(info_s);

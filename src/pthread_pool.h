@@ -64,5 +64,5 @@ struct pool {
 	pthread_t threads[1];
 };
 
-static void * thread(void *arg);
+//static void * thread(void *arg);
 #endif

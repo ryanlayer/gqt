@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <sqlite3.h>
 #include <sys/stat.h>
+#include "genotq.h"
 
 #ifndef __PED_H__
 #define __PED_H__

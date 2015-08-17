@@ -1,14 +1,33 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "parse_q.h"
-#include "genotq.h"
-#include "unity.h"
 #include <math.h>
 #include <stdio.h>
 #include <inttypes.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sqlite3.h>
+
+#include "unity.h"
+
+#include "bcf.h"
+#include "bim.h"
+#include "bm.h"
+#include "genotq.h"
+#include "output_buffer.h"
+#include "parse_q.h"
+#include "ped.h"
+#include "plt.h"
+#include "pq.h"
+#include "pthread_pool.h"
+#include "quick_file.h"
+#include "timer.h"
+#include "ubin.h"
+#include "variant_metadata.h"
+#include "vid.h"
+#include "wah.h"
+#include "wahbm.h"
+#include "wahbm_compressed_in_place.h"
+#include "wahbm_in_place.h"
 
 //char *BCF_FILE = "../data/diff_gts.bcf";
 char *BCF_FILE = "../data/10.1e4.var.bcf";
@@ -1044,6 +1063,8 @@ void test_index_variant_metadata(void)
          *variant_index_file_name = ".tmp.gqtv",
          *variant_db_name = ".tmp.gqtv.db";
 
+    char *full_cmd = "test_index_variant_metadata";
+
     remove(gt_file_name);
     remove(bim_file_name);
     remove(vid_file_name);
@@ -1056,7 +1077,8 @@ void test_index_variant_metadata(void)
                                                        gt_file_name,
                                                        bim_file_name,
                                                        vid_file_name,
-                                                       tmp_dir);
+                                                       tmp_dir,
+                                                       full_cmd);
 
 
     char *LOF_field = "LOF";
@@ -1134,6 +1156,8 @@ void test_get_variant_metadata_bin_info(void)
          *variant_index_file_name = ".test_get_variant_metadata_bin_info.gqtv",
          *variant_db_name = ".test_get_variant_metadata_bin_info.gqtv.db";
 
+    char *full_cmd = "test_get_variant_metadata_bin_info";
+
     remove(gt_file_name);
     remove(bim_file_name);
     remove(vid_file_name);
@@ -1146,7 +1170,8 @@ void test_get_variant_metadata_bin_info(void)
                                                        gt_file_name,
                                                        bim_file_name,
                                                        vid_file_name,
-                                                       tmp_dir);
+                                                       tmp_dir,
+                                                       full_cmd);
 
 
     char *LOF_field = "LOF";
@@ -1241,6 +1266,8 @@ void test_get_query_bins(void)
          *variant_index_file_name = ".test_get_query_bins.gqtv",
          *variant_db_name = ".test_get_query_bins.gqtv.db";
 
+    char *full_cmd = "test_get_query_bins";
+
     remove(gt_file_name);
     remove(bim_file_name);
     remove(vid_file_name);
@@ -1254,7 +1281,8 @@ void test_get_query_bins(void)
                                                        gt_file_name,
                                                        bim_file_name,
                                                        vid_file_name,
-                                                       tmp_dir);
+                                                       tmp_dir,
+                                                       full_cmd);
 
 
     char *LOF_field = "LOF";
@@ -2467,6 +2495,8 @@ void test_get_variant_metadata_wah_bitmap_in_place(void)
          *variant_index_file_name = ".test_get_query_bins.gqtv",
          *variant_db_name = ".test_get_query_bins.gqtv.db";
 
+    char *full_cmd = "test_get_variant_metadata_wah_bitmap_in_place";
+
     remove(gt_file_name);
     remove(bim_file_name);
     remove(vid_file_name);
@@ -2480,7 +2510,8 @@ void test_get_variant_metadata_wah_bitmap_in_place(void)
                                                        gt_file_name,
                                                        bim_file_name,
                                                        vid_file_name,
-                                                       tmp_dir);
+                                                       tmp_dir,
+                                                       full_cmd);
 
 
     char *LOF_field = "LOF";
@@ -2567,7 +2598,7 @@ void test_get_variant_metadata_wah_bitmap_in_place(void)
                                                   &lof_md_type,
                                                   &source_file);
 
-    fprintf(stderr, "%llu\n", offset);
+    //fprintf(stderr, "%llu\n", offset);
 
     FILE *f = fopen(variant_index_file_name, "rb");
     fseek(f, offset, SEEK_SET);
@@ -2575,8 +2606,10 @@ void test_get_variant_metadata_wah_bitmap_in_place(void)
     r = fread(bin_sizes, sizeof(uint32_t), num_bins, f); 
 
     uint32_t i;
+    /*
     for (i = 0; i < num_bins; ++i)
         fprintf(stderr, "%u\n", bin_sizes[i]);
+    */
 
 
 
@@ -2636,5 +2669,316 @@ void test_put_it_all_together(void)
                                                 2,
                                                 &ws,
                                                 &w_lens);
+}
+///}}}
+
+//{{{void test_append_wahbm_to_wahbm_file(void)
+void test_plt_line_to_packed_ints(void)
+{
+
+    uint32_t num_variants = 60;
+
+    char *plt_1 = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                  "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0";
+
+    char *plt_2 = "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 "
+                  "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1";
+
+    char *plt_3 = "1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 "
+                  "1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0";
+
+    char *plt_4 = "1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                  "1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0";
+
+
+    uint32_t *ubin_1;
+    uint32_t ubin_len_1 = plt_line_to_packed_ints(plt_1, num_variants, &ubin_1);
+    TEST_ASSERT_EQUAL(1 + ((num_variants-1)/16), ubin_len_1);
+    TEST_ASSERT_EQUAL( 0, ubin_1[0]);
+    TEST_ASSERT_EQUAL( 0, ubin_1[1]);
+    TEST_ASSERT_EQUAL( 0, ubin_1[2]);
+    TEST_ASSERT_EQUAL( 0, ubin_1[3]);
+
+    uint32_t *ubin_2;
+    uint32_t ubin_len_2 = plt_line_to_packed_ints(plt_2, num_variants, &ubin_2);
+    TEST_ASSERT_EQUAL(1 + ((num_variants-1)/16), ubin_len_2);
+    // 01010101010101010101010101010101
+    TEST_ASSERT_EQUAL( 1431655765, ubin_2[0]);
+    // 01010101010101010101010101010101
+    TEST_ASSERT_EQUAL( 1431655765, ubin_2[1]);
+    // 01010101010101010101010101010101
+    TEST_ASSERT_EQUAL( 1431655765, ubin_2[2]);
+    // 01010101010101010101010100000000
+    TEST_ASSERT_EQUAL( 1431655680, ubin_2[3]);
+
+    uint32_t *ubin_3;
+    uint32_t ubin_len_3 = plt_line_to_packed_ints(plt_3, num_variants, &ubin_3);
+    TEST_ASSERT_EQUAL(1 + ((num_variants-1)/16), ubin_len_3);
+    //01000100010001000100010001000100
+    TEST_ASSERT_EQUAL( 1145324612, ubin_3[0]);
+    //01000100010001000100010001000100
+    TEST_ASSERT_EQUAL( 1145324612, ubin_3[1]);
+    //01000100010001000100010001000100
+    TEST_ASSERT_EQUAL( 1145324612, ubin_3[2]);
+    //01000100010001000100010000000000
+    TEST_ASSERT_EQUAL( 1145324544, ubin_3[3]);
+
+    uint32_t *ubin_4;
+    uint32_t ubin_len_4 = plt_line_to_packed_ints(plt_4, num_variants, &ubin_4);
+    TEST_ASSERT_EQUAL(1 + ((num_variants-1)/16), ubin_len_4);
+    //01000000000000000000000000000000
+    TEST_ASSERT_EQUAL( 1073741824, ubin_4[0]);
+    //00000000000000000000000000000100
+    TEST_ASSERT_EQUAL( 4, ubin_4[1]);
+    //00000000000000000000000000000000
+    TEST_ASSERT_EQUAL( 0, ubin_4[2]);
+    //00000000000000000000000000000000
+    TEST_ASSERT_EQUAL( 0, ubin_4[3]);
+
+
+
+    /*
+    uint32_t *wah_1;
+    uint32_t *wah_sizes_1;
+    uint32_t wah_len_1 = ubin_to_bitmap_wah(ubin_1,
+                                            ubin_len_1,
+                                            60,
+                                            &wah_1,
+                                            &wah_sizes_1);
+ 
+    */
+}
+//}}}
+
+//{{{ void test_ubin_to_bitmap_wah(void)
+void test_ubin_to_bitmap_wah(void)
+{
+
+    uint32_t num_variants = 60;
+
+    char *plt_1 = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                  "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0";
+
+    char *plt_2 = "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 "
+                  "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1";
+
+    char *plt_3 = "1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 "
+                  "1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0";
+
+    uint32_t *ubin_1;
+    uint32_t ubin_len_1 = plt_line_to_packed_ints(plt_1, num_variants, &ubin_1);
+
+    uint32_t *ubin_2;
+    uint32_t ubin_len_2 = plt_line_to_packed_ints(plt_2, num_variants, &ubin_2);
+
+    uint32_t *ubin_3;
+    uint32_t ubin_len_3 = plt_line_to_packed_ints(plt_3, num_variants, &ubin_3);
+
+    uint32_t *wah_1;
+    uint32_t *wah_sizes_1;
+    uint32_t wah_len_1 = ubin_to_bitmap_wah(ubin_1,
+                                            ubin_len_1,
+                                            60,
+                                            &wah_1,
+                                            &wah_sizes_1);
+    TEST_ASSERT_EQUAL( 2, wah_sizes_1[0]);
+    TEST_ASSERT_EQUAL( 1, wah_sizes_1[1]);
+    TEST_ASSERT_EQUAL( 1, wah_sizes_1[2]);
+    TEST_ASSERT_EQUAL( 1, wah_sizes_1[3]);
+
+    TEST_ASSERT_EQUAL( bin_char_to_int("01111111111111111111111111111111"),
+                       wah_1[0]);
+    TEST_ASSERT_EQUAL( bin_char_to_int("01111111111111111111111111111100"),
+                       wah_1[1]);
+    TEST_ASSERT_EQUAL( bin_char_to_int("10000000000000000000000000000010"),
+                       wah_1[2]);
+    TEST_ASSERT_EQUAL( bin_char_to_int("10000000000000000000000000000010"),
+                       wah_1[3]);
+    TEST_ASSERT_EQUAL( bin_char_to_int("10000000000000000000000000000010"),
+                       wah_1[4]);
+
+    /************************************************************************/
+    uint32_t *wah_2;
+    uint32_t *wah_sizes_2;
+    uint32_t wah_len_2 = ubin_to_bitmap_wah(ubin_2,
+                                            ubin_len_2,
+                                            60,
+                                            &wah_2,
+                                            &wah_sizes_2);
+    TEST_ASSERT_EQUAL( 1, wah_sizes_2[0]);
+    TEST_ASSERT_EQUAL( 2, wah_sizes_2[1]);
+    TEST_ASSERT_EQUAL( 1, wah_sizes_2[2]);
+    TEST_ASSERT_EQUAL( 1, wah_sizes_2[3]);
+
+    TEST_ASSERT_EQUAL( bin_char_to_int("10000000000000000000000000000010"),
+                       wah_2[0]);
+    TEST_ASSERT_EQUAL( bin_char_to_int("01111111111111111111111111111111"),
+                       wah_2[1]);
+    TEST_ASSERT_EQUAL( bin_char_to_int("01111111111111111111111111111100"),
+                       wah_2[2]);
+    TEST_ASSERT_EQUAL( bin_char_to_int("10000000000000000000000000000010"),
+                       wah_2[3]);
+    TEST_ASSERT_EQUAL( bin_char_to_int("10000000000000000000000000000010"),
+                       wah_2[4]);
+
+    /************************************************************************/
+
+    uint32_t *wah_3;
+    uint32_t *wah_sizes_3;
+    uint32_t wah_len_3 = ubin_to_bitmap_wah(ubin_3,
+                                            ubin_len_3,
+                                            60,
+                                            &wah_3,
+                                            &wah_sizes_3);
+
+    TEST_ASSERT_EQUAL( 2, wah_sizes_3[0]);
+    TEST_ASSERT_EQUAL( 2, wah_sizes_3[1]);
+    TEST_ASSERT_EQUAL( 1, wah_sizes_3[2]);
+    TEST_ASSERT_EQUAL( 1, wah_sizes_3[3]);
+
+    TEST_ASSERT_EQUAL( bin_char_to_int("00101010101010101010101010101010"),
+                       wah_3[0]);
+    TEST_ASSERT_EQUAL( bin_char_to_int("01010101010101010101010101010100"),
+                       wah_3[1]);
+
+    TEST_ASSERT_EQUAL( bin_char_to_int("01010101010101010101010101010101"),
+                       wah_3[2]);
+    TEST_ASSERT_EQUAL( bin_char_to_int("00101010101010101010101010101000"),
+                       wah_3[3]);
+
+    TEST_ASSERT_EQUAL( bin_char_to_int("10000000000000000000000000000010"),
+                       wah_3[4]);
+    TEST_ASSERT_EQUAL( bin_char_to_int("10000000000000000000000000000010"),
+                       wah_3[5]);
+}
+//}}}
+
+//{{{ void test_convert_file_by_name_ubin_to_wahbm(void)
+void test_convert_file_by_name_ubin_to_wahbm(void)
+{
+    char *ubin_file_name = "test_ubin";
+    char *gqt_file_name = "test_gqt";
+    char *full_cmd = "gqt convert bcf -i bcf";
+    uint32_t num_variants = 60;
+    uint32_t num_samples = 3;
+
+    char *plt_0 = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                  "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0";
+
+    char *plt_1 = "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 "
+                  "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1";
+
+    char *plt_2 = "1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 "
+                  "1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0";
+
+    uint32_t A[16] = {bin_char_to_int("01111111111111111111111111111111"),
+                      bin_char_to_int("01111111111111111111111111111100"),
+                      bin_char_to_int("10000000000000000000000000000010"),
+                      bin_char_to_int("10000000000000000000000000000010"),
+                      bin_char_to_int("10000000000000000000000000000010"),
+                      bin_char_to_int("10000000000000000000000000000010"),
+                      bin_char_to_int("01111111111111111111111111111111"),
+                      bin_char_to_int("01111111111111111111111111111100"),
+                      bin_char_to_int("10000000000000000000000000000010"),
+                      bin_char_to_int("10000000000000000000000000000010"),
+                      bin_char_to_int("00101010101010101010101010101010"),
+                      bin_char_to_int("01010101010101010101010101010100"),
+                      bin_char_to_int("01010101010101010101010101010101"),
+                      bin_char_to_int("00101010101010101010101010101000"),
+                      bin_char_to_int("10000000000000000000000000000010"),
+                      bin_char_to_int("10000000000000000000000000000010")};
+
+    uint32_t *ubin_0;
+    uint32_t ubin_len_0 = plt_line_to_packed_ints(plt_0, 60, &ubin_0);
+
+    uint32_t *ubin_1;
+    uint32_t ubin_len_1 = plt_line_to_packed_ints(plt_1, 60, &ubin_1);
+
+    uint32_t *ubin_2;
+    uint32_t ubin_len_2 = plt_line_to_packed_ints(plt_2, 60, &ubin_2);
+
+    FILE *f = fopen(ubin_file_name, "wb");
+    if (!f)
+        err(EX_IOERR, "Error opening to \"%s\"", ubin_file_name); 
+
+    if (fwrite(&num_variants, sizeof(uint32_t), 1, f) != 1)
+        err(EX_IOERR, "Error writing to \"%s\"", ubin_file_name); 
+
+    if (fwrite(&num_samples, sizeof(uint32_t), 1, f) != 1)
+        err(EX_IOERR, "Error writing to \"%s\"", ubin_file_name); 
+
+    if (fwrite(ubin_0, sizeof(uint32_t), ubin_len_0, f) != ubin_len_0)
+        err(EX_IOERR, "Error writing to \"%s\"", ubin_file_name); 
+
+    if (fwrite(ubin_1, sizeof(uint32_t), ubin_len_1, f) != ubin_len_1)
+        err(EX_IOERR, "Error writing to \"%s\"", ubin_file_name); 
+
+    if (fwrite(ubin_2, sizeof(uint32_t), ubin_len_2, f) != ubin_len_2)
+        err(EX_IOERR, "Error writing to \"%s\"", ubin_file_name); 
+
+    fclose(f);
+
+    uint32_t r = convert_file_by_name_ubin_to_wahbm(ubin_file_name,
+                                                    gqt_file_name,
+                                                    full_cmd);
+
+    struct wahbm_file *o = open_wahbm_file(gqt_file_name);
+
+    uint32_t *wah_bitmap = NULL;;
+    uint32_t wah_size = get_wahbm_bitmap(o, 0, 0, &wah_bitmap);
+
+    TEST_ASSERT_EQUAL(2, wah_size);
+    TEST_ASSERT_EQUAL(A[0], wah_bitmap[0]);
+    TEST_ASSERT_EQUAL(A[1], wah_bitmap[1]);
+
+    wah_size = get_wahbm_bitmap(o, 0, 1, &wah_bitmap);
+    TEST_ASSERT_EQUAL(1, wah_size);
+    TEST_ASSERT_EQUAL(A[2], wah_bitmap[0]);
+
+    wah_size = get_wahbm_bitmap(o, 0, 2, &wah_bitmap);
+    TEST_ASSERT_EQUAL(1, wah_size);
+    TEST_ASSERT_EQUAL(A[3], wah_bitmap[0]);
+
+    wah_size = get_wahbm_bitmap(o, 0, 3, &wah_bitmap);
+    TEST_ASSERT_EQUAL(1, wah_size);
+    TEST_ASSERT_EQUAL(A[4], wah_bitmap[0]);
+
+    wah_size = get_wahbm_bitmap(o, 1, 0, &wah_bitmap);
+    TEST_ASSERT_EQUAL(1, wah_size);
+    TEST_ASSERT_EQUAL(A[5], wah_bitmap[0]);
+
+    wah_size = get_wahbm_bitmap(o, 1, 1, &wah_bitmap);
+    TEST_ASSERT_EQUAL(2, wah_size);
+    TEST_ASSERT_EQUAL(A[6], wah_bitmap[0]);
+    TEST_ASSERT_EQUAL(A[7], wah_bitmap[1]);
+
+    wah_size = get_wahbm_bitmap(o, 1, 2, &wah_bitmap);
+    TEST_ASSERT_EQUAL(1, wah_size);
+    TEST_ASSERT_EQUAL(A[8], wah_bitmap[0]);
+
+    wah_size = get_wahbm_bitmap(o, 1, 3, &wah_bitmap);
+    TEST_ASSERT_EQUAL(1, wah_size);
+    TEST_ASSERT_EQUAL(A[9], wah_bitmap[0]);
+
+    wah_size = get_wahbm_bitmap(o, 2, 0, &wah_bitmap);
+    TEST_ASSERT_EQUAL(2, wah_size);
+    TEST_ASSERT_EQUAL(A[10], wah_bitmap[0]);
+    TEST_ASSERT_EQUAL(A[11], wah_bitmap[1]);
+
+    wah_size = get_wahbm_bitmap(o, 2, 1, &wah_bitmap);
+    TEST_ASSERT_EQUAL(2, wah_size);
+    TEST_ASSERT_EQUAL(A[12], wah_bitmap[0]);
+    TEST_ASSERT_EQUAL(A[13], wah_bitmap[1]);
+
+    wah_size = get_wahbm_bitmap(o, 2, 2, &wah_bitmap);
+    TEST_ASSERT_EQUAL(1, wah_size);
+    TEST_ASSERT_EQUAL(A[14], wah_bitmap[0]);
+
+    wah_size = get_wahbm_bitmap(o, 2, 3, &wah_bitmap);
+    TEST_ASSERT_EQUAL(1, wah_size);
+    TEST_ASSERT_EQUAL(A[15], wah_bitmap[0]);
+
+    free(wah_bitmap);
+    destroy_wahbm_file(o);
 }
 //}}}

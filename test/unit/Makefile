@@ -34,6 +34,8 @@ all: clean $(TEST_NAMES) test
 	    $(SRC)/plt.c \
 	    $(SRC)/variant_metadata.c \
 	    $(SRC)/ped.c \
+	    $(SRC)/vid.c \
+	    $(SRC)/bim.c \
 	    $(SRC)/pq.c \
 	    $(SRC)/bcf.c \
 	    $(SRC)/ubin.c \

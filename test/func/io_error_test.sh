@@ -85,8 +85,8 @@ rm_index
 make_index
 perl -e '$out = "foobar";print pack("V*",10,0,length($out),0,48,0,1,0,666,666);print $out' > truncated.bin
 run $GQT query -i $BCF.gqt  -b truncated.bin
-assert_fail_to_stderr $EX_NOINPUT $LINENO
-assert_in_stderr Zlib $LINENO
+assert_fail_to_stderr $EX_IOERR $LINENO
+assert_in_stderr truncated.bin $LINENO
 rm_index
 rm truncated.bin
 
@@ -163,4 +163,44 @@ echo -e "1\tI11\t1" >> test.ped
 run $GQT convert ped -i $BCF -p test.ped
 assert_in_stderr "gqt: WARNING: None of the samples names from column 2 in PED file test.ped matched sample names in VCF/BCF ../data/10.1e4.var.bcf'" $LINENO
 assert_in_stderr "0 of 3 PED samples matched VCF/BCF database records." $LINENO
+rm_index
+
+# Test VID without VID header
+make_index
+run $GQT query -i $BCF.gqt -v $BCF.gqt
+assert_fail_to_stderr $EX_NOINPUT $LINENO
+assert_in_stderr "gqt: File '../data/10.1e4.var.bcf.gqt' is not a VID file." $LINENO
+rm_index
+
+
+# Test VID with VID header
+make_index
+run $GQT query -i $BCF.gqt -v $BCF.vid
+assert_exit_code $EX_OK $LINENO
+rm_index
+
+# Test BIM without BIM header
+make_index
+run $GQT query -i $BCF.gqt -b $BCF.gqt
+assert_fail_to_stderr $EX_NOINPUT $LINENO
+assert_in_stderr "gqt: File '../data/10.1e4.var.bcf.gqt' is not a BIM file." $LINENO
+rm_index
+
+# Test BIM with BIM header
+make_index
+run $GQT query -i $BCF.gqt -b $BCF.bim
+assert_exit_code $EX_OK $LINENO
+rm_index
+
+# Test WAHBM without WAHBM header
+make_index
+run $GQT query -i $BCF -b $BCF.bim -v $BCF.vid -d $BCF.db
+assert_fail_to_stderr $EX_NOINPUT $LINENO
+assert_in_stderr "gqt: File '../data/10.1e4.var.bcf' is not a GQT file." $LINENO
+rm_index
+
+# Test WAHBM with WAHBM header
+make_index
+run $GQT query -i $BCF.gqt -b $BCF.bim -v $BCF.vid -d $BCF.db
+assert_exit_code $EX_OK $LINENO
 rm_index

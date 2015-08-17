@@ -5,7 +5,14 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <inttypes.h>
+
 #include "genotq.h"
+#include "vid.h"
+#include "wahbm_in_place.h"
+#include "ped.h"
+#include "wahbm.h"
+#include "bcf.h"
+#include "parse_q.h"
 #include "timer.h"
 #include "quick_file.h"
 #include "output_buffer.h"
@@ -263,9 +270,11 @@ int query(int argc, char **argv, char *full_cmd)
     }
 
     // open WAH/GQT file
-    struct wah_file wf = init_wahbm_file(wahbm_file_name);
+    //struct wah_file wf = init_wahbm_file(wahbm_file_name);
+    struct wahbm_file *wf = open_wahbm_file(wahbm_file_name);
 
     // open VID file
+    /*
     FILE *vid_f = fopen(vid_file_name, "rb");
     if (!vid_f)
         err(EX_NOINPUT, "Cannot read file\"%s\"", vid_file_name);
@@ -278,8 +287,13 @@ int query(int argc, char **argv, char *full_cmd)
     check_file_read(vid_file_name, vid_f, wf.num_fields, fr);
 
     fclose(vid_f);
+    */
 
-    uint32_t num_ints = (wf.num_fields + 32 - 1)/ 32;
+    struct vid_file *vid_f = open_vid_file(vid_file_name);
+    load_vid_data(vid_f);
+
+    //uint32_t num_ints = (wf.num_fields + 32 - 1)/ 32;
+    uint32_t num_ints = (wf->gqt_header->num_variants + 32 - 1)/ 32;
     uint32_t len_ints;
 
     for (i = 0; i < gt_q_count; ++i) {
@@ -295,14 +309,15 @@ int query(int argc, char **argv, char *full_cmd)
 
         // Enforce that the offsets of the relevant samples is 
         // within the number of samples in the GQT index.
-        if (id_lens[i] > wf.num_records) {
+        //if (id_lens[i] > wf.num_records) {
+        if (id_lens[i] > wf->gqt_header->num_samples) {
             fprintf(stderr, 
                     "ERROR: there are more samples in the PED database (%d) "
                     "that match this condition \nthan there are in the GQT "
                     "index (%d).  Perhaps your PED file is a superset of "
                     "the\nsamples in your VCF/BCF file?\n", 
                     id_lens[i], 
-                    wf.num_records);
+                    wf->gqt_header->num_samples);
             return 1;
         }
 
@@ -402,7 +417,7 @@ int query(int argc, char **argv, char *full_cmd)
             mapped_counts[i] = (uint32_t *)calloc(len_count_R,
                                                   sizeof(uint32_t));
             for ( j = 0; j < len_count_R; ++j)
-                mapped_counts[i][vids[j]] = counts[i][j];
+                mapped_counts[i][vid_f->vids[j]] = counts[i][j];
 
             gt_mask[i] = (uint32_t *) malloc(num_ints * sizeof(uint32_t));
             if (!gt_mask[i])
@@ -477,10 +492,10 @@ int query(int argc, char **argv, char *full_cmd)
         for (i = 0; i < num_ints; ++i) 
             masked_vid_count += popcount(final_mask[i]);
 
-        if (masked_vid_count <= wf.num_fields)
+        if (masked_vid_count <= wf->gqt_header->num_variants)
             printf("%u\n", masked_vid_count);
         else
-            printf("%u\n", wf.num_fields);
+            printf("%u\n", wf->gqt_header->num_variants);
 
     } else if ((v_is_set == 1) && (s_is_set == 1)) {
         get_bcf_query_result(final_mask,
@@ -489,7 +504,7 @@ int query(int argc, char **argv, char *full_cmd)
                              id_query_list,
                              id_lens,
                              gt_q_count,
-                             wf.num_fields,
+                             wf->gqt_header->num_variants,
                              vid_file_name,
                              src_bcf_file_name,
                              bcf_output);
@@ -505,27 +520,27 @@ int query(int argc, char **argv, char *full_cmd)
                 for (j = 0; j < p; ++j) {
                     leading_zeros = __builtin_clz(v);
 
-                    if (i*32 + leading_zeros + 1 > wf.num_fields)
+                    if (i*32 + leading_zeros + 1 > wf->gqt_header->num_variants)
                         break;
 
-                    hit = vids[leading_zeros + i*32];
+                    hit = vid_f->vids[leading_zeros + i*32];
 
                     mapped_mask[hit/32] |= 1 << (31-hit%32);
                     v &= ~(1 << (32 - leading_zeros - 1));
                 }
             }
-            if (i*32 + leading_zeros + 1 > wf.num_fields)
+            if (i*32 + leading_zeros + 1 > wf->gqt_header->num_variants)
                 break;
         }
 
         print_query_result(mapped_mask,
                            num_ints,
-                           vids,
+                           vid_f->vids,
                            q,
                            mapped_counts,
                            id_lens,
                            gt_q_count,
-                           wf.num_fields,
+                           wf->gqt_header->num_variants,
                            bim_file_name,
                            full_cmd);
     }
@@ -538,7 +553,8 @@ int query(int argc, char **argv, char *full_cmd)
             free(counts[j]);
     }
 
-    destroy_wahbm_file(&wf);
+    destroy_vid_file(vid_f);
+    destroy_wahbm_file(wf);
     return 0;
 }
 //}}}
@@ -562,6 +578,7 @@ void get_bcf_query_result(uint32_t *mask,
      * sorted list of line numbers we want.  So first we intersect the VID file
      * and the mask, then sort it.
      */
+    /*
     FILE *vid_f = fopen(vid_file_name, "rb");
     if (!vid_f)
         err(EX_NOINPUT, "Cannot read file\"%s\"", vid_file_name);
@@ -574,6 +591,9 @@ void get_bcf_query_result(uint32_t *mask,
     check_file_read(vid_file_name, vid_f, num_fields, fr);
 
     fclose(vid_f);
+    */
+    struct vid_file *vid_f = open_vid_file(vid_file_name);
+    load_vid_data(vid_f);
 
     uint32_t i, j, masked_vid_count = 0;
 
@@ -592,7 +612,7 @@ void get_bcf_query_result(uint32_t *mask,
             continue; /* skip a bunch of ops if you can */
         for (j = 0; j < 32; j++) {
             if (bytes & (1 << (31 - j))) {
-                masked_vids[masked_vid_i] = vids[i*32 + j];
+                masked_vids[masked_vid_i] = vid_f->vids[i*32 + j];
                 masked_vid_i+=1;
             }
         }
@@ -600,7 +620,7 @@ void get_bcf_query_result(uint32_t *mask,
             break;
     }
 
-    free(vids);
+    destroy_vid_file(vid_f);
 
     qsort(masked_vids, masked_vid_count, sizeof(uint32_t), compare_uint32_t);
 
@@ -629,6 +649,7 @@ void get_bcf_query_result(uint32_t *mask,
             break;
         bcf_line_i += 1;
     }
+
     hts_close(out);
     hts_close(fp);
 }

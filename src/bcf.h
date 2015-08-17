@@ -5,7 +5,7 @@
 #include <htslib/vcf.h>
 #include <htslib/tbx.h>
 #include <htslib/kstring.h>
-#include "genotq.h"
+#include "pq.h"
 
 struct bcf_file {
     char *file_name;
@@ -54,7 +54,8 @@ void sort_gt_md(pri_queue *q,
                 char *s_gt_of_name,
                 char *md_of_name,
                 char *bim_of_name,
-                char *vid_out);
+                char *vid_out,
+                char *full_cmd);
 
 void rotate_gt(uint32_t num_inds,
                uint32_t num_vars,
@@ -65,7 +66,9 @@ void compress_md(struct bcf_file *bcf_f,
                  char *md_of_name,
                  char *bim_out,
                  uint64_t *md_lens,
-                 uint32_t num_vars);
+                 uint32_t num_vars,
+                 uint32_t num_inds,
+                 char *full_cmd);
 
 int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                                           uint32_t num_fields,
@@ -73,7 +76,8 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                                           char *wah_out,
                                           char *bim_out,
                                           char *vid_out,
-                                          char *tmp_dir);
+                                          char *tmp_dir,
+                                          char *full_cmd);
 
 int get_variant_metadata_type(struct bcf_file *bcf_f,
                               char *field_name);

@@ -2,7 +2,7 @@ BIN=../bin
 OBJ=../obj
 HTS_ROOT=../../htslib
 #CFLAGS=-g -D_FILE_OFFSET_BITS=64
-CFLAGS=-O2 -D_FILE_OFFSET_BITS=64
+CFLAGS=-O2 -D_FILE_OFFSET_BITS=64 -Werror
 #CFLAGS=-Wall -O0 -g -fno-inline -fkeep-inline-functions -D_FILE_OFFSET_BITS=64 -fPIC -DDEBUG -D_DEBUG
 #CFLAGS+=-mavx -mavx2
 #CFLAGS+=-Dtime_wahbm_pca_by_name
@@ -19,6 +19,8 @@ LIB= timer.o \
      misc.o \
      query.o \
      pop.o \
+     bim.o \
+     vid.o \
      parse_q.yy.o \
      parse_q.o \
      ped.o \

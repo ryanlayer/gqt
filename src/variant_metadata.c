@@ -4,7 +4,9 @@
 #include <ctype.h>
 #include <sqlite3.h>
 #include <sys/stat.h>
-#include "genotq.h"
+#include <htslib/vcf.h>
+
+#include "variant_metadata.h"
 
 //{{{ static int get_rowid_callback(void *row_id,
 static int get_rowid_callback(void *row_id,

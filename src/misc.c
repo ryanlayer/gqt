@@ -3,13 +3,16 @@
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
-#include "genotq.h"
+
+#include "bcf.h"
+#include "ubin.h"
+#include "wahbm.h"
 
 int misc_help();
 int plt_ubin(char *in, char *out);
 int plt_vcf(char *in, char *out);
 int ubin_plt(char *in, char *out);
-int ubin_wahbm(char *in, char *out);
+int ubin_wahbm(char *in, char *out, char *full_cmd);
 int ubin_wahbm16(char *in, char *out);
 int ubin_wah(char *in, char *out);
 int vcf_plt(char *in,
@@ -25,7 +28,7 @@ int wahbm_shared(char *in, char *out);
 int top_n_matches(char *in, uint32_t num_matches);
 int speed_check(char *in);
 
-int misc(int argc, char **argv)
+int misc(int argc, char **argv, char *full_cmd)
 {
     if (argc < 2) return misc_help();
 
@@ -153,7 +156,7 @@ int misc(int argc, char **argv)
     if (strcmp(type, "plt-invert") == 0)  return plt_invert(in, out);
     if (strcmp(type, "plt-invert-ubin") == 0)  return plt_invert_ubin(in, out);
     if (strcmp(type, "ubin-plt") == 0) return ubin_plt(in, out);
-    if (strcmp(type, "ubin-wahbm") == 0) return ubin_wahbm(in, out);
+    if (strcmp(type, "ubin-wahbm") == 0) return ubin_wahbm(in, out, full_cmd);
     if (strcmp(type, "ubin-wahbm16") == 0) return ubin_wahbm16(in, out);
     if (strcmp(type, "ubin-wah") == 0) return ubin_wah(in, out);
     if (strcmp(type, "pca") == 0) return wahbm_pca(in, out);
@@ -204,9 +207,9 @@ int ubin_wahbm16(char *in, char *out)
     return convert_file_by_name_ubin_to_wahbm16(in, out);
 }
 
-int ubin_wahbm(char *in, char *out)
+int ubin_wahbm(char *in, char *out, char *full_cmd)
 {
-    return convert_file_by_name_ubin_to_wahbm(in, out);
+    return convert_file_by_name_ubin_to_wahbm(in, out, full_cmd);
 }
 
 int ubin_plt(char *in, char *out)

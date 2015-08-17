@@ -11,8 +11,15 @@
 #include <sys/param.h>
 #include <math.h>
 #include <limits.h>
+#include <sysexits.h>
+
+#include "wah.h"
+#include "bm.h"
 #include "genotq.h"
 
+
+
+#if 0
 //{{{ struct wah_file init_wah_file(char *file_name)
 struct wah_file init_wah_file(char *file_name)
 {
@@ -57,6 +64,7 @@ void destroy_wah_file(struct wah_file *wf)
     free(wf->record_offsets);
 }
 //}}}
+#endif
 
 //{{{ uint32_t  wah_or_b(uint32_t *R,
 uint32_t wah_or_b(uint32_t *R,
@@ -980,7 +988,6 @@ uint32_t float_to_wah_bitmap(float *I,
 }
 //}}}
 
-
 //{{{ int append_active_word_b(uint32_t *R,
 int append_active_word_b(uint32_t *R,
                          uint32_t R_len,
@@ -1022,7 +1029,7 @@ int append_active_word_b(uint32_t *R,
 }
 //}}}
 
-//{{{
+//{{{ uint32_t append_fill_word_b(uint32_t *R,
 /*
  * The fill_size is the number of words / 31*fill_size number of bits
  */

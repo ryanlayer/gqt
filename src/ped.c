@@ -4,7 +4,8 @@
 #include <ctype.h>
 #include <sqlite3.h>
 #include <sys/stat.h>
-#include "genotq.h"
+#include <htslib/vcf.h>
+#include "ped.h"
 
 //{{{ static int uint32_t_ll_callback(void *ll_p,
 static int uint32_t_ll_callback(void *ll_p,

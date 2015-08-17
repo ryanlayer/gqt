@@ -3,7 +3,11 @@
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
-#include "genotq.h"
+
+#include "ubin.h"
+#include "plt.h"
+#include "wahbm.h"
+
 
 int view_help();
 int view_plt(char *in);

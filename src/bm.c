@@ -1,3 +1,8 @@
+#include <string.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+#include "bm.h"
 #include "genotq.h"
 
 //{{{uint32_t uint32_t_to_bitmap(uint32_t *I,

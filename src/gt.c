@@ -384,7 +384,7 @@ int gt_in_place_wahbm(char *in,
 
     free(ints);
     free(wf_R);
-    destroy_wahbm_file(&wf);
+    destroy_wah_file(&wf);
 
     return 0;
 }
@@ -419,7 +419,7 @@ int gt_compressed_in_place_wahbm(char *in,
 
     free(ints);
     free(wf_R);
-    destroy_wahbm_file(&wf);
+    destroy_wah_file(&wf);
 
     return 0;
 }
@@ -453,7 +453,7 @@ int gt_wahbm(char *in,
 
     free(ints);
     free(wf_R);
-    destroy_wahbm_file(&wf);
+    destroy_wah_file(&wf);
 
     return 0;
 }

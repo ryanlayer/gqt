@@ -2,7 +2,8 @@
 #define __WAHBM_COMPRESSED_IN_PLACE_H__
 
 #include <stdint.h>
-#include "genotq.h"
+#include "wah.h"
+#include "wahbm.h"
 
 /**
  * @brief   compressed in-place OR two WAH runs
@@ -167,13 +168,12 @@ uint32_t compressed_in_place_wah_to_ints(uint32_t *W,
  * @code
  * @endcode
  */
-uint32_t range_records_compressed_in_place_wahbm(
-            struct wah_file wf,
-            uint32_t *record_ids,
-            uint32_t num_r,
-            uint32_t start_test_value,
-            uint32_t end_test_value,
-            uint32_t **R);
+uint32_t range_records_compressed_in_place_wahbm(struct wahbm_file *wf,
+                                                 uint32_t *record_ids,
+                                                 uint32_t num_r,
+                                                 uint32_t start_test_value,
+                                                 uint32_t end_test_value,
+                                                 uint32_t **R);
 
 
 /**
@@ -196,7 +196,7 @@ uint32_t range_records_compressed_in_place_wahbm(
  * @endcode
  */
 uint32_t count_range_records_compressed_in_place_wahbm(
-            struct wah_file wf,
+            struct wahbm_file *wf,
             uint32_t *record_ids,
             uint32_t num_r,
             uint32_t start_test_value,
@@ -237,12 +237,11 @@ uint32_t add_compressed_in_place_wahbm(uint32_t *R,
  * @code
  * @endcode
  */
-uint32_t gt_count_records_compressed_in_place_wahbm(
-                    struct wah_file wf,
-                    uint32_t *record_ids,
-                    uint32_t num_r,
-                    uint32_t test_value,
-                    uint32_t **R);
+uint32_t gt_count_records_compressed_in_place_wahbm(struct wahbm_file *wf,
+                                                    uint32_t *record_ids,
+                                                    uint32_t num_r,
+                                                    uint32_t test_value,
+                                                    uint32_t **R);
 
 /**
  * @brief Return records whose value are greater than the test value using 
@@ -260,11 +259,11 @@ uint32_t gt_count_records_compressed_in_place_wahbm(
  * @code
  * @endcode
  */
-uint32_t gt_records_compressed_in_place_wahbm(struct wah_file wf,
-                                       uint32_t *record_ids,
-                                       uint32_t num_r,
-                                       uint32_t test_value,
-                                       uint32_t **R);
+uint32_t gt_records_compressed_in_place_wahbm(struct wahbm_file *wf,
+                                              uint32_t *record_ids,
+                                              uint32_t num_r,
+                                              uint32_t test_value,
+                                              uint32_t **R);
 
 
 #endif

@@ -1,6 +1,8 @@
 #ifndef __WAH_H__
 #define __WAH_H__
 
+#include <stdint.h>
+
 #if 0
 struct wah_file {
     FILE *file;

@@ -77,4 +77,4 @@ $(BIN)/%: %.c $(OBJS)
 		-DSAMTOOLS=1 \
 		$(HTS_ROOT)/libhts.a \
 		$(SQLITE_ROOT)/sqlite3.o \
-		-ll -ldl -lz -lm  -pthread
+		-ldl -lz -lm  -pthread

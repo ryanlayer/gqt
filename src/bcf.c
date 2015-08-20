@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <htslib/hts.h>
 #include <htslib/vcf.h>
 #include <htslib/kstring.h>
@@ -13,6 +14,7 @@
 #include "ubin.h"
 #include "genotq.h"
 #include "timer.h"
+
 
 
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))

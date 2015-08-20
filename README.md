@@ -26,6 +26,7 @@ GQT depends on htslib, sqlite3, and lex (flex).
 git clone https://github.com/samtools/htslib.git
 cd htslib
 make
+cd ..
 ```
 
 *Step 2*. Download sqlite amalgamation source.
@@ -49,6 +50,7 @@ cd flex-2.5.39
 ./configure
 make
 make install
+cd ..
 ```
 
 *Step 4*. Get GQT source then modify the GQT Makefile by setting the
@@ -60,6 +62,7 @@ cd gqt/
 make
 cd test/func
 ./functional_tests.sh
+cd ../../..
 ```
 
 ## Example workflow
@@ -80,7 +83,7 @@ bcftools index chr11.11q14.3.bcf
 
 With the BCF index created, now create the GQT index.
 ```
-gqt convert bcf -i chr11.11q14.3.bcf
+gqt/bin/gqt convert bcf -i chr11.11q14.3.bcf
 ```
 
 This will create three files:
@@ -113,7 +116,7 @@ HG00171     HG00171         FIN         2
 
 Without a PED file the database can be created from the BCF file:
 ```
-gqt convert ped -i chr11.11q14.3.bcf
+gqt/bin/gqt convert ped -i chr11.11q14.3.bcf
 ```
 This creates a database named `chr11.11q14.3.bcf.db`
 
@@ -122,7 +125,7 @@ sophisticated queries based on the phenotypes, ancestries, and
 relationships of the samples. More on this below.
 ```
 wget --trust-server-names http://bit.ly/gqt_ped
-gqt convert ped -i chr11.11q14.3.bcf -p 1kg.phase3.ped
+gqt/bin/gqt convert ped -i chr11.11q14.3.bcf -p 1kg.phase3.ped
 ```
 This creates a database named `1kg.phase3.ped.db`
 
@@ -133,7 +136,7 @@ variants where at least one of the three listed individuals is heterozygous.
 ```
 gqt/bin/gqt query \
     -i chr11.11q14.3.bcf.gqt \
-    -p "Sample_ID in ('NA21126','NA21127','NA21128')" \
+    -p "BCF_Sample in ('NA21126','NA21127','NA21128')" \
     -g "count(HET)>1" \
     > NA21126-8.HET.vcf
 ```

@@ -5,7 +5,7 @@ all:
 	@touch src/parse_q.yy.c
 	@mkdir -p $(OBJ)
 	@mkdir -p $(BIN)
-	cd src; make
+	cd src; $(MAKE)
 
 clean:
 	rm -rf $(BIN)/*

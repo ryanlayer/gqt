@@ -46,21 +46,21 @@ LIB= timer.o \
 
 OBJS=$(addprefix $(OBJ)/, $(LIB))
 
+.SECONDARY: $(OBJS)
+
 
 PROG=read_binary_uints \
 	gqt 
 
 
-LIST=sqlite parse_q $(addprefix $(BIN)/, $(PROG))
+LIST=$(SQLITE_ROOT)/sqlite3.o parse_q.yy.c $(addprefix $(BIN)/, $(PROG))
 
 all: $(LIST)
-	@mkdir -p $(OBJ)
-	@mkdir -p $(BIN)
 
-parse_q:
+parse_q.yy.c: parse_q.l
 	$(LEX) -oparse_q.yy.c parse_q.l
 
-sqlite: 
+$(SQLITE_ROOT)/sqlite3.o: $(SQLITE_ROOT)/sqlite3.c
 	$(CC) -c $(SQLITE_ROOT)/sqlite3.c -o $(SQLITE_ROOT)/sqlite3.o
 
 $(OBJ)/%.o: %.c 

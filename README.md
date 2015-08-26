@@ -91,10 +91,8 @@ in `~/src`, the correct path for BCFTOOLS_PLUGIN would be `~/src/bcftools/plugin
 
     export BCFTOOLS_PLUGINS="$HOME/src/bcftools/plugins"
 
-5d. Lastly, you need to also update the directories assigned to [LD_LIBRARY_PATH](https://github.com/ryanlayer/gqt/blob/master/test/func/functional_tests.sh#L511)
-and [DYLD_LIBRARY_PATH](https://github.com/ryanlayer/gqt/blob/master/test/func/functional_tests.sh#L512) in your `gqt/test/func/functional_tests.sh`
-file to be directory of the htslib source tree. For example, if you compiled htslib
-in `~/src`, the correct settings would be:
+5d. Lastly, you may need to also upate the directories assigned to either [LD_LIBRARY_PATH](https://github.com/ryanlayer/gqt/blob/master/test/func/functional_tests.sh#L511) (linux)
+or [DYLD_LIBRARY_PATH](https://github.com/ryanlayer/gqt/blob/master/test/func/functional_tests.sh#L512) (Mac OS X) in your `gqt/test/func/functional_tests.sh` file to include the directory where `libhts.so.1` is located. For example, if you compiled htslib in `~/src`, the correct settings would be:
     
     export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/src/htslib"
     export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:$HOME/src/htslib"

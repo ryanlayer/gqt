@@ -381,7 +381,7 @@ int count_in_place_wahbm(char *in,
 
     //struct wah_file wf = init_wahbm_file(in);
     struct wahbm_file *wf = open_wahbm_file(in);
-    __attribute__((aligned(64)))uint32_t *wf_R;
+    __attribute__((aligned(64)))uint32_t *wf_R = NULL; 
     //__declspec(align(64)) uint32_t *wf_R;
     uint32_t len_wf_R;
 

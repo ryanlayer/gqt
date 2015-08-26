@@ -516,7 +516,7 @@ int query(int argc, char **argv, char *full_cmd)
 
         uint32_t *mapped_mask = (uint32_t *) calloc(num_ints,sizeof(uint32_t));
 
-        uint32_t v,p,leading_zeros, hit;
+        uint32_t v,p,leading_zeros=32, hit;
         for (i = 0; i < num_ints; ++i) {
             if (final_mask[i] != 0) {
                 v = final_mask[i];

@@ -80,7 +80,7 @@ int count(int argc, char **argv)
 
     int c;
     char *in=NULL, *out=NULL, *record_ids=NULL, *op=NULL, *bim=NULL;
-    uint32_t query_value, num_records;
+    uint32_t query_value = 0, num_records = 0;
     int i_is_set = 0,
         a_is_set = 0,
         b_is_set = 0,

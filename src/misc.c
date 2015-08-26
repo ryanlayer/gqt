@@ -33,8 +33,8 @@ int misc(int argc, char **argv, char *full_cmd)
     if (argc < 2) return misc_help();
 
     int c;
-    char *in, *out, *bim, *vid, *db;
-    uint32_t num_fields, num_records, num_matches;
+    char *in = NULL, *out = NULL, *bim = NULL, *vid = NULL, *db = NULL;
+    uint32_t num_fields = 0, num_records = 0, num_matches = 0;
     int i_is_set = 0, 
         o_is_set = 0, 
         d_is_set = 0, 

@@ -44,7 +44,7 @@ uint32_t ints_to_rle(uint32_t *I, int I_len, uint32_t **O)
         curr_bit,
         ll_len = 0,
         last_bit = -1;
-    uint32_t rle_v;
+    uint32_t rle_v = 0;
     for (i = 0; i < I_len; ++i) {
         for(j = 0; j < 32; ++j) {
             curr_bit = ((I[i] >> (31-j)) & 1);

@@ -517,7 +517,9 @@ uint32_t range_records_compressed_in_place_wahbm(
                         malloc(sizeof(uint32_t)*max_wah_size);
     if (!and_result_bm )
         err(EX_OSERR, "malloc error");
-    uint32_t and_result_bm_size, record_new_bm_size, or_result_bm_size;
+    uint32_t and_result_bm_size = 0,
+             record_new_bm_size = 0,
+             or_result_bm_size = 0;
     uint32_t i,j;
 
     //for (i = 0; i < max_wah_size; ++i)
@@ -591,8 +593,10 @@ uint32_t count_range_records_compressed_in_place_wahbm(
     if (!or_result_bm )
         err(EX_OSERR, "malloc error");
 
-    uint32_t and_result_bm_size, record_new_bm_size, or_result_bm_size;
-    uint32_t i,j,r_size;
+    uint32_t and_result_bm_size = 0,
+             record_new_bm_size = 0,
+             or_result_bm_size = 0;
+    uint32_t i,j,r_size = 0;
 
 #ifdef time_count_range_records_compressed_in_place_wahbm
     unsigned long t1 = 0, t2 = 0, t3 = 0;

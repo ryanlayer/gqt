@@ -95,8 +95,8 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
                                         char *db_name)
 {
 
-    char **ped_field_names;
-    int *ped_field_types;
+    char **ped_field_names = NULL;
+    int *ped_field_types = NULL;
     uint32_t i, j, num_ped_fields = 0;
 
     // Figure out which fields will be in the DB

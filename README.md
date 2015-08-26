@@ -58,8 +58,9 @@ cd ..
 locations.  Compile and test.
 
 NOTE: In order for the functional tests to pass, they assume that you 
-have bcftools and plink installed in your PATH 
-and that you have updated the BCFTOOLS_PLUGIN variable.
+have [bcftools](https://github.com/samtools/bcftools) 
+and [plink](https://www.cog-genomics.org/plink2) installed in your PATH.
+It also assumes that you have updated the BCFTOOLS_PLUGIN variable.
 ```
 git clone https://github.com/ryanlayer/gqt.git
 cd gqt/

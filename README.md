@@ -67,10 +67,10 @@ make
 
 5a. Install bcftools (not necessary for GQT to function, but useful for the functional tests below).
 ```
+cd ..
 git clone https://github.com/samtools/bcftools
 cd bcftools
 make
-cd ..
 ```
 
 5b. Install plink (v1.9) (not necessary for GQT to function, but useful for the functional tests below)..
@@ -95,10 +95,10 @@ in `~/src`, the correct settings would be:
     export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/src/htslib"
     export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:$HOME/src/htslib"
 
-Okay, now you are ready to run the tests:
+Okay, now you are ready to run the tests. Make sure you are back in the make gqt source directory.
 
 ```
-cd test/func
+cd ../gqt/test/func
 ./functional_tests.sh
 cd ../../..
 ```

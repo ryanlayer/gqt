@@ -750,16 +750,18 @@ void print_query_result(uint32_t *mask,
                         append_out_buf(&outbuf, info_s, strlen(info_s));
 
                     } else if (q[k].variant_op == p_pct) {
-                        asprintf(&info_s, ";GQT_%u=%f", k,
+                        r = asprintf(&info_s, ";GQT_%u=%f", k,
                                 //((float)counts[k][vids[line_idx]])/
                                 ((float)counts[k][line_idx])/
                                 ((float) id_lens[k]));
+                        if (r == -1) err(EX_OSERR, "asprintf error");
                         append_out_buf(&outbuf, info_s, strlen(info_s));
                     } else if (q[k].variant_op == p_maf) {
-                        asprintf(&info_s, ";GQT_%u=%f", k,
+                        r = asprintf(&info_s, ";GQT_%u=%f", k,
                                 //((float)counts[k][vids[line_idx]])/
                                 ((float)counts[k][line_idx])/
                                 (((float) id_lens[k])*2.0));
+                        if (r == -1) err(EX_OSERR, "asprintf error");
                         append_out_buf(&outbuf, info_s, strlen(info_s));
                     }
 

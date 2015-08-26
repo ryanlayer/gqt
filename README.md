@@ -53,14 +53,33 @@ make install
 cd ..
 ```
 
-*Step 4*. Get GQT source then modify the GQT Makefile by setting the
+*Step 4*. Install bcftools (not necessary for GQT to function, but useful for the functional tests below).
+```
+git clone https://github.com/samtools/bcftools
+cd bcftools
+make
+cd ..
+```
+
+*Step 5*. Install plink (v1.9) (not necessary for GQT to function, but useful for the functional tests below)..
+```
+# 5a. download the appropriate binary from:
+https://www.cog-genomics.org/plink2
+# 5b.
+Copy the plink binary to a directory on your PATH
+```
+
+*Step 6*. Get GQT source then modify the GQT Makefile by setting the
 `HTS_ROOT` and `SQLITE_ROOT` variable in `src/Makfile` to reflect their
 locations.  Compile and test.
 
 NOTE: In order for the functional tests to pass, they assume that you 
 have [bcftools](https://github.com/samtools/bcftools) 
-and [plink](https://www.cog-genomics.org/plink2) installed in your PATH.
-It also assumes that you have updated the BCFTOOLS_PLUGIN variable.
+and [plink](https://www.cog-genomics.org/plink2) installed in your PATH (see steps 4 and 5).
+In addition, after you install [bcftools](https://github.com/samtools/bcftools),
+you need to also update the directory assigned to BCFTOOLS_PLUGIN in `gqt/test/func/functional_tests.sh`
+to be the plugins directory in the bcftools source tree. For example, if you compiled bcftool
+in `~/src`, the correct path for BCFTOOLS_PLUGIN would be `~/src/bcftools/plugins`.
 ```
 git clone https://github.com/ryanlayer/gqt.git
 cd gqt/

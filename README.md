@@ -85,7 +85,7 @@ in `~/src`, the correct path for BCFTOOLS_PLUGIN would be `~/src/bcftools/plugin
 NOTE: Lastly, you need to also update the directories assigned to [LD_LIBRARY_PATH](https://github.com/ryanlayer/gqt/blob/master/test/func/functional_tests.sh#L511)
 and [DYLD_LIBRARY_PATH](https://github.com/ryanlayer/gqt/blob/master/test/func/functional_tests.sh#L512) in your `gqt/test/func/functional_tests.sh`
 file to be directory of the htslib source tree. For example, if you compiled htslib
-in `~/src`, the correct settings would be export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/src/htslib"
+in `~/src`, the correct settings would be export`LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/src/htslib"`
 and `export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:$HOME/src/htslib"`.
 ```
 git clone https://github.com/ryanlayer/gqt.git

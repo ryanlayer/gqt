@@ -63,6 +63,10 @@ cd gqt/
 make
 ```
 
+At this point, it is recommended that you copy the gqt binary to a directory that is on your PATH.
+
+
+
 *Step 5 (Optional)* Run the GQT functional tests.
 
 5a. Install bcftools (not necessary for GQT to function, but useful for the functional tests below).

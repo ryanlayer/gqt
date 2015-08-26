@@ -55,11 +55,11 @@ PROG=read_binary_uints \
 	gqt 
 
 
-LIST=$(SQLITE_ROOT)/sqlite3.o parse_q.yy.c $(addprefix $(BIN)/, $(PROG))
+LIST=$(SQLITE_ROOT)/sqlite3.o parse_q $(addprefix $(BIN)/, $(PROG))
 
 all: $(LIST)
 
-parse_q.yy.c: parse_q.l
+parse_q:
 	$(LEX) -oparse_q.yy.c parse_q.l
 
 $(SQLITE_ROOT)/sqlite3.o: $(SQLITE_ROOT)/sqlite3.c

@@ -53,38 +53,54 @@ make install
 cd ..
 ```
 
-*Step 4*. Install bcftools (not necessary for GQT to function, but useful for the functional tests below).
-```
-git clone https://github.com/samtools/bcftools
-cd bcftools
-make
-cd ..
-```
-
-*Step 5*. Install plink (v1.9) (not necessary for GQT to function, but useful for the functional tests below)..
-```
-# 5a. download the appropriate binary from:
-https://www.cog-genomics.org/plink2
-# 5b.
-Copy the plink binary to a directory on your PATH
-```
-
-*Step 6*. Get GQT source then modify the GQT Makefile by setting the
+*Step 4*. Get GQT source then modify the GQT Makefile by setting the
 `HTS_ROOT` and `SQLITE_ROOT` variable in `src/Makfile` to reflect their
-locations.  Compile and test.
+locations.  Compile.
 
-NOTE: In order for the functional tests to pass, they assume that you 
-have [bcftools](https://github.com/samtools/bcftools) 
-and [plink](https://www.cog-genomics.org/plink2) installed in your PATH (see steps 4 and 5).
-In addition, after you install [bcftools](https://github.com/samtools/bcftools),
-you need to also update the directory assigned to BCFTOOLS_PLUGIN in `gqt/test/func/functional_tests.sh`
-to be the plugins directory in the bcftools source tree. For example, if you compiled bcftool
-in `~/src`, the correct path for BCFTOOLS_PLUGIN would be `~/src/bcftools/plugins`.
 ```
 git clone https://github.com/ryanlayer/gqt.git
 cd gqt/
 make
-cd test/func
+```
+
+At this point, it is recommended that you copy the gqt binary to a directory that is on your PATH.
+
+
+
+*Step 5 (Optional)* Run the GQT functional tests.
+
+5a. Install bcftools (not necessary for GQT to function, but useful for the functional tests below).
+```
+cd ..
+git clone https://github.com/samtools/bcftools
+cd bcftools
+make
+```
+
+5b. Install plink (v1.9) (not necessary for GQT to function, but useful for the functional tests below)..
+```
+# Download the appropriate binary from:
+https://www.cog-genomics.org/plink2
+# Now copy the plink binary to a directory on your PATH
+```
+
+5c. In addition, after you install [bcftools](https://github.com/samtools/bcftools),
+you need to also update the directory assigned to [BCFTOOLS_PLUGIN](https://github.com/ryanlayer/gqt/blob/master/test/func/functional_tests.sh#L510) in your `gqt/test/func/functional_tests.sh`
+file to be the plugins directory in the bcftools source tree. For example, if you compiled bcftool
+in `~/src`, the correct path for BCFTOOLS_PLUGIN would be `~/src/bcftools/plugins`. That is:
+
+    export BCFTOOLS_PLUGINS="$HOME/src/bcftools/plugins"
+
+5d. Lastly, you may need to also upate the directories assigned to either [LD_LIBRARY_PATH](https://github.com/ryanlayer/gqt/blob/master/test/func/functional_tests.sh#L511) (linux)
+or [DYLD_LIBRARY_PATH](https://github.com/ryanlayer/gqt/blob/master/test/func/functional_tests.sh#L512) (Mac OS X) in your `gqt/test/func/functional_tests.sh` file to include the directory where `libhts.so.1` is located. For example, if you compiled htslib in `~/src`, the correct settings would be:
+    
+    export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/src/htslib"
+    export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:$HOME/src/htslib"
+
+Okay, now you are ready to run the tests. Make sure you are back in the make gqt source directory.
+
+```
+cd ../gqt/test/func
 ./functional_tests.sh
 cd ../../..
 ```

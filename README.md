@@ -93,6 +93,8 @@ in `~/src`, the correct settings would be:
     export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/src/htslib"
     export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:$HOME/src/htslib"
 
+Okay, now you are ready to run the tests:
+
 ```
 git clone https://github.com/ryanlayer/gqt.git
 cd gqt/

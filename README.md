@@ -82,7 +82,7 @@ you need to also update the directory assigned to [BCFTOOLS_PLUGIN](https://gith
 file to be the plugins directory in the bcftools source tree. For example, if you compiled bcftool
 in `~/src`, the correct path for BCFTOOLS_PLUGIN would be `~/src/bcftools/plugins`. That is:
 
-    export BCFTOOLS_PLUGINS="~/src/bcftools/plugins"
+    export BCFTOOLS_PLUGINS="$HOME/src/bcftools/plugins"
 
 
 NOTE: Lastly, you need to also update the directories assigned to [LD_LIBRARY_PATH](https://github.com/ryanlayer/gqt/blob/master/test/func/functional_tests.sh#L511)

@@ -292,7 +292,7 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
 
     // create the table
     sqlite3 *db;
-    char *err_msg;
+    char *err_msg = NULL;
     int rc = sqlite3_open(db_name, &db);
     if( rc != SQLITE_OK )
         err(EX_SOFTWARE,
@@ -529,7 +529,7 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
 uint32_t resolve_ind_query(uint32_t **R, char *query, char *ped_db_file)
 {
     sqlite3 *db;
-    char *err_msg;
+    char *err_msg = NULL;
     int rc = sqlite3_open(ped_db_file, &db);
     if( rc != SQLITE_OK )
         err(EX_NOINPUT,
@@ -584,7 +584,7 @@ uint32_t resolve_label_query(char ***R,
                              char *ped_db_file)
 {
     sqlite3 *db;
-    char *err_msg;
+    char *err_msg = NULL;
     int rc = sqlite3_open(ped_db_file, &db);
     if( rc != SQLITE_OK )
         err(EX_NOINPUT,

@@ -55,7 +55,7 @@ cd ..
 
 *Step 4*. Get GQT source then modify the GQT Makefile by setting the
 `HTS_ROOT` and `SQLITE_ROOT` variable in `src/Makfile` to reflect their
-locations.  Compile.
+locations based on the directories in which they were placed during steps 1 and 2.  Compile.
 
 ```
 git clone https://github.com/ryanlayer/gqt.git
@@ -172,7 +172,7 @@ This creates a database named `1kg.phase3.ped.db`
 #### Query the GQT index
 When the database is based only on the BCF file (`chr11.11q14.3.bcf.db`),
 queries can be based on the sample names. For example, you can find the
-variants where at least one of the three listed individuals is heterozygous.
+variants where at least two of the three listed individuals is heterozygous.
 ```
 gqt/bin/gqt query \
     -i chr11.11q14.3.bcf.gqt \
@@ -183,7 +183,7 @@ gqt/bin/gqt query \
 
 When the database also includes the PED file (`1kg.phase3.ped.db`), it is
 possible to query based on fields like gender and population.  For example, the
-following query will find all variants that has a frequency of at least 10%
+following query will find all variants that has a frequency of more than 10%
 among the GBR population:
 ```
 gqt/bin/gqt query \

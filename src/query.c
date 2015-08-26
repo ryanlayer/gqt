@@ -325,7 +325,7 @@ int query(int argc, char **argv, char *full_cmd)
             return 1;
         }
 
-        uint32_t low_v, high_v;
+        uint32_t low_v = 0, high_v = 0;
 
         /*
          * q holds the parameters of each query, first determin the range of 

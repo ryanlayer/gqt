@@ -1490,15 +1490,15 @@ uint32_t range_records_w_exclude_wahbm(struct wahbm_file *wf,
                  *record_new_bm = NULL,
                  *record_tmp_bm = NULL;
 
-    uint32_t record_curr_bm_size,
-                 record_new_bm_size,
-                 record_tmp_bm_size;
+    uint32_t record_curr_bm_size = 0,
+                 record_new_bm_size = 0,
+                 record_tmp_bm_size = 0;
 
     uint32_t *query_curr_bm = NULL,
                  *query_tmp_bm = NULL;
 
-    uint32_t query_curr_bm_size,
-                 query_tmp_bm_size;
+    uint32_t query_curr_bm_size = 0,
+                 query_tmp_bm_size = 0;
 
 
     uint32_t i,j,k,l;
@@ -1584,9 +1584,9 @@ uint32_t count_range_records_wahbm(struct wahbm_file *wf,
                  *record_new_bm = NULL,
                  *record_tmp_bm = NULL;
 
-    uint32_t record_curr_bm_size,
-                 record_new_bm_size,
-                 record_tmp_bm_size;
+    uint32_t record_curr_bm_size = 0,
+                 record_new_bm_size = 0,
+                 record_tmp_bm_size = 0;
 
     uint32_t i,j, r_size;
 
@@ -1653,9 +1653,9 @@ uint32_t sum_range_records_wahbm(struct wahbm_file *wf,
              *record_new_bm = NULL,
              *record_tmp_bm = NULL;
 
-    uint32_t record_curr_bm_size,
-             record_new_bm_size,
-             record_tmp_bm_size;
+    uint32_t record_curr_bm_size = 0,
+             record_new_bm_size = 0,
+             record_tmp_bm_size = 0;
 
     uint32_t i,j, r_size;
 
@@ -1722,15 +1722,15 @@ uint32_t range_records_wahbm(struct wahbm_file *wf,
                  *record_new_bm = NULL,
                  *record_tmp_bm = NULL;
 
-    uint32_t record_curr_bm_size,
-                 record_new_bm_size,
-                 record_tmp_bm_size;
+    uint32_t record_curr_bm_size = 0,
+                 record_new_bm_size = 0,
+                 record_tmp_bm_size = 0;
 
     uint32_t *query_curr_bm = NULL,
                  *query_tmp_bm = NULL;
 
-    uint32_t query_curr_bm_size,
-                 query_tmp_bm_size;
+    uint32_t query_curr_bm_size = 0,
+                 query_tmp_bm_size = 0;
 
 
     uint32_t i,j,k,l;

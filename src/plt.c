@@ -333,7 +333,7 @@ int convert_file_by_name_invert_plt(char *in_file_name, char *out_file_name)
     char orig_path[strlen(ptr)];
     char *o = strcpy(orig_path, full_path);
 
-    char *pch, *last;
+    char *pch = NULL, *last = NULL;
     pch = strtok(ptr, "/");
     while (pch != NULL) {
         last = pch;

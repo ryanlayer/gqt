@@ -149,7 +149,9 @@ uint32_t range_records_in_place_wahbm(struct wahbm_file *wf,
                         malloc(sizeof(uint32_t)*max_wah_size);
     if (!and_result_bm )
         err(EX_OSERR, "malloc error");
-    uint32_t and_result_bm_size, record_new_bm_size, or_result_bm_size;
+    uint32_t and_result_bm_size = 0,
+             record_new_bm_size = 0,
+             or_result_bm_size = 0;
     uint32_t i,j;
     for (i = 0; i < max_wah_size; ++i)
         and_result_bm[i] = 0x7fffffff;
@@ -218,7 +220,9 @@ uint32_t count_range_records_in_place_wahbm(struct wahbm_file *wf,
     if (!or_result_bm )
         err(EX_OSERR, "malloc error");
 
-    uint32_t and_result_bm_size, record_new_bm_size, or_result_bm_size;
+    uint32_t and_result_bm_size = 0,
+             record_new_bm_size = 0,
+             or_result_bm_size = 0;
     uint32_t i,j,r_size;
 
     for (i = 0; i < num_r; ++i) {

@@ -19,7 +19,7 @@ int view(int argc, char **argv)
     if (argc < 2) return view_help();
 
     int c;
-    char *in, *out;
+    char *in = NULL, *out = NULL;
     int i_is_set = 0,
         r_is_set; 
     int record_id = -1;

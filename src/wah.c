@@ -476,6 +476,7 @@ struct wah_run init_wah_run(uint32_t *words,
     r.fill = 0;
     r.num_words = 0;
     r.is_fill = 0;
+    r.fill_bit = 0;
 
     return r;
 }

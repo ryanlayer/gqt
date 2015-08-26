@@ -24,7 +24,7 @@ int sort(int argc, char **argv)
     if (argc < 2) return sort_help();
 
     int c;
-    char *in, *out;
+    char *in = NULL, *out = NULL;
     uint32_t num_fields, num_records;
     int i_is_set = 0, 
         o_is_set = 0; 

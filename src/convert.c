@@ -30,7 +30,7 @@ int convert(int argc, char **argv, char *full_cmd)
 
     int c;
     char *in=NULL, *out=NULL, *bim=NULL, *vid=NULL, *tmp_dir=NULL, *ped=NULL;
-    uint32_t num_fields, num_records, col = 2;
+    uint32_t num_fields = 0, num_records = 0, col = 2;
     int i_is_set = 0, 
         o_is_set = 0, 
         f_is_set = 0, 

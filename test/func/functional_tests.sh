@@ -507,9 +507,18 @@ else
     echo "SKIP($LINENO): PLINK not set"
 fi
 
-export BCFTOOLS_PLUGINS="$HOME/src/bcftools/plugins/"
+export BCFTOOLS_PLUGINS=":$HOME/src/bcftools/plugins/"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/src/htslib"
 export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:$HOME/src/htslib"
+
+R=`bcftools plugin fill-AN-AC 2>&1`
+
+if [[ $R == *"Could not load \"fill-AN-AC\""* ]]
+then
+    echo "BCFTOOLS plugin not found. Skipping remaining test. Please see README for help."
+    exit
+fi
+
 
 BCFTOOLS_COUNT=`bcftools view $BCF\
     | bcftools plugin fill-AN-AC \

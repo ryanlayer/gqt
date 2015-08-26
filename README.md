@@ -55,7 +55,7 @@ cd ..
 
 *Step 4*. Get GQT source then modify the GQT Makefile by setting the
 `HTS_ROOT` and `SQLITE_ROOT` variable in `src/Makfile` to reflect their
-locations.  Compile.
+locations based on the directories in which they were placed during steps 1 and 2.  Compile.
 
 ```
 git clone https://github.com/ryanlayer/gqt.git

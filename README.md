@@ -56,6 +56,10 @@ cd ..
 *Step 4*. Get GQT source then modify the GQT Makefile by setting the
 `HTS_ROOT` and `SQLITE_ROOT` variable in `src/Makfile` to reflect their
 locations.  Compile and test.
+
+NOTE: In order for the functional tests to pass, they assume that you 
+have bcftools and plink installed in your PATH 
+and that you have updated the BCFTOOLS_PLUGIN variable.
 ```
 git clone https://github.com/ryanlayer/gqt.git
 cd gqt/

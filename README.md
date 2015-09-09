@@ -1,3 +1,8 @@
+
+For questions and discussion about GQT please visit the forum at: 
+
+https://groups.google.com/forum/#!forum/gqt-discuss
+
 GQT
 ========
 Genotype Query Tools (GQT) is command line software and a C API for indexing 

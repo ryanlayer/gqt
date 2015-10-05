@@ -65,7 +65,7 @@ static int char_ll_callback(void *ll_p,
         exit(1);
     }
 
-    new_node->v = (char *) malloc(strlen(argv[label_i])*sizeof(char));
+    new_node->v = (char *) malloc((strlen(argv[label_i])+1)*sizeof(char));
     if (!new_node->v )
         err(EX_OSERR, "malloc error");
     strcpy(new_node->v, argv[label_i]);
@@ -127,7 +127,7 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
         }
 
         char *word;
-        tmp_line = (char *) malloc(strlen(line) * sizeof(char));
+        tmp_line = (char *) malloc((strlen(line)+1) * sizeof(char));
         if (!tmp_line )
             err(EX_OSERR, "malloc error");
         strcpy(tmp_line, line);

@@ -13,6 +13,7 @@
 #include "ped.h"
 #include "wahbm.h"
 #include "bcf.h"
+#include "off.h"
 #include "parse_q.h"
 #include "timer.h"
 #include "quick_file.h"
@@ -20,7 +21,23 @@
 
 int query_help();
 
-void print_query_result(uint32_t *mask,
+void print_query_result_offset(uint32_t *mask,
+                               uint32_t mask_len,
+                               uint32_t *vids,
+                               struct gqt_query *q,
+                               uint32_t **counts,
+                               uint32_t *id_lens,
+                               uint32_t *U_R,
+                               uint32_t U_R_len,
+                               char **id_query_list,
+                               char **gt_query_list,
+                               uint32_t num_qs,
+                               uint32_t num_fields,
+                               char *off_file_name,
+                               char *source_file,
+                               char *full_cmd);
+
+void print_query_result_bim(uint32_t *mask,
                         uint32_t mask_len,
                         uint32_t *vids,
                         struct gqt_query *q,
@@ -43,7 +60,7 @@ void get_bcf_query_result(uint32_t *mask,
                         uint32_t num_qs,
                         uint32_t num_fields,
                         char *vid_file_name,
-                        char *src_bcf_file_name,
+                        char *bcf_file_name,
                         int bcf_output);
 
 int compare_uint32_t (const void *a, const void *b);
@@ -85,35 +102,37 @@ int query(int argc, char **argv, char *full_cmd)
     if (argc < 2) return query_help();
 
     int c;
-    char *wahbm_file_name=NULL,
+    char *gqt_file_name=NULL,
          *id_query=NULL,
          *gt_query=NULL,
          *db_file_name=NULL,
          *bim_file_name=NULL,
-         *src_bcf_file_name=NULL,
+         *off_file_name=NULL,
+         *bcf_file_name=NULL,
          *vid_file_name=NULL;
-    int i_is_set = 0,
+    int c_is_set = 0,
+        i_is_set = 0,
         id_q_count = 0,
         gt_q_count = 0,
         d_is_set = 0,
-        c_is_set = 0,
-        v_is_set = 0,
-        s_is_set = 0,
-        b_is_set = 0,
+        V_is_set = 0,
+        G_is_set = 0,
+        B_is_set = 0,
+        O_is_set = 0,
         bcf_output = 0;
 
     char *id_query_list[100];
     char *gt_query_list[100];
 
     //{{{ parse cmd line opts
-    while ((c = getopt (argc, argv, "chi:p:g:d:b:v:s:B")) != -1) {
+    while ((c = getopt (argc, argv, "chi:p:g:d:B:V:G:O:")) != -1) {
         switch (c) {
         case 'c':
             c_is_set = 1;
             break;
         case 'i':
             i_is_set = 1;
-            wahbm_file_name = optarg;
+            bcf_file_name = optarg;
             break;
         case 'p':
             id_query_list[id_q_count] = optarg;
@@ -127,20 +146,21 @@ int query(int argc, char **argv, char *full_cmd)
             d_is_set = 1;
             db_file_name = optarg;
             break;
-        case 'b':
-            b_is_set = 1;
+        case 'B':
+            B_is_set = 1;
             bim_file_name = optarg;
             break;
-        case 'v':
-            v_is_set = 1;
+        case 'V':
+            V_is_set = 1;
             vid_file_name = optarg;
             break;
-        case 's':
-            s_is_set = 1;
-            src_bcf_file_name = optarg;
+        case 'G':
+            G_is_set = 1;
+            gqt_file_name = optarg;
             break;
-        case 'B':
-            bcf_output = 1;
+        case 'O':
+            O_is_set = 1;
+            off_file_name = optarg;
             break;
         case 'h':
             return query_help();
@@ -163,92 +183,192 @@ int query(int argc, char **argv, char *full_cmd)
         }
     }
 
-    if (i_is_set == 0) {
-        fprintf(stderr, "GQT file is not set\n");
+    if ((B_is_set == 1) && (O_is_set == 1)) {
+        fprintf(stderr,
+                "Both BIM and OFF files are specified.  Can only use one.\n");
         return query_help();
-    } else {
-        if ( access( wahbm_file_name, F_OK) == -1 )
-            err(EX_NOINPUT, "Error accessing GQT file \"%s\"", wahbm_file_name);
     }
 
-    if (d_is_set == 1) {
-        if ( access( db_file_name, F_OK) == -1 )
-            err(EX_NOINPUT,
-                "Error accessing PED DB file \"%s\"",
-                db_file_name);
-    }
+    // BCF/VCFGZ file is set
+    if (i_is_set == 1) {
+        if ( access( bcf_file_name, F_OK) == -1 )
+            err(EX_NOINPUT, "Error accessing BCF file \"%s\"", bcf_file_name);
 
+        // GQT is not, autodetect
+        if (G_is_set == 0) {
+            gqt_file_name  = (char*)malloc(strlen(bcf_file_name) + 5); 
+            if (!gqt_file_name)
+                err(EX_OSERR, "malloc error");
+            strcpy(gqt_file_name, bcf_file_name);
+            strcat(gqt_file_name, ".gqt");
 
-    // Try to auto-detect file names based on GQT
-    if ( (i_is_set == 1) && (b_is_set == 0)) {
-
-        int auto_bim_file_name_size = asprintf(&bim_file_name,
-                                               "%s",
-                                               wahbm_file_name);
-        if (auto_bim_file_name_size == -1) err(EX_OSERR, "asprintf error");
-        strcpy(bim_file_name + strlen(bim_file_name) - 3, "bim");
-
-        if ( access( bim_file_name, F_OK) != -1 ) {
-            b_is_set = 1;
-        } else {
-            fprintf(stderr,
-                    "Auto detect failure: BIM file %s not found\n",
-                    bim_file_name);
-            return query_help();
+            if ( access( gqt_file_name, F_OK) != -1 ) {
+                G_is_set = 1;
+            } else {
+                fprintf(stderr,
+                        "Auto detect failure: GQT file %s not found\n",
+                        gqt_file_name);
+                return query_help();
+            }
         }
-    }
 
-    if ( (i_is_set == 1) && (v_is_set == 0)) {
+        // PED DB is not, autodetect
+        if (d_is_set == 0) {
+            db_file_name  = (char*)malloc(strlen(bcf_file_name) + 4); 
+            if (!db_file_name)
+                err(EX_OSERR, "malloc error");
+            strcpy(db_file_name, bcf_file_name);
+            strcat(db_file_name, ".db");
 
-        int auto_vid_file_name_size = asprintf(&vid_file_name,
-                                               "%s",
-                                               wahbm_file_name);
-        if (auto_vid_file_name_size   == -1) err(EX_OSERR, "asprintf error");
-        strcpy(vid_file_name + strlen(vid_file_name) - 3, "vid");
-
-        if ( access( vid_file_name, F_OK) != -1 ) {
-            v_is_set = 1;
-        } else {
-            fprintf(stderr,
-                    "Auto detect failure: VID file %s not found\n",
-                    vid_file_name);
-            return query_help();
+            if ( access( db_file_name, F_OK) != -1 ) {
+                d_is_set = 1;
+            } else {
+                fprintf(stderr,
+                        "Auto detect failure: DB file %s not found\n",
+                        db_file_name);
+                return query_help();
+            }
         }
-    }
 
-    ///////////////////////////////
-    if ( (i_is_set == 1) && (d_is_set == 0)) {
+        // VID is not, autodetect
+        if (V_is_set == 0) {
+            vid_file_name  = (char*)malloc(strlen(bcf_file_name) + 5); 
+            if (!vid_file_name)
+                err(EX_OSERR, "malloc error");
+            strcpy(vid_file_name, bcf_file_name);
+            strcat(vid_file_name, ".vid");
 
-        int auto_db_file_name_size = asprintf(&db_file_name,
-                                              "%s",
-                                              wahbm_file_name);
-        if ( auto_db_file_name_size == -1) err(EX_OSERR, "asprintf error");
-        strcpy(db_file_name + strlen(db_file_name) - 3, "db\0");
-
-        if ( access( db_file_name, F_OK) != -1 ) {
-            d_is_set = 1;
-        } else {
-            fprintf(stderr,
-                    "Auto detect failure: PED DB file %s not found\n",
-                    db_file_name);
-            return query_help();
+            if ( access( vid_file_name, F_OK) != -1 ) {
+                V_is_set = 1;
+            } else {
+                fprintf(stderr,
+                        "Auto detect failure: VID file %s not found\n",
+                        vid_file_name);
+                return query_help();
+            }
         }
+
+        if ( (B_is_set == 0) && (O_is_set == 0) ) {
+            // first try and find the off file, then look for the bim
+            off_file_name  = (char*)malloc(strlen(bcf_file_name) + 5); 
+            if (!off_file_name)
+                err(EX_OSERR, "malloc error");
+            strcpy(off_file_name, bcf_file_name);
+            strcat(off_file_name, ".off");
+
+            if ( access( off_file_name, F_OK) != -1 ) {
+                O_is_set = 1;
+            } else {
+                bim_file_name  = (char*)malloc(strlen(bcf_file_name) + 5); 
+                if (!bim_file_name)
+                    err(EX_OSERR, "malloc error");
+                strcpy(bim_file_name, bcf_file_name);
+                strcat(bim_file_name, ".bim");
+                if ( access( bim_file_name, F_OK) != -1 ) 
+                    B_is_set = 1;
+            }
+
+            if ( (B_is_set == 0) && (O_is_set == 0) ) {
+                fprintf(stderr,
+                        "Auto detect failure: neither OFF file %s nor "
+                        "BIM file %s where found\n",
+                        off_file_name, bim_file_name);
+                return query_help();
+            }
+        }
+    } else if (G_is_set == 1) { 
+        if ( access( gqt_file_name, F_OK) == -1 )
+            err(EX_NOINPUT, "Error accessing GQT file \"%s\"", gqt_file_name);
+
+        // If the BCF/VCFGZ file is not set, then the BIM file is used
+
+        if (B_is_set == 0) {
+            int auto_bim_file_name_size = asprintf(&bim_file_name,
+                                                   "%s",
+                                                   gqt_file_name);
+            if (auto_bim_file_name_size == -1)
+                err(EX_OSERR, "asprintf error");
+            strcpy(bim_file_name + strlen(bim_file_name) - 3, "bim");
+
+            if ( access( bim_file_name, F_OK) != -1 ) {
+                B_is_set = 1;
+            } else {
+                fprintf(stderr,
+                        "Auto detect failure: BIM file %s not found\n",
+                        bim_file_name);
+                return query_help();
+            }
+        }
+
+        if (V_is_set == 0) {
+            int auto_vid_file_name_size = asprintf(&vid_file_name,
+                                                   "%s",
+                                                   gqt_file_name);
+            if (auto_vid_file_name_size == -1)
+                err(EX_OSERR, "asprintf error");
+            strcpy(vid_file_name + strlen(vid_file_name) - 3, "vid");
+
+            if ( access( vid_file_name, F_OK) != -1 ) {
+                V_is_set = 1;
+            } else {
+                fprintf(stderr,
+                        "Auto detect failure: VID file %s not found\n",
+                        vid_file_name);
+                return query_help();
+            }
+        }
+
+        if (d_is_set == 0) {
+            int auto_db_file_name_size = asprintf(&db_file_name,
+                                                  "%s",
+                                                  gqt_file_name);
+            if ( auto_db_file_name_size == -1) err(EX_OSERR, "asprintf error");
+            strcpy(db_file_name + strlen(db_file_name) - 3, "db\0");
+
+            if ( access( db_file_name, F_OK) != -1 ) {
+                d_is_set = 1;
+            } else {
+                fprintf(stderr,
+                        "Auto detect failure: PED DB file %s not found\n",
+                        db_file_name);
+                return query_help();
+            }
+        }
+    }  else {
+        fprintf(stderr,
+                "Neither GQT or BCF/VCF.GZ file given.\n");
+        return query_help();
+    } 
+
+    if ((B_is_set == 0) && (O_is_set == 0)){
+        fprintf(stderr, "Must set either BIM or OFF file.\n");
+        return query_help();
+    } 
+
+    if (B_is_set == 1) {
+        if ( access( bim_file_name, F_OK) == -1 )
+            err(EX_NOINPUT, "Error accessing BIM file \"%s\"", bim_file_name);
     }
 
+    if (O_is_set == 1) {
+        if ( access( off_file_name, F_OK) == -1 )
+            err(EX_NOINPUT, "Error accessing OFF file \"%s\"", bim_file_name);
+    }
 
-    if (v_is_set == 0) {
+    if (V_is_set == 0) {
         fprintf(stderr, "VID file is not set\n");
         return query_help();
-    }
-
-    if (b_is_set == 0) {
-        fprintf(stderr, "BIM file is not set\n");
-        return query_help();
+    } else {
+        if ( access( vid_file_name, F_OK) == -1 )
+            err(EX_NOINPUT, "Error accessing VID file \"%s\"", vid_file_name);
     }
 
     if (d_is_set == 0) {
-        fprintf(stderr, "PED database file is not set\n");
+        fprintf(stderr, "DB file is not set\n");
         return query_help();
+    } else {
+        if ( access( db_file_name, F_OK) == -1 )
+            err(EX_NOINPUT, "Error accessing DB file \"%s\"", db_file_name);
     }
 
     if (gt_q_count != id_q_count) {
@@ -273,32 +393,15 @@ int query(int argc, char **argv, char *full_cmd)
         }
     }
 
-    // open WAH/GQT file
-    //struct wah_file wf = init_wahbm_file(wahbm_file_name);
-    struct wahbm_file *wf = open_wahbm_file(wahbm_file_name);
-
-    // open VID file
-    /*
-    FILE *vid_f = fopen(vid_file_name, "rb");
-    if (!vid_f)
-        err(EX_NOINPUT, "Cannot read file\"%s\"", vid_file_name);
-
-    uint32_t *vids = (uint32_t *) malloc(wf.num_fields*sizeof(uint32_t));
-    if (!vids)
-        err(EX_OSERR, "malloc error");
-
-    size_t fr = fread(vids, sizeof(uint32_t), wf.num_fields, vid_f);
-    check_file_read(vid_file_name, vid_f, wf.num_fields, fr);
-
-    fclose(vid_f);
-    */
-
+    struct wahbm_file *wf = open_wahbm_file(gqt_file_name);
     struct vid_file *vid_f = open_vid_file(vid_file_name);
     load_vid_data(vid_f);
 
     //uint32_t num_ints = (wf.num_fields + 32 - 1)/ 32;
     uint32_t num_ints = (wf->gqt_header->num_variants + 32 - 1)/ 32;
     uint32_t len_ints;
+    uint32_t *U_R = NULL;
+    uint32_t U_R_len = 0;
 
     for (i = 0; i < gt_q_count; ++i) {
         uint32_t len_count_R;
@@ -310,6 +413,18 @@ int query(int argc, char **argv, char *full_cmd)
         id_lens[i] = resolve_ind_query(&R,
                                       id_query_list[i],
                                       db_file_name);
+
+        uint32_t *tmp_U_R = (uint32_t *)
+                realloc(U_R, (U_R_len + id_lens[i]) * sizeof(uint32_t));
+        if (!tmp_U_R)
+            err(EX_OSERR, "malloc error");
+        else
+            U_R = tmp_U_R;
+
+        for (j = 0; j < id_lens[i]; ++j) {
+            U_R[U_R_len] = R[j];
+            U_R_len += 1;
+        }
 
         // Enforce that the offsets of the relevant samples is 
         // within the number of samples in the GQT index.
@@ -481,6 +596,13 @@ int query(int argc, char **argv, char *full_cmd)
         free(R);
     }
 
+    // Get the uniq elements in place
+    qsort(U_R, U_R_len, sizeof(uint32_t), compare_uint32_t);
+    for (i = j = 0; i < U_R_len; i++)
+        if (U_R[i] != U_R[j]) 
+            U_R[++j] = U_R[i];
+    U_R_len = j + 1;
+
     uint32_t *final_mask = (uint32_t *) calloc(num_ints,sizeof(uint32_t));
 
     // combine all of the masks to see what we need to print
@@ -501,18 +623,7 @@ int query(int argc, char **argv, char *full_cmd)
         else
             printf("%u\n", wf->gqt_header->num_variants);
 
-    } else if ((v_is_set == 1) && (s_is_set == 1)) {
-        get_bcf_query_result(final_mask,
-                             num_ints, 
-                             q,
-                             id_query_list,
-                             id_lens,
-                             gt_q_count,
-                             wf->gqt_header->num_variants,
-                             vid_file_name,
-                             src_bcf_file_name,
-                             bcf_output);
-    } else if (b_is_set == 1){
+    } else if ( (B_is_set == 1) || (O_is_set == 1)){
 
         uint32_t *mapped_mask = (uint32_t *) calloc(num_ints,sizeof(uint32_t));
 
@@ -537,16 +648,33 @@ int query(int argc, char **argv, char *full_cmd)
                 break;
         }
 
-        print_query_result(mapped_mask,
-                           num_ints,
-                           vid_f->vids,
-                           q,
-                           mapped_counts,
-                           id_lens,
-                           gt_q_count,
-                           wf->gqt_header->num_variants,
-                           bim_file_name,
-                           full_cmd);
+        if (B_is_set == 1)
+            print_query_result_bim(mapped_mask,
+                               num_ints,
+                               vid_f->vids,
+                               q,
+                               mapped_counts,
+                               id_lens,
+                               gt_q_count,
+                               wf->gqt_header->num_variants,
+                               bim_file_name,
+                               full_cmd);
+        else
+            print_query_result_offset(mapped_mask,
+                                      num_ints,
+                                      vid_f->vids,
+                                      q,
+                                      mapped_counts,
+                                      id_lens,
+                                      U_R,
+                                      U_R_len,
+                                      id_query_list,
+                                      gt_query_list,
+                                      gt_q_count,
+                                      wf->gqt_header->num_variants,
+                                      off_file_name,
+                                      bcf_file_name,
+                                      full_cmd);
     }
 
     for (j = 0; j < gt_q_count; ++j) {
@@ -563,113 +691,18 @@ int query(int argc, char **argv, char *full_cmd)
 }
 //}}}
 
-//{{{ void get_bcf_query_result(uint32_t *mask,
-void get_bcf_query_result(uint32_t *mask,
-                        uint32_t mask_len,
-                        struct gqt_query *q,
-                        char **id_query_list,
-                        uint32_t *id_lens,
-                        uint32_t num_qs,
-                        uint32_t num_fields,
-                        char *vid_file_name,
-                        char *src_bcf_file_name,
-                        int bcf_output)
-{
-
-    /* The VID file contains the line numbers of the variants after they have
-     * been sorted.  To reach back into the BCF file to print the metadata
-     * associated with the variants marked in the mask, we need to create a
-     * sorted list of line numbers we want.  So first we intersect the VID file
-     * and the mask, then sort it.
-     */
-    /*
-    FILE *vid_f = fopen(vid_file_name, "rb");
-    if (!vid_f)
-        err(EX_NOINPUT, "Cannot read file\"%s\"", vid_file_name);
-
-    uint32_t *vids = (uint32_t *) malloc(num_fields*sizeof(uint32_t));
-    if (!vids )
-        err(EX_OSERR, "malloc error");
-
-    size_t fr = fread(vids, sizeof(uint32_t), num_fields, vid_f);
-    check_file_read(vid_file_name, vid_f, num_fields, fr);
-
-    fclose(vid_f);
-    */
-    struct vid_file *vid_f = open_vid_file(vid_file_name);
-    load_vid_data(vid_f);
-
-    uint32_t i, j, masked_vid_count = 0;
-
-    for (i = 0; i < mask_len; ++i)
-        masked_vid_count += popcount(mask[i]);
-
-    uint32_t *masked_vids = (uint32_t *)
-            malloc(masked_vid_count*sizeof(uint32_t));
-    if (!masked_vids )
-        err(EX_OSERR, "malloc error");
-    uint32_t masked_vid_i = 0;
-
-    for (i = 0; i < mask_len; ++i) {
-        uint32_t bytes = mask[i];
-	if (bytes == 0)
-            continue; /* skip a bunch of ops if you can */
-        for (j = 0; j < 32; j++) {
-            if (bytes & (1 << (31 - j))) {
-                masked_vids[masked_vid_i] = vid_f->vids[i*32 + j];
-                masked_vid_i+=1;
-            }
-        }
-        if (masked_vid_i == masked_vid_count)
-            break;
-    }
-
-    destroy_vid_file(vid_f);
-
-    qsort(masked_vids, masked_vid_count, sizeof(uint32_t), compare_uint32_t);
-
-    htsFile *fp    = hts_open(src_bcf_file_name,"rb");
-    bcf_hdr_t *hdr = bcf_hdr_read(fp);
-    bcf1_t *line    = bcf_init1();
-    //bcf_hdr_set_samples(hdr, print_name_csv, 0);
-
-    htsFile *out;
-    if (!bcf_output)
-        out = hts_open("-", "w");
-    else
-        out = hts_open("-", "wb");
-
-    int r = bcf_hdr_write(out, hdr);
-
-    uint32_t bcf_line_i = 0;
-    masked_vid_i = 0;
-    while ( bcf_read(fp, hdr, line) != -1) {
-        if (masked_vids[masked_vid_i] == bcf_line_i) {
-            r = bcf_unpack(line, BCF_UN_ALL);
-            r = bcf_write1(out, hdr, line);
-            masked_vid_i+=1;
-        }
-        if (masked_vid_i == masked_vid_count)
-            break;
-        bcf_line_i += 1;
-    }
-
-    hts_close(out);
-    hts_close(fp);
-}
-//}}}
  
-//{{{ void print_query_result(uint32_t *mask,
-void print_query_result(uint32_t *mask,
-                        uint32_t mask_len,
-                        uint32_t *vids,
-                        struct gqt_query *q,
-                        uint32_t **counts,
-                        uint32_t *id_lens,
-                        uint32_t num_qs,
-                        uint32_t num_fields,
-                        char *bim,
-                        char *full_cmd)
+//{{{ void print_query_result_bim(uint32_t *mask,
+void print_query_result_bim(uint32_t *mask,
+                            uint32_t mask_len,
+                            uint32_t *vids,
+                            struct gqt_query *q,
+                            uint32_t **counts,
+                            uint32_t *id_lens,
+                            uint32_t num_qs,
+                            uint32_t num_fields,
+                            char *bim,
+                            char *full_cmd)
 {
     uint32_t i,j,k,line_idx,bytes, bit_i = 0;
 
@@ -782,15 +815,190 @@ void print_query_result(uint32_t *mask,
 }
 //}}}
 
+//{{{ void print_query_result_offset(uint32_t *mask,
+void print_query_result_offset(uint32_t *mask,
+                               uint32_t mask_len,
+                               uint32_t *vids,
+                               struct gqt_query *q,
+                               uint32_t **counts,
+                               uint32_t *id_lens,
+                               uint32_t *U_R,
+                               uint32_t U_R_len,
+                               char **id_query_list,
+                               char **gt_query_list,
+                               uint32_t num_qs,
+                               uint32_t num_fields,
+                               char *off_file_name,
+                               char *source_file,
+                               char *full_cmd)
+{
+    struct off_file *off_f = open_off_file(off_file_name);
+    struct bcf_file bcf_f = init_bcf_file(source_file);
+
+    char *sample_names = NULL;
+
+    uint32_t i,j,k,line_idx,bytes, bit_i = 0;
+    int r;
+    for (i = 0; i < U_R_len; ++i) {
+        if (i == 0 )
+            r = asprintf(&sample_names,
+                         "%s",
+                         bcf_f.hdr->samples[U_R[i]]);
+        else
+            r = asprintf(&sample_names,
+                         "%s,%s",
+                         sample_names,
+                         bcf_f.hdr->samples[U_R[i]]);
+        if (r == -1)
+            err(EX_OSERR, "asprintf error");
+    }
+
+    if (bcf_hdr_set_samples(bcf_f.hdr, sample_names, 0) != 0)
+        errx(EX_DATAERR, "Error setting samples: %s\n", source_file);
+
+    char *info_s;
+ 
+    for (i = 0; i < num_qs; i++) {
+        if ( q[i].variant_op == p_count ) {
+            r = asprintf(&info_s, "##INFO=<ID=GQT_%u,Number=1,Type=Integer,"
+                         "Description=\"GQT count result from "
+                         "phenotype:'%s' genotype:'%s'\">",
+                         i, id_query_list[i], gt_query_list[i]);
+            if (r == -1) err(EX_OSERR, "asprintf error");
+
+            if (bcf_hdr_append(bcf_f.hdr, info_s) != 0)
+                errx(EX_DATAERR, "Error updating header: %s\n", source_file);
+
+        } else if ( q[i].variant_op == p_pct ) {
+            r = asprintf(&info_s, "##INFO=<ID=GQT_%u,Number=1,Type=Float,"
+                         "Description=\"GQT percent result from "
+                         "phenotype:'%s' genotype:'%s'\">",
+                         i, id_query_list[i], gt_query_list[i]);
+            if (r == -1) err(EX_OSERR, "asprintf error");
+
+            if (bcf_hdr_append(bcf_f.hdr, info_s) != 0)
+                errx(EX_DATAERR, "Error updating header: %s\n", source_file);
+
+        } else if ( q[i].variant_op == p_maf ) {
+            r = asprintf(&info_s, "##INFO=<ID=GQT_%u,Number=1,Type=Float,"
+                         "Description=\"GQT maf result from "
+                         "phenotype:'%s' genotype:'%s'\">",
+                         i, id_query_list[i], gt_query_list[i]);
+
+            if (bcf_hdr_append(bcf_f.hdr, info_s) != 0)
+                errx(EX_DATAERR, "Error updating header: %s\n", source_file);
+        }
+
+    }
+
+    r = asprintf(&info_s, "##%s_queryVersion=%s", PROGRAM_NAME, VERSION);
+    if (r == -1) err(EX_OSERR, "asprintf error");
+
+    if (bcf_hdr_append(bcf_f.hdr, info_s) != 0)
+        errx(EX_DATAERR, "Error updating header: %s\n", source_file);
+
+    r = asprintf(&info_s, "##%s_queryCommand=%s", PROGRAM_NAME, full_cmd);
+    if (r == -1) err(EX_OSERR, "asprintf error");
+
+    if (bcf_hdr_append(bcf_f.hdr, info_s) != 0)
+        errx(EX_DATAERR, "Error updating header: %s\n", source_file);
+
+    htsFile *out_f = hts_open("-","w");
+    if ( !out_f )
+        err(EX_DATAERR, "Could open output file");
+
+    bcf_hdr_write(out_f, bcf_f.hdr);
+
+    bcf_f.line = bcf_init1();
+
+    for (i=0; i < mask_len; ++i) {
+        bytes = mask[i];
+	if (bytes == 0)
+            continue; /* skip a bunch of ops if you can */
+        for (j=0; j < 32; j++) {
+            if (bytes & 1 << (31 - j)) {
+	        line_idx = i*32+j;
+
+                r = goto_bcf_line(&bcf_f, off_f, line_idx);
+
+                if (r == -1) 
+                    err(EX_NOINPUT,
+                        "Error seeking file '%s'", bcf_f.file_name);
+
+                r = get_bcf_line(&bcf_f);
+                if (r == -1) 
+                    err(EX_NOINPUT,
+                        "Error reading file '%s'", bcf_f.file_name);
+
+                for (k=0; k < num_qs; k++) {
+                    r = asprintf(&info_s, "GQT_%u", k);
+                    if (r == -1)
+                        err(EX_OSERR, "asprintf error");
+
+                    if ( q[k].variant_op == p_count ) {
+                        int32_t v = counts[k][line_idx];
+                        if (bcf_update_info_int32(bcf_f.hdr,
+                                                  bcf_f.line,
+                                                  info_s,
+                                                  &v,
+                                                  1) != 0)
+                            errx(EX_DATAERR,
+                                 "Error adding to info field: %s\n",
+                                 bcf_f.file_name);
+                    } else if (q[k].variant_op == p_pct) {
+                        float v = ((float)counts[k][line_idx])/
+                                    ((float) id_lens[k]);
+                        if (bcf_update_info_float(bcf_f.hdr,
+                                                  bcf_f.line,
+                                                  info_s,
+                                                  &v,
+                                                  1) != 0)
+                            errx(EX_DATAERR,
+                                 "Error adding to info field: %s\n",
+                                 bcf_f.file_name);
+
+                    } else if (q[k].variant_op == p_maf) {
+                        float v = ((float)counts[k][line_idx])/
+                                    (((float) id_lens[k])*2.0);
+                        if (bcf_update_info_float(bcf_f.hdr,
+                                                  bcf_f.line,
+                                                  info_s,
+                                                  &v,
+                                                  1) != 0)
+                            errx(EX_DATAERR,
+                                 "Error adding to info field: %s\n",
+                                 bcf_f.file_name);
+                    }
+                }
+
+                bcf_write(out_f, bcf_f.hdr, bcf_f.line);
+
+            }
+	    bit_i++;
+	    if (bit_i == num_fields)
+	        break;
+        }
+
+        if (bit_i == num_fields)
+            break;
+    }
+    hts_close(out_f);
+    destroy_off_file(off_f);
+}
+//}}}
+
 //{{{int query_help()
 int query_help()
 {
     fprintf(stderr, 
 "%s v%s\n"
-"usage:   gqt query -i <wahbm file> \\\n"
-"                   [-b <bim file> || -s <bcf file> && -v <vid file>]  \\\n"                    
-"                   -c only print number of resulting variants \\\n"
+"usage:   gqt query -i <bcf/vcf or gqt file> \\\n"
 "                   -d <ped database file> \\\n"
+"                   -B <bim file> (opt.)\\\n"
+"                   -O <off file> (opt.)\\\n"
+"                   -V <vid file> (opt.)\\\n"
+"                   -G <gqt file> (opt.)\\\n"
+"                   -c only print number of resulting variants \\\n"
 "                   -p <population query 1> \\\n"
 "                   -g <genotype query 1> \\\n"
 "                   -p <population query 2> \\\n"
@@ -842,3 +1050,101 @@ PROGRAM_NAME, VERSION);
     return EX_USAGE;
 }
 //}}}
+
+#if 0 
+//{{{ void get_bcf_query_result(uint32_t *mask,
+void get_bcf_query_result(uint32_t *mask,
+                        uint32_t mask_len,
+                        struct gqt_query *q,
+                        char **id_query_list,
+                        uint32_t *id_lens,
+                        uint32_t num_qs,
+                        uint32_t num_fields,
+                        char *vid_file_name,
+                        char *bcf_file_name,
+                        int bcf_output)
+{
+
+    /* The VID file contains the line numbers of the variants after they have
+     * been sorted.  To reach back into the BCF file to print the metadata
+     * associated with the variants marked in the mask, we need to create a
+     * sorted list of line numbers we want.  So first we intersect the VID file
+     * and the mask, then sort it.
+     */
+    /*
+    FILE *vid_f = fopen(vid_file_name, "rb");
+    if (!vid_f)
+        err(EX_NOINPUT, "Cannot read file\"%s\"", vid_file_name);
+
+    uint32_t *vids = (uint32_t *) malloc(num_fields*sizeof(uint32_t));
+    if (!vids )
+        err(EX_OSERR, "malloc error");
+
+    size_t fr = fread(vids, sizeof(uint32_t), num_fields, vid_f);
+    check_file_read(vid_file_name, vid_f, num_fields, fr);
+
+    fclose(vid_f);
+    */
+    struct vid_file *vid_f = open_vid_file(vid_file_name);
+    load_vid_data(vid_f);
+
+    uint32_t i, j, masked_vid_count = 0;
+
+    for (i = 0; i < mask_len; ++i)
+        masked_vid_count += popcount(mask[i]);
+
+    uint32_t *masked_vids = (uint32_t *)
+            malloc(masked_vid_count*sizeof(uint32_t));
+    if (!masked_vids )
+        err(EX_OSERR, "malloc error");
+    uint32_t masked_vid_i = 0;
+
+    for (i = 0; i < mask_len; ++i) {
+        uint32_t bytes = mask[i];
+	if (bytes == 0)
+            continue; /* skip a bunch of ops if you can */
+        for (j = 0; j < 32; j++) {
+            if (bytes & (1 << (31 - j))) {
+                masked_vids[masked_vid_i] = vid_f->vids[i*32 + j];
+                masked_vid_i+=1;
+            }
+        }
+        if (masked_vid_i == masked_vid_count)
+            break;
+    }
+
+    destroy_vid_file(vid_f);
+
+    qsort(masked_vids, masked_vid_count, sizeof(uint32_t), compare_uint32_t);
+
+    htsFile *fp    = hts_open(bcf_file_name,"rb");
+    bcf_hdr_t *hdr = bcf_hdr_read(fp);
+    bcf1_t *line    = bcf_init1();
+    //bcf_hdr_set_samples(hdr, print_name_csv, 0);
+
+    htsFile *out;
+    if (!bcf_output)
+        out = hts_open("-", "w");
+    else
+        out = hts_open("-", "wb");
+
+    int r = bcf_hdr_write(out, hdr);
+
+    uint32_t bcf_line_i = 0;
+    masked_vid_i = 0;
+    while ( bcf_read(fp, hdr, line) != -1) {
+        if (masked_vids[masked_vid_i] == bcf_line_i) {
+            r = bcf_unpack(line, BCF_UN_ALL);
+            r = bcf_write1(out, hdr, line);
+            masked_vid_i+=1;
+        }
+        if (masked_vid_i == masked_vid_count)
+            break;
+        bcf_line_i += 1;
+    }
+
+    hts_close(out);
+    hts_close(fp);
+}
+//}}}
+#endif

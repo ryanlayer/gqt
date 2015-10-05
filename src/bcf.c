@@ -1,4 +1,5 @@
 #define _GNU_SOURCE
+#include <htslib/bgzf.h>
 #include <htslib/hts.h>
 #include <htslib/vcf.h>
 #include <htslib/kstring.h>
@@ -10,6 +11,7 @@
 
 #include "bcf.h"
 #include "vid.h"
+#include "off.h"
 #include "bim.h"
 #include "ubin.h"
 #include "genotq.h"
@@ -44,20 +46,168 @@ struct bcf_file init_bcf_file(char *file_name)
     
     bcf_f.file_name = file_name;
 
-    bcf_f.fp = hts_open(file_name,"rb");
-    if ( !bcf_f.fp ) 
+    bcf_f.fp.bcf = hts_open(file_name,"rb");
+    if ( !bcf_f.fp.bcf ) 
         err(EX_DATAERR, "Could not read file: %s", file_name);
 
-    bcf_f.hdr = bcf_hdr_read(bcf_f.fp);
+    if (bcf_f.fp.bcf->format.compression != bgzf)
+        errx(EX_DATAERR, "Not a BGZF file: %s\n", file_name);
+
+    bcf_f.hdr = bcf_hdr_read(bcf_f.fp.bcf);
 
     if ( !bcf_f.hdr )
         err(EX_DATAERR, "Could not read the header: %s", file_name);
+
+    htsFormat type = *hts_get_format(bcf_f.fp.bcf);
+    if (type.format == bcf) {
+        bcf_f.is_bcf = 1;
+        bcf_f.offset = bgzf_tell(bcf_f.fp.bcf->fp.bgzf);
+    } else {
+        bcf_f.is_bcf = 0;
+
+        bcf_f.str.m = 0;
+        bcf_f.str.l = 0;
+        bcf_f.str.s = 0;
+
+        hts_close(bcf_f.fp.bcf);
+        bcf_f.fp.vcf = bgzf_open(file_name, "r");
+        
+        if (!bcf_f.fp.vcf)
+            err(EX_DATAERR, "Could not read file: %s", file_name);
+        if ( !(bcf_f.fp.vcf->is_compressed) ) {
+            bgzf_close(bcf_f.fp.vcf);
+            err(EX_DATAERR, "Not a compresed file: %s", file_name);
+        }
+
+        // move past the header
+        int ret;
+        uint64_t last_offset = 0;
+        while (bgzf_getline(bcf_f.fp.vcf, '\n', &(bcf_f.str)) >= 0) {
+            if (bcf_f.str.s[0] == '#')
+                last_offset = bgzf_tell(bcf_f.fp.vcf);
+            else
+                break;
+        }
+        if (bgzf_seek(bcf_f.fp.vcf, last_offset, SEEK_SET) != 0)
+            err(EX_DATAERR, "Error moving past header: %s", file_name);
+        bcf_f.offset = last_offset;
+    }
 
     bcf_f.line = bcf_init1();
     bcf_f.num_records = bcf_hdr_nsamples(bcf_f.hdr);
     bcf_f.gt = NULL;
 
     return bcf_f;
+}
+//}}}
+
+//{{{int get_bcf_line(struct bcf_file *bcf_f)
+int get_bcf_line(struct bcf_file *bcf_f)
+{
+    int r;
+
+    if (bcf_f->is_bcf) {
+        r = bcf_read(bcf_f->fp.bcf, bcf_f->hdr, bcf_f->line);
+        bcf_f->offset = bgzf_tell(bcf_f->fp.bcf->fp.bgzf);
+    } else {
+        r = bgzf_getline(bcf_f->fp.vcf, '\n', &(bcf_f->str));
+        if (r < 0)
+            return r;
+        else 
+            r = 0;
+        bcf_f->offset = bgzf_tell(bcf_f->fp.vcf);
+        vcf_parse(&(bcf_f->str), bcf_f->hdr, bcf_f->line);
+    }
+
+    return r;
+}
+//}}}
+
+//{{{ int goto_bcf_line(struct bcf_file *bcf_f,
+int goto_bcf_line(struct bcf_file *bcf_f,
+                   struct off_file *off_f,
+                   uint32_t line_no)
+{
+    int r;
+
+    if (line_no >= off_f->gqt_header->num_variants)
+        errx(EX_SOFTWARE,
+             "Seeking to line beyond file boundary for '%s'.",
+             off_f->file_name); 
+
+
+    if (bcf_f->is_bcf) 
+        r = bgzf_seek(bcf_f->fp.bcf->fp.bgzf,
+                      off_f->offsets[line_no],
+                      SEEK_SET);
+    else
+        r = bgzf_seek(bcf_f->fp.vcf,
+                      off_f->offsets[line_no],
+                      SEEK_SET);
+
+    return r;
+}
+//}}}
+
+//{{{int convert_file_by_name_bcf_to_wahbm_offset(char *in,
+int convert_file_by_name_bcf_to_wahbm_offset(char *in,
+                                             uint32_t num_fields,
+                                             uint32_t num_records,
+                                             char *wah_out,
+                                             char *offset_out,
+                                             char *vid_out,
+                                             char *tmp_dir,
+                                             char *full_cmd)
+{
+    uint32_t num_inds = num_fields;
+    uint32_t num_vars = num_records;
+
+    char *gt_of_name,
+         *gt_s_of_name,
+         *gt_s_r_of_name;
+
+    int r = asprintf(&gt_of_name, "%s/.gt.tmp.packed", tmp_dir);
+    if (r == -1) err(EX_OSERR, "asprintf error");
+    r = asprintf(&gt_s_of_name, "%s/.s.gt.tmp.packed", tmp_dir);
+    if (r == -1) err(EX_OSERR, "asprintf error");
+    r = asprintf(&gt_s_r_of_name, "%s/.r.s.gt.tmp.packed", tmp_dir);
+    if (r == -1) err(EX_OSERR, "asprintf error");
+
+
+    struct bcf_file bcf_f = init_bcf_file(in);
+    pri_queue q = priq_new(0);
+
+    push_bcf_gt_offset(&q,
+                       &bcf_f,
+                       num_inds,
+                       num_vars,
+                       gt_of_name,
+                       offset_out,
+                       full_cmd);
+    sort_gt(&q,
+            num_inds,
+            num_vars,
+            gt_of_name,
+            gt_s_of_name,
+            vid_out,
+            full_cmd);
+
+    rotate_gt(num_inds,
+              num_vars,
+              gt_s_of_name,
+              gt_s_r_of_name);
+
+    close_bcf_file(&bcf_f);
+
+    r = convert_file_by_name_ubin_to_wahbm(gt_s_r_of_name,
+                                          wah_out,
+                                          full_cmd);
+
+    remove(gt_of_name);
+    remove(gt_s_of_name);
+    remove(gt_s_r_of_name);
+
+    return r;
 }
 //}}}
 
@@ -73,14 +223,6 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 {
     uint32_t num_inds = num_fields;
     uint32_t num_vars = num_records;
-
-    /*
-    char *gt_of_name = ".gt.tmp.packed";
-    char *gt_s_of_name = ".s.gt.tmp.packed";
-    char *gt_s_r_of_name = ".r.s.gt.tmp.packed";
-    char *md_of_name = ".md.tmp.packed";
-    char *md_s_of_name = ".md.tmp.packed.bim";
-    */
 
     char *gt_of_name,
          *gt_s_of_name,
@@ -119,25 +261,14 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                    gt_of_name,
                    md_of_name);
 
-    sort_gt_md(&q,
-               md_index,
-               md_s_index,
-               num_inds,
-               num_vars,
-               gt_of_name,
-               gt_s_of_name,
-               md_of_name,
-               md_s_of_name,
-               vid_out,
-               full_cmd);
+    sort_gt(&q,
+            num_inds,
+            num_vars,
+            gt_of_name,
+            gt_s_of_name,
+            vid_out,
+            full_cmd);
 
-    /*
-    compress_md(&bcf_f,
-                md_s_of_name,
-                bim_out,
-                md_s_index,
-                num_vars);
-    */
     compress_md(&bcf_f,
                 md_of_name,
                 bim_out,
@@ -166,6 +297,359 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
     //free(md_index);
     free(md_s_index);
     return r;
+}
+//}}}
+
+//{{{ void push_bcf_gt_offset(pri_queue *q,
+/*
+ * Read a BCF file and populated:
+ * INPUT:
+ *   bcf_f: a bcf_file struct that contains the file handle and metadata for
+ *          the target BCF file 
+ * OUTPUT:
+ *   q: a prioriy queue where the priority is the alt allele count and
+ *      the number of leaded zeros, and the value is the index of that 
+ *      variant both in md_of_name (where md_index maps index to the file
+ *      offset) and in gt_of_name (which is fixed width and that index can be
+ *      multiplied by width to get fill offset)
+ *   md_of_name: a file containg the variant metadata
+ *   md_index: an array of 64-bit ints that contains that maps the index of a
+ *             vairiant to its offset in md_of_name
+ *   gt_of_name: a variant-major file containing arrays of pakced genotypes
+ *               (0,1,2,3) this is a fixed-width file and each element in the
+ *               array is a 32-bit int
+ */
+void push_bcf_gt_offset(pri_queue *q,
+                       struct bcf_file *bcf_f,
+                       uint32_t num_inds,
+                       uint32_t num_vars,
+                       char *gt_of_name,
+                       char *offset_of_name,
+                       char *full_cmd)
+{
+    FILE *gt_of = fopen(gt_of_name,"wb");
+    if (!gt_of)
+        err(EX_CANTCREAT, "Cannot create file \"%s\"", gt_of_name);
+
+    /*
+    FILE *off_of = fopen(offset_of_name,"wb");
+    if (!off_of)
+        err(EX_CANTCREAT, "Cannot create file \"%s\"", offset_of_name);
+    */
+
+    struct off_file *off_of = new_off_file(offset_of_name,
+                                           full_cmd,
+                                           num_vars,
+                                           num_inds);
+
+    uint32_t num_ind_ints = 1 + ((num_inds - 1) / 16);
+
+    // Allocate this array once, and reuse it for every variant
+    uint32_t *packed_ints = (uint32_t *) calloc(num_ind_ints,
+                                                sizeof(uint32_t));
+
+    uint64_t md_i = 0;
+
+    uint32_t i, j, k, sum, int_i, two_bit_i = 0;
+    int ntmp = 0;
+
+    int32_t *gt_p = NULL;
+
+    priority p;
+
+    uint32_t tenth_num_var = num_vars / 10;
+    fprintf(stderr,"Extracting genotypes and offsets");
+
+    uint64_t last_offset = 0;
+
+    for (i = 0; i < num_vars; ++i) {
+        if ((tenth_num_var ==0) || (i % tenth_num_var == 0))
+            fprintf(stderr,".");
+
+        sum = 0;
+        int_i = 0;
+        two_bit_i = 0;
+
+        last_offset = bcf_f->offset;
+        // Get the next bcf record
+        int r = get_bcf_line(bcf_f);
+
+        if (r == -1) 
+            err(EX_NOINPUT, "Error reading file \"%s\"", bcf_f->file_name);
+        
+        // Unpack all of the fields 
+        bcf_unpack(bcf_f->line, BCF_UN_ALL);
+
+
+        // Get gentotypes
+        uint32_t num_gts_per_sample = bcf_get_genotypes(bcf_f->hdr,
+                                                        bcf_f->line,
+                                                        &gt_p,
+                                                        &ntmp);
+        num_gts_per_sample /= num_inds;
+        int32_t *gt_i = gt_p;
+
+        
+        if (num_gts_per_sample != 2) {
+            fprintf(stderr, "num_gts_per_sample:%u\t%u:%u\n",
+                            num_gts_per_sample,
+                            i,
+                            num_vars);
+        }
+        // Pack genotypes
+        for (j = 0; j < num_inds; ++j) {
+            uint32_t gt = 0;
+
+            assert(num_gts_per_sample <= 2);
+            assert(num_gts_per_sample > 0);
+
+            if ( (num_gts_per_sample == 1) || 
+                 (gt_i[1] == bcf_int32_vector_end) ){
+                if (bcf_gt_is_missing(gt_i[0]))
+                    gt = 3;
+                else if (bcf_gt_allele(gt_i[0]) == 0)
+                    gt = 0;
+                else
+                    gt = 1;
+            } else {
+                if (bcf_gt_is_missing(gt_i[0]) && bcf_gt_is_missing(gt_i[1]))
+                    gt = 3;
+                else if ((bcf_gt_allele(gt_i[0]) == 0 ) &&
+                         (bcf_gt_allele(gt_i[1]) == 0 ))
+                    gt = 0;
+                else if ((bcf_gt_allele(gt_i[0]) != (bcf_gt_allele(gt_i[1]))))
+                    gt = 1;
+                else 
+                    gt = 2;
+            }
+                
+            packed_ints[int_i] += gt << (30 - 2*two_bit_i);
+
+            two_bit_i += 1;
+            if (two_bit_i == 16) {
+                two_bit_i = 0;
+                int_i += 1;
+            }
+
+            sum += gt;
+            gt_i += num_gts_per_sample;
+        }
+
+        // Get a priority for the variant based on the sum and number of 
+        // leading zeros
+        p.sum = sum;
+        uint32_t prefix_len = 0;
+        j = 0;
+        while ((j < num_ind_ints) && (packed_ints[j] == 0)){
+            prefix_len += 32;
+            j += 1;
+        }
+        if (j < num_ind_ints)
+            prefix_len += nlz1(packed_ints[j]);
+        
+        // Push it into the q
+        p.len = prefix_len;
+        int *j = (int *) malloc (sizeof(int));
+        if (!j)
+            err(EX_OSERR, "malloc error");
+        j[0] = i;
+        priq_push(*q, j, p);
+
+        // Write to file
+        if (fwrite(packed_ints,
+                   sizeof(uint32_t),
+                   num_ind_ints,
+                   gt_of) != num_ind_ints)
+            err(EX_IOERR, "Error writing to \"%s\"", gt_of_name); 
+
+        // Write offset the of the start of the current line
+        /*
+        if (fwrite(&last_offset,
+                   sizeof(uint64_t),
+                   1,
+                   off_of) != 1)
+            err(EX_IOERR, "Error writing to \"%s\"", offset_of_name); 
+        */
+        add_to_off_file(off_of, last_offset);
+
+        memset(packed_ints, 0, num_ind_ints*sizeof(uint32_t));
+    }
+
+    fprintf(stderr,"Done\n");
+
+    free(packed_ints);
+    fclose(gt_of);
+    destroy_off_file(off_of);
+}
+//}}}
+
+//{{{ void push_bcf_gt_md_offset(pri_queue *q,
+void push_bcf_gt_md_offset(pri_queue *q,
+                           struct bcf_file *bcf_f,
+                           uint32_t num_inds,
+                           uint32_t num_vars,
+                           char *gt_of_name,
+                           char *offset_of_name,
+                           char *md_of_name,
+                           char *full_cmd)
+{
+    // store genotypes in packed ints
+    FILE *gt_of = fopen(gt_of_name,"wb");
+    if (!gt_of)
+        err(EX_CANTCREAT, "Cannot create file '%s'", gt_of_name);
+
+    // store uncompressed variant metadata
+    FILE *md_of = fopen(md_of_name,"w");
+    if (!md_of)
+        err(EX_CANTCREAT, "Cannot create file '%s'", md_of_name);
+
+    struct off_file *off_of = new_off_file(offset_of_name,
+                                           full_cmd,
+                                           num_vars,
+                                           num_inds);
+
+    uint32_t num_ind_ints = 1 + ((num_inds - 1) / 16);
+
+    // Allocate this array once, and reuse it for every variant
+    uint32_t *packed_ints = (uint32_t *) calloc(num_ind_ints,
+                                                sizeof(uint32_t));
+
+    uint64_t md_i = 0;
+
+    uint32_t i, j, k, sum, int_i, two_bit_i = 0;
+    int ntmp = 0;
+
+    int32_t *gt_p = NULL;
+
+    priority p;
+
+    uint32_t tenth_num_var = num_vars / 10;
+    fprintf(stderr,"Extracting genotypes, variant metadata, and offsets");
+
+    uint64_t last_offset = 0;
+
+    for (i = 0; i < num_vars; ++i) {
+        if ((tenth_num_var ==0) || (i % tenth_num_var == 0))
+            fprintf(stderr,".");
+
+        sum = 0;
+        int_i = 0;
+        two_bit_i = 0;
+
+        last_offset = bcf_f->offset;
+        // Get the next bcf record
+        int r = get_bcf_line(bcf_f);
+
+        if (r == -1) 
+            err(EX_NOINPUT, "Error reading file \"%s\"", bcf_f->file_name);
+        
+        // Unpack all of the fields 
+        bcf_unpack(bcf_f->line, BCF_UN_ALL);
+
+
+        // Get gentotypes
+        uint32_t num_gts_per_sample = bcf_get_genotypes(bcf_f->hdr,
+                                                        bcf_f->line,
+                                                        &gt_p,
+                                                        &ntmp);
+        num_gts_per_sample /= num_inds;
+        int32_t *gt_i = gt_p;
+
+        
+        if (num_gts_per_sample != 2) {
+            fprintf(stderr, "num_gts_per_sample:%u\t%u:%u\n",
+                            num_gts_per_sample,
+                            i,
+                            num_vars);
+        }
+        // Pack genotypes
+        for (j = 0; j < num_inds; ++j) {
+            uint32_t gt = 0;
+
+            assert(num_gts_per_sample <= 2);
+            assert(num_gts_per_sample > 0);
+
+            if ( (num_gts_per_sample == 1) || 
+                 (gt_i[1] == bcf_int32_vector_end) ){
+                if (bcf_gt_is_missing(gt_i[0]))
+                    gt = 3;
+                else if (bcf_gt_allele(gt_i[0]) == 0)
+                    gt = 0;
+                else
+                    gt = 1;
+            } else {
+                if (bcf_gt_is_missing(gt_i[0]) && bcf_gt_is_missing(gt_i[1]))
+                    gt = 3;
+                else if ((bcf_gt_allele(gt_i[0]) == 0 ) &&
+                         (bcf_gt_allele(gt_i[1]) == 0 ))
+                    gt = 0;
+                else if ((bcf_gt_allele(gt_i[0]) != (bcf_gt_allele(gt_i[1]))))
+                    gt = 1;
+                else 
+                    gt = 2;
+            }
+                
+            packed_ints[int_i] += gt << (30 - 2*two_bit_i);
+
+            two_bit_i += 1;
+            if (two_bit_i == 16) {
+                two_bit_i = 0;
+                int_i += 1;
+            }
+
+            sum += gt;
+            gt_i += num_gts_per_sample;
+        }
+
+        // Get a priority for the variant based on the sum and number of 
+        // leading zeros
+        p.sum = sum;
+        uint32_t prefix_len = 0;
+        j = 0;
+        while ((j < num_ind_ints) && (packed_ints[j] == 0)){
+            prefix_len += 32;
+            j += 1;
+        }
+        if (j < num_ind_ints)
+            prefix_len += nlz1(packed_ints[j]);
+        
+        // Push it into the q
+        p.len = prefix_len;
+        int *j = (int *) malloc (sizeof(int));
+        if (!j)
+            err(EX_OSERR, "malloc error");
+        j[0] = i;
+        priq_push(*q, j, p);
+
+        // Write to file
+        if (fwrite(packed_ints,
+                   sizeof(uint32_t),
+                   num_ind_ints,
+                   gt_of) != num_ind_ints)
+            err(EX_IOERR, "Error writing to \"%s\"", gt_of_name); 
+
+        //Get metadata
+        bcf_f->line->n_sample = 0;
+        vcf_format1(bcf_f->hdr, bcf_f->line, &md);
+        md_i += md.l;
+        md_index[i] = md_i;
+        fprintf(md_of, "%s", md.s);
+        md.l = 0;
+
+        add_to_off_file(off_of, last_offset);
+
+        memset(packed_ints, 0, num_ind_ints*sizeof(uint32_t));
+    }
+
+    fprintf(stderr,"Done\n");
+
+    if (md.s != 0)
+        free(md.s);
+
+    free(packed_ints);
+    fclose(gt_of);
+    fclose(md_of);
+    destroy_off_file(off_of);
 }
 //}}}
 
@@ -230,20 +714,18 @@ void push_bcf_gt_md(pri_queue *q,
         if ((tenth_num_var ==0) || (i % tenth_num_var == 0))
             fprintf(stderr,".");
 
-
-
         sum = 0;
         int_i = 0;
         two_bit_i = 0;
 
         // Get the next bcf record
-        int r = bcf_read(bcf_f->fp, bcf_f->hdr, bcf_f->line);
+        //int r = bcf_read(bcf_f->fp, bcf_f->hdr, bcf_f->line);
+        //int r = bcf_read(bcf_f->fp.bcf, bcf_f->hdr, bcf_f->line);
+        int r = get_bcf_line(bcf_f);
 
         if (r == -1) 
             err(EX_NOINPUT, "Error reading file \"%s\"", bcf_f->file_name);
         
-
-
         // Unpack all of the fields 
         bcf_unpack(bcf_f->line, BCF_UN_ALL);
 
@@ -386,34 +868,18 @@ void push_bcf_gt_md(pri_queue *q,
  *   vid_out: a file containg the index of the sorted variant in the original
  *            BCF file
  */
-void sort_gt_md(pri_queue *q,
-                uint64_t *md_index,
-                uint64_t *md_s_index,
-                uint32_t num_inds,
-                uint32_t num_vars,
-                char *gt_of_name,
-                char *gt_s_of_name,
-                char *md_of_name,
-                char *md_s_of_name,
-                char *vid_out,
-                char *full_cmd)
+void sort_gt(pri_queue *q,
+             uint32_t num_inds,
+             uint32_t num_vars,
+             char *gt_of_name,
+             char *gt_s_of_name,
+             char *vid_out,
+             char *full_cmd)
 {
-    // unsorted metadata
-    //FILE *md_of = fopen(md_of_name,"r");
     // unsorted genotypes
     FILE *gt_of = fopen(gt_of_name,"rb");
     if (!gt_of)
         err(EX_NOINPUT, "Cannot read file\"%s\"", gt_of_name);
-
-    // sorted genotypes
-    //FILE *md_out = fopen(md_s_of_name,"w");
-    // sorted variant row #s
-    
-    /*
-    FILE *v_out = fopen(vid_out,"wb");
-    if (!v_out)
-        err(EX_CANTCREAT, "Cannot create file \"%s\"", vid_out);
-    */
 
     struct vid_file *v_out = new_vid_file(vid_out,
                                           full_cmd,
@@ -437,7 +903,7 @@ void sort_gt_md(pri_queue *q,
     uint32_t tenth_num_var = num_vars / 10;
     uint32_t var_i = 0;
     uint64_t cumul_len = 0;
-    fprintf(stderr,"Sorting genotypes and metadata");
+    fprintf(stderr,"Sorting genotypes");
 
     // Get variants in order and rewrite a variant-major sorted matrix
     while ( priq_top(*q, &p) != NULL ) {
@@ -450,25 +916,7 @@ void sort_gt_md(pri_queue *q,
 
         uint64_t start = 0;
         int r;
-#if 0
-        // get start offset of metadata
-        if (*d != 0)
-            start = md_index[*d - 1];
 
-        // get the length of meta data
-        uint64_t len = md_index[*d] - start;
-
-        // jump to the spot the metadata and read
-        fseek(md_of, start*sizeof(char), SEEK_SET);
-        char buf[len+1];
-        int r = fread(buf, sizeof(char), len, md_of);
-        buf[len] = '\0';
-        //write metadata to file
-        fprintf(md_out, "%s", buf);
-
-        cumul_len += strlen(buf);
-        md_s_index[var_i] = cumul_len;
-#endif
         // jump to the sport in the genotypes, read and write
         start = num_ind_ints*sizeof(uint32_t);
         start = (*d)*start;
@@ -483,11 +931,6 @@ void sort_gt_md(pri_queue *q,
                    s_gt_of) != num_ind_ints)
             err(EX_IOERR, "Error writing to \"%s\"", gt_s_of_name); 
 
-        //write out the variant ID
-        /*
-        if (fwrite(d, sizeof(uint32_t), 1, v_out) != 1)
-            err(EX_IOERR, "Error writing to \"%s\"", vid_out); 
-        */
         write_vid(v_out, *d);
 
         var_i += 1;
@@ -497,10 +940,7 @@ void sort_gt_md(pri_queue *q,
 
     free(packed_ints);
 
-    //fclose(md_out);
-    //fclose(v_out);
     destroy_vid_file(v_out);
-    //fclose(md_of);
     fclose(gt_of);
     fclose(s_gt_of);
 }
@@ -948,184 +1388,13 @@ void close_bcf_file(struct bcf_file *bcf_f)
 {
     bcf_hdr_destroy(bcf_f->hdr);
     bcf_destroy1(bcf_f->line);
-    hts_close(bcf_f->fp);
-}
-//}}}
 
-#if 0
-//{{{int convert_file_by_name_bcf_to_wahbm_bim(char *in,
-int convert_file_by_name_bcf_to_wahbm_bim(char *in,
-                                          uint32_t num_fields,
-                                          uint32_t num_records,
-                                          char *wah_out,
-                                          char *bim_out)
-{
-
-    struct hdf5_file hdf5_f = init_hdf5_file(".tmp.h5",
-                                             num_records, //num_vars,
-                                             num_fields); //num_inds);
-
-    struct bcf_file bcf_f = init_bcf_file(in);
-
-    pri_queue q = priq_new(0);
-
-#ifdef time_convert_file_by_name_bcf_to_wahbm_bim
-    unsigned long t1 = 0, t2 = 0, t3 = 0;
-#endif
-
-
-#ifdef time_convert_file_by_name_bcf_to_wahbm_bim
-    start();
-#endif
-
-    push_bcf_gt_md(&q, &bcf_f, &hdf5_f);
-
-#ifdef time_convert_file_by_name_bcf_to_wahbm_bim
-    stop();
-    t1 = report();
-#endif
-
-#ifdef time_convert_file_by_name_bcf_to_wahbm_bim
-    start();
-#endif
-
-    sort_rotate_gt_md(&q, &hdf5_f, bim_out);
-
-#ifdef time_convert_file_by_name_bcf_to_wahbm_bim
-    stop();
-    t2 = report();
-#endif
-
-#ifdef time_convert_file_by_name_bcf_to_wahbm_bim
-    start();
-#endif
-
-    int r = convert_hdf5_ind_ubin_to_ind_wah(hdf5_f, wah_out);
-
-#ifdef time_convert_file_by_name_bcf_to_wahbm_bim
-    stop();
-    t3 = report();
-#endif
-
-    
-#ifdef time_convert_file_by_name_bcf_to_wahbm_bim
-    double t = t1 + t2 + t3 + 0.0;
-    fprintf(stderr, "push_bcf_gt_md: %lu %f\t"
-                    "sort_rotate_gt_md: %lu %f\t"
-                    "convert_hdf5_ind_ubin_to_ind_wah: %lu %f\n",
-                    t1, t1/t,
-                    t2, t2/t,
-                    t3, t3/t
-           );
-#endif
-
-    priq_free(q);
-    close_hdf5_file(hdf5_f);
-    close_bcf_file(&bcf_f);
-    remove(".tmp.h5");
-
-    //return r;
-    return 0;
-}
-//}}}
-
-//{{{uint32_t pack_sum_count_prefix_bcf_line(struct bcf_file bcf_f,
-uint32_t pack_sum_count_prefix_bcf_line(struct bcf_file bcf_f,
-                                        uint32_t num_samples,
-                                        uint32_t num_gts_per_sample,
-                                        uint32_t **packed_ints,
-                                        uint32_t *sum,
-                                        uint32_t *prefix_len)
-{
-    uint32_t num_ints = 1 + ((num_samples - 1) / 16);
-    *packed_ints = calloc(num_ints, sizeof(uint32_t));
-    //fprintf(stderr, "pack_sum_count_prefix_bcf_line\tnum_ints:%u\n",num_ints); 
-    int32_t *gt_i = bcf_f.gt;
-
-    uint32_t two_bit_i = 0, int_i = 0;
-
-    *sum = 0;
-
-    uint32_t i, j, a = 0;
-    for (i = 0; i < num_samples; ++i) {
-        uint32_t gt = 0;
-        for (j=0; j< num_gts_per_sample; ++j) {
-            gt += bcf_gt_allele(gt_i[j]);
-        }
-
-        //fprintf(stderr, "pack_sum_count_prefix_bcf_line\tint_i:%u\n",int_i); 
-        (*packed_ints)[int_i] += gt << (30 - 2*two_bit_i);
-        two_bit_i += 1;
-        if (two_bit_i == 16) {
-            two_bit_i = 0;
-            int_i += 1;
-        }
-
-        *sum += gt;
-        gt_i += num_gts_per_sample;
+    if (bcf_f->is_bcf) {
+        hts_close(bcf_f->fp.bcf);
+    } else {
+        if (bcf_f->str.s)
+            free(bcf_f->str.s);
+        bgzf_close(bcf_f->fp.vcf);
     }
-
-    *prefix_len = 0;
-    for (i = 0; i < num_ints; ++i) {
-        if ( (*packed_ints)[i] == 0 )
-            *prefix_len += 32;
-        else {
-            *prefix_len += nlz1((*packed_ints)[i]);
-            break;
-        }
-    }
-
-    return num_ints;
 }
 //}}}
-
-//{{{uint32_t md_bcf_line(struct bcf_file bcf_f,
-uint32_t md_bcf_line(struct bcf_file bcf_f,
-                     char **md)
-{
-    size_t len = strlen(bcf_hdr_id2name(bcf_f.hdr, bcf_f.line->rid)) +
-                 10 + // max length of pos
-                 strlen(bcf_f.line->d.id) +
-                 strlen(bcf_f.line->d.allele[0]) +
-                 strlen(bcf_f.line->d.allele[1]) +
-                 4; //tabs
-    *md = (char *) malloc(len * sizeof(char));
-    if (!md )
-        err(EX_OSERR, "malloc error");
-
-    sprintf(*md,
-            "%s\t%d\t%s\t%s\t%s",
-            bcf_hdr_id2name(bcf_f.hdr, bcf_f.line->rid),
-            bcf_f.line->pos,
-            bcf_f.line->d.id,
-            bcf_f.line->d.allele[0],
-            bcf_f.line->d.allele[1]);
-
-    return len;
-}
-//}}}}
-
-//{{{int read_unpack_next_bcf_line(struct bcf_file *bcf_f,
-int read_unpack_next_bcf_line(struct bcf_file *bcf_f,
-                              int *num_samples,
-                              int *num_gts_per_sample)
-{
-    int r = bcf_read(bcf_f->fp, bcf_f->hdr, bcf_f->line);
-
-    if (r < 0)
-        return r; 
-
-    int ntmp = bcf_f->line->n_sample;
-    bcf_unpack(bcf_f->line, BCF_UN_ALL);
-    *num_gts_per_sample = bcf_get_genotypes(bcf_f->hdr,
-                                            bcf_f->line,
-                                            &(bcf_f->gt),
-                                            &ntmp);
-    *num_samples = bcf_hdr_nsamples(bcf_f->hdr);
-    *num_gts_per_sample /= *num_samples;
-
-    return r;
-}
-//}}}
-#endif
-

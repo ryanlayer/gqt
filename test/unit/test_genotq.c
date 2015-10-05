@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "parse_q.h"
 #include "bcf.h"
+#include "off.h"
 #include "wahbm.h"
 #include "ubin.h"
 #include "plt.h"
@@ -12,9 +13,13 @@
 #include <inttypes.h>
 #include <string.h>
 
-char *BCF_FILE = "../data/diff_gts.bcf";
+char *BCF_FILE = "../data/10.1e4.var.bcf";
+uint64_t BCF_OFFSETS[3] = {577,645,713};
+uint64_t VCF_OFFSETS[3] = {670,737,804};
+
+char *VCF_FILE = "../data/10.1e4.var.vcf.gz";
 uint32_t NUM_INDS = 10;
-uint32_t NUM_VARS = 2;
+uint32_t NUM_VARS = 43;
 
 void setUp(void) { }
 void tearDown(void) { }
@@ -67,7 +72,105 @@ void test_init_bcf_file(void)
 {
     struct bcf_file bcf_f = init_bcf_file(BCF_FILE);
     TEST_ASSERT_EQUAL(NUM_INDS, bcf_f.num_records);
+    TEST_ASSERT_EQUAL(1, bcf_f.is_bcf);
     close_bcf_file(&bcf_f);
+
+    struct bcf_file vcf_f = init_bcf_file(VCF_FILE);
+    TEST_ASSERT_EQUAL(NUM_INDS, vcf_f.num_records);
+    TEST_ASSERT_EQUAL(0, vcf_f.is_bcf);
+    close_bcf_file(&vcf_f);
+}
+//}}}
+
+//{{{void test_get_bcf_line(void)
+void test_get_bcf_line(void)
+{
+    struct bcf_file bcf_f = init_bcf_file(BCF_FILE);
+
+    TEST_ASSERT_EQUAL(BCF_OFFSETS[0], bcf_f.offset);
+
+    TEST_ASSERT_EQUAL(0, get_bcf_line(&bcf_f));
+    TEST_ASSERT_EQUAL(0, bcf_f.line->rid);
+    TEST_ASSERT_EQUAL(0, bcf_f.line->pos);
+    TEST_ASSERT_EQUAL(1, bcf_f.line->rlen);
+
+    TEST_ASSERT_EQUAL(BCF_OFFSETS[1], bcf_f.offset);
+
+    TEST_ASSERT_EQUAL(0, get_bcf_line(&bcf_f));
+    TEST_ASSERT_EQUAL(0, bcf_f.line->rid);
+    TEST_ASSERT_EQUAL(1, bcf_f.line->pos);
+    TEST_ASSERT_EQUAL(1, bcf_f.line->rlen);
+
+    TEST_ASSERT_EQUAL(BCF_OFFSETS[2], bcf_f.offset);
+
+    close_bcf_file(&bcf_f);
+
+    struct bcf_file vcf_f = init_bcf_file(VCF_FILE);
+
+    TEST_ASSERT_EQUAL(VCF_OFFSETS[0], vcf_f.offset);
+
+    TEST_ASSERT_EQUAL(0, get_bcf_line(&vcf_f));
+    TEST_ASSERT_EQUAL(0, vcf_f.line->rid);
+    TEST_ASSERT_EQUAL(0, vcf_f.line->pos);
+    TEST_ASSERT_EQUAL(1, vcf_f.line->rlen);
+
+    TEST_ASSERT_EQUAL(VCF_OFFSETS[1], vcf_f.offset);
+
+    TEST_ASSERT_EQUAL(0, get_bcf_line(&vcf_f));
+    TEST_ASSERT_EQUAL(0, vcf_f.line->rid);
+    TEST_ASSERT_EQUAL(1, vcf_f.line->pos);
+    TEST_ASSERT_EQUAL(1, vcf_f.line->rlen);
+
+    TEST_ASSERT_EQUAL(VCF_OFFSETS[2], vcf_f.offset);
+
+    close_bcf_file(&vcf_f);
+}
+//}}}
+
+//{{{void test_push_bcf_gt_offset(void)
+void test_push_bcf_gt_offset(void)
+{
+    struct bcf_file bcf_f = init_bcf_file(BCF_FILE);
+    pri_queue q_bcf = priq_new(0);
+
+    push_bcf_gt_offset(&q_bcf,
+                       &bcf_f,
+                       NUM_INDS,
+                       NUM_VARS,
+                       ".tmp.gt_file",
+                       ".tmp.offset_file",
+                       "test_push_bcf_gt_offset");
+
+    close_bcf_file(&bcf_f);
+
+    struct off_file *of_bcf = open_off_file(".tmp.offset_file");
+
+    TEST_ASSERT_EQUAL(BCF_OFFSETS[0], of_bcf->offsets[0]);
+    TEST_ASSERT_EQUAL(BCF_OFFSETS[1], of_bcf->offsets[1]);
+    TEST_ASSERT_EQUAL(BCF_OFFSETS[2], of_bcf->offsets[2]);
+
+    destroy_off_file(of_bcf);
+
+    struct bcf_file vcf_f = init_bcf_file(VCF_FILE);
+    pri_queue q_vcf = priq_new(0);
+
+    push_bcf_gt_offset(&q_vcf,
+                       &vcf_f,
+                       NUM_INDS,
+                       NUM_VARS,
+                       ".tmp.gt_file",
+                       ".tmp.offset_file",
+                       "test_push_bcf_gt_offset");
+
+    close_bcf_file(&vcf_f);
+
+    struct off_file *of_vcf = open_off_file(".tmp.offset_file");
+
+    TEST_ASSERT_EQUAL(VCF_OFFSETS[0], of_vcf->offsets[0]);
+    TEST_ASSERT_EQUAL(VCF_OFFSETS[1], of_vcf->offsets[1]);
+    TEST_ASSERT_EQUAL(VCF_OFFSETS[2], of_vcf->offsets[2]);
+
+    destroy_off_file(of_vcf);
 }
 //}}}
 

@@ -14,24 +14,43 @@
 #include "genotq.h"
 
 int convert_help();
-int bcf_wahbm(char *in,
-              char *wah_out,
-              char *bim_out,
-              char *vid_out,
-              char *tmp_dir,
-              uint32_t num_fields,
-              uint32_t num_records,
-              char *full_cmd);
-int ped_ped(char *in, char *ped, uint32_t col, char *out);
+int bcf_wahbm_metadata(char *in,
+                 char *wah_out,
+                 char *bim_out,
+                 char *vid_out,
+                 char *tmp_dir,
+                 uint32_t num_fields,
+                 uint32_t num_records,
+                 char *full_cmd);
+int bcf_wahbm_offset(char *bcf_file_name,
+                     char *wah_out,
+                     char *offset_out,
+                     char *vid_out,
+                     char *tmp_dir,
+                     uint32_t num_fields,
+                     uint32_t num_records,
+                     char *full_cmd);
+
+int ped_ped(char *in, char *ped, uint32_t col, char *ped_db_file_name);
 
 int convert(int argc, char **argv, char *full_cmd)
 {
     if (argc < 2) return convert_help();
 
     int c;
-    char *in=NULL, *out=NULL, *bim=NULL, *vid=NULL, *tmp_dir=NULL, *ped=NULL;
+    char *bcf_file_name=NULL,
+         *gqt_file_name=NULL,
+         *ped_db_file_name=NULL,
+         *bim_file_name=NULL,
+         *off_file_name=NULL,
+         *vid_file_name=NULL,
+         *tmp_dir=NULL,
+         *ped=NULL;
+
     uint32_t num_fields = 0, num_records = 0, col = 2;
     int i_is_set = 0, 
+        B_is_set = 0, 
+        O_is_set = 0, 
         o_is_set = 0, 
         f_is_set = 0, 
         b_is_set = 0, 
@@ -40,8 +59,15 @@ int convert(int argc, char **argv, char *full_cmd)
         p_is_set = 0, 
         r_is_set = 0; 
 
-    while((c = getopt (argc, argv, "hi:o:f:r:b:v:t:p:c:")) != -1) {
+    while((c = getopt (argc, argv, "Bhi:o:f:r:b:v:t:p:c:O:")) != -1) {
         switch (c) {
+            case 'O':
+                O_is_set = 1;
+                off_file_name = optarg;
+                break;
+            case 'B':
+                B_is_set = 1;
+                break;
             case 'c':
                 col = atoi(optarg);
                 break;
@@ -55,19 +81,19 @@ int convert(int argc, char **argv, char *full_cmd)
                 break;
             case 'v':
                 v_is_set = 1;
-                vid = optarg;
+                vid_file_name = optarg;
                 break;
             case 'b':
                 b_is_set = 1;
-                bim = optarg;
+                bim_file_name = optarg;
                 break;
             case 'i':
                 i_is_set = 1;
-                in = optarg;
+                bcf_file_name = optarg;
                 break;
             case 'o':
                 o_is_set = 1;
-                out = optarg;
+                gqt_file_name = optarg;
                 break;
             case 'f':
                 f_is_set = 1;
@@ -107,44 +133,53 @@ int convert(int argc, char **argv, char *full_cmd)
         fprintf(stderr, "BCF/VCF/VCF.GZ file is not set\n");
         return convert_help();
     } else {
-        if ( access( in, F_OK) == -1 )
+        if ( access( bcf_file_name, F_OK) == -1 )
             err(EX_NOINPUT,
                 "Error accessing BCF/VCF/VCF.GZ file \"%s\"",
-                in);
+                bcf_file_name);
     }
 
+    if ( (O_is_set == 1) && ((B_is_set == 1) || (b_is_set == 1)) ) {
+        fprintf(stderr, "Must use either offset or bim, not both.\b");
+        return convert_help();
+    }
+ 
     if (strcmp(type, "bcf") == 0) {
         if ( (f_is_set == 0) || (r_is_set == 0) ) {
 
             fprintf(stderr,"Attempting to autodetect number of variants "
-                    "and samples from %s\n", in);
+                    "and samples from %s\n", bcf_file_name);
             //Try and auto detect the sizes, need the index
             tbx_t *tbx = NULL;
             hts_idx_t *idx = NULL;
-            htsFile *fp    = hts_open(in,"rb");
+            htsFile *fp    = hts_open(bcf_file_name,"rb");
             if ( !fp ) {
-                err(EX_DATAERR, "Could not read file: %s", in);
+                err(EX_DATAERR, "Could not read file: %s", bcf_file_name);
             }
 
             bcf_hdr_t *hdr = bcf_hdr_read(fp);
             if ( !hdr ) {
-                err(EX_DATAERR, "Could not read the header: %s", in);
+                err(EX_DATAERR, "Could not read the header: %s", bcf_file_name);
             }
 
             if (hts_get_format(fp)->format==vcf) {
-                tbx = tbx_index_load(in);
+                tbx = tbx_index_load(bcf_file_name);
                 if ( !tbx ) { 
-                    err(EX_NOINPUT,"Could not load TBI index: %s.tbi", in);
+                    err(EX_NOINPUT,
+                        "Could not load index: %s.csi",
+                        bcf_file_name);
                 }
             } else if ( hts_get_format(fp)->format==bcf ) {
-                idx = bcf_index_load(in);
+                idx = bcf_index_load(bcf_file_name);
                 if ( !idx ) {
-                    err(EX_NOINPUT,"Could not load CSI index: %s.csi", in);
+                    err(EX_NOINPUT,"
+                        Could not load index: %s.csi",
+                        bcf_file_name);
                 }
             } else {
                 err(EX_NOINPUT,
                     "Could not detect the file type as VCF or BCF: %s",
-                    in);
+                    bcf_file_name);
             }
 
             num_fields = hdr->n[BCF_DT_SAMPLE];
@@ -172,27 +207,33 @@ int convert(int argc, char **argv, char *full_cmd)
             if (tbx)
                 tbx_destroy(tbx);
         }
-
         if (o_is_set == 0) {
-            out  = (char*)malloc(strlen(in) + 5); // 5 for ext and \0
-            if (!out)
+            gqt_file_name  = (char*)malloc(strlen(bcf_file_name) + 5);
+            if (!gqt_file_name)
                 err(EX_OSERR, "malloc error");
-            strcpy(out,in);
-            strcat(out, ".gqt");
+            strcpy(gqt_file_name,bcf_file_name);
+            strcat(gqt_file_name, ".gqt");
         }
-        if (b_is_set == 0) {
-            bim  = (char*)malloc(strlen(in) + 5); // 5 for ext and \0
-            if (!bim)
+        if ((B_is_set == 1) && (b_is_set == 0)) {
+            bim_file_name  = (char*)malloc(strlen(bcf_file_name) + 5);
+            if (!bim_file_name)
                 err(EX_OSERR, "malloc error");
-            strcpy(bim,in);
-            strcat(bim, ".bim");
+            strcpy(bim_file_name,bcf_file_name);
+            strcat(bim_file_name, ".bim");
+        }
+        if ((B_is_set == 0) && (O_is_set == 0)) {
+            off_file_name  = (char*)malloc(strlen(in) + 5); // 5 for ext and \0
+            if (!off_file_name)
+                err(EX_OSERR, "malloc error");
+            strcpy(off_file_name,in);
+            strcat(off_file_name, ".off");
         }
         if (v_is_set == 0) {
-            vid  = (char*)malloc(strlen(in) + 5); // 5 for ext and \0
-            if (!vid)
+            vid_file_name  = (char*)malloc(strlen(in) + 5); // 5 for ext and \0
+            if (!vid_file_name)
                 err(EX_OSERR, "malloc error");
-            strcpy(vid,in);
-            strcat(vid, ".vid");
+            strcpy(vid_file_name,in);
+            strcat(vid_file_name, ".vid");
         }
         if (t_is_set == 0) {
             tmp_dir  = (char*)malloc(3*sizeof(char)); // "./\0"
@@ -201,36 +242,45 @@ int convert(int argc, char **argv, char *full_cmd)
             strcpy(tmp_dir,"./");
         }
 
-        int r = bcf_wahbm(in,
-                          out,
-                          bim,
-                          vid,
-                          tmp_dir,
-                          num_fields,
-                          num_records,
-                          full_cmd);
+        if (B_is_set)
+            return bcf_wahbm_metadata(in,
+                                      gqt_file_name,
+                                      bim_file_name,
+                                      vid_file_name,
+                                      tmp_dir,
+                                      num_fields,
+                                      num_records,
+                                      full_cmd);
+        else
+            return bcf_wahbm_offset(in,
+                                    gqt_file_name,
+                                    off_file_name,
+                                    vid_file_name,
+                                    tmp_dir,
+                                    num_fields,
+                                    num_records,
+                                    full_cmd);
 
-        return r;
     } 
 
     if (strcmp(type, "ped") == 0)  {
         if (o_is_set == 0) {
             if (p_is_set == 1) {
-                out  = (char*)malloc(strlen(ped) + 4); // 4 for ext and \0
-                if (!out)
+                ped_db_file_name  = (char*)malloc(strlen(ped) + 4);
+                if (!ped_db_file_name)
                     err(EX_OSERR, "malloc error");
-                strcpy(out,ped);
-                strcat(out, ".db");
+                strcpy(ped_db_file_name,ped);
+                strcat(ped_db_file_name, ".db");
             } else {
-                out  = (char*)malloc(strlen(in) + 4); // 4 for ext and \0
-                if (!out)
+                ped_db_file_name = (char*)malloc(strlen(in) + 4);
+                if (!ped_db_file_name)
                     err(EX_OSERR, "malloc error");
-                strcpy(out,in);
-                strcat(out, ".db");
+                strcpy(ped_db_file_name,in);
+                strcat(ped_db_file_name, ".db");
             }
       }
 
-      return ped_ped(in, ped, col, out);
+      return ped_ped(in, ped, col, ped_db_file_name);
     }
     return convert_help();
 }
@@ -248,6 +298,8 @@ int convert_help()
             "         -c           Sample name column in PED (Default 2)\n"
             "         -o           Output file name (opt.)\n"
             "         -v           VID output file name (opt.)\n"
+            "         -O           OFF output file name (opt.)\n"
+            "         -B           Use BIM file instead of OFF file (opt.)\n"
             "         -b           BIM output file name (opt.)\n"
             "         -r           Number of variants (opt. with index)\n"
             "         -f           Number of samples (opt. with index)\n"
@@ -258,19 +310,19 @@ int convert_help()
 }
 
 
-int ped_ped(char *in, char *ped, uint32_t col, char *out)
+int ped_ped(char *in, char *ped, uint32_t col, char *ped_db_file_name)
 {
-    return convert_file_by_name_ped_to_db(in, ped, col, out);
+    return convert_file_by_name_ped_to_db(in, ped, col, ped_db_file_name);
 }
 
-int bcf_wahbm(char *in,
-              char *wah_out,
-              char *bim_out,
-              char *vid_out,
-              char *tmp_dir,
-              uint32_t num_fields,
-              uint32_t num_records,
-              char *full_cmd)
+int bcf_wahbm_metadata(char *in,
+                       char *wah_out,
+                       char *bim_out,
+                       char *vid_out,
+                       char *tmp_dir,
+                       uint32_t num_fields,
+                       uint32_t num_records,
+                       char *full_cmd)
 {
     return convert_file_by_name_bcf_to_wahbm_bim(in,
                                                  num_fields,
@@ -280,4 +332,44 @@ int bcf_wahbm(char *in,
                                                  vid_out,
                                                  tmp_dir,
                                                  full_cmd);
+}
+
+int bcf_wahbm_offset(char *in,
+                     char *wah_out,
+                     char *offset_out,
+                     char *vid_out,
+                     char *tmp_dir,
+                     uint32_t num_fields,
+                     uint32_t num_records,
+                     char *full_cmd)
+{
+    return convert_file_by_name_bcf_to_wahbm_offset(in,
+                                                    num_fields,
+                                                    num_records,
+                                                    wah_out,
+                                                    offset_out,
+                                                    vid_out,
+                                                    tmp_dir,
+                                                    full_cmd);
+}
+
+int bcf_wahbm_metadata_offset(char *in,
+                              char *wah_out,
+                              char *bim_out,
+                              char *offset_out,
+                              char *vid_out,
+                              char *tmp_dir,
+                              uint32_t num_fields,
+                              uint32_t num_records,
+                              char *full_cmd)
+{
+    return convert_file_by_name_bcf_to_wahbm_metadata_offset(in,
+                                                             num_fields,
+                                                             num_records,
+                                                             wah_out,
+                                                             bim_out,
+                                                             offset_out,
+                                                             vid_out,
+                                                             tmp_dir,
+                                                             full_cmd);
 }

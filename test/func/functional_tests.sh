@@ -25,11 +25,13 @@ fi
 
 
 BCF=$DATA_PATH/10.1e4.var.bcf
+VCF=$DATA_PATH/10.1e4.var.vcf.gz
 
 clean_up()
 {
     ls $DATA_PATH/* \
         | grep -v "^$BCF$" \
+        | grep -v "^$VCF$" \
         | grep -v "^$DATA_PATH/diff_gts.bcf$" \
         | grep -v "^$DATA_PATH/more_fields.ped$" \
         | grep -v "^$DATA_PATH/too_many_fields.ped$" \
@@ -53,6 +55,7 @@ fi
 $BCFTOOLS index $BCF
 
 $GQT convert bcf \
+    -B \
     -i $BCF \
     2> /dev/null
 
@@ -96,17 +99,20 @@ $GQT convert bcf \
     -r 43 \
     -f 10 \
     -i $BCF \
+    -B \
     -b tmp.bcf.bim \
     -v tmp.bcf.vid \
     -o tmp.bcf.gqt \
     2> /dev/null
 
 $GQT convert ped \
+    -B \
     -i $BCF \
     -o tmp.bcf.db \
     2> /dev/null
 
 $GQT convert bcf \
+    -B \
     -r 43 \
     -f 10 \
     -i $BCF \
@@ -116,10 +122,11 @@ $GQT convert ped \
     -i $BCF \
     2> /dev/null
 
-$GQT query -i tmp.bcf.gqt -b tmp.bcf.bim -v tmp.bcf.vid -d tmp.bcf.db\
+$GQT query -G tmp.bcf.gqt -B tmp.bcf.bim -V tmp.bcf.vid -d tmp.bcf.db\
 | grep -v "gqt_queryCommand" > tmp.spec
 
-$GQT query -i $BCF.gqt \
+
+$GQT query -G $BCF.gqt \
 | grep -v "gqt_queryCommand" > tmp.nospec
 
 if diff tmp.spec tmp.nospec > /dev/null
@@ -226,10 +233,13 @@ else
     echo "SKIP($LINENO): SQLITE3 not set"
 fi
 
+clean_up
+exit
 
 # count the number of homo_ref rows
 GQT_BOTH_NUM=`$GQT query \
-    -i $BCF.gqt \
+    -G $BCF.gqt \
+    -V $BCF.vid \
     -d $DATA_PATH/more_fields.ped.db \
     -p "Population ='ESN'" \
     -g "HOM_REF" \
@@ -264,7 +274,7 @@ fi
 
 
 $GQT query \
-    -i $BCF.gqt \
+    -G $BCF.gqt \
     -d $DATA_PATH/more_fields.ped.db \
     -p "" \
     -g "pct(HOM_REF)" \
@@ -273,7 +283,7 @@ $GQT query \
     > tmp.pct
 
 $GQT query \
-    -i $BCF.gqt \
+    -G $BCF.gqt \
     -d $DATA_PATH/more_fields.ped.db \
     -p "" \
     -g "count(HOM_REF)" \
@@ -294,7 +304,7 @@ else
 fi
 
 $GQT query \
-    -i $BCF.gqt \
+    -G $BCF.gqt \
     -d $DATA_PATH/more_fields.ped.db \
     -p "" \
     -g "pct(HOM_REF)" \
@@ -332,7 +342,7 @@ $BCFTOOLS view -c 10 $BCF \
     > tmp.bcf
 
 $GQT query \
-    -i $BCF.gqt \
+    -G $BCF.gqt \
     -d $DATA_PATH/more_fields.ped.db \
     -p "" \
     -g "maf()>=0.5" \
@@ -356,6 +366,7 @@ fi
 $BCFTOOLS view -Ov $BCF -o $DATA_PATH/10.1e4.var.vcf
 
 $GQT convert bcf \
+    -B \
     -r 43 \
     -f 10 \
     -i $DATA_PATH/10.1e4.var.vcf \
@@ -364,13 +375,14 @@ $GQT convert bcf \
 $BCFTOOLS view -Oz $BCF -o $DATA_PATH/10.1e4.var.vcf.gz
 
 $GQT convert bcf \
+    -B \
     -r 43 \
     -f 10 \
     -i $DATA_PATH/10.1e4.var.vcf.gz\
     2> /dev/null
 
 $GQT query \
-    -i $BCF.gqt \
+    -G $BCF.gqt \
     -d $DATA_PATH/more_fields.ped.db \
     -p "" \
     -g "maf()>=0.5" \
@@ -379,7 +391,7 @@ $GQT query \
     > tmp.bcf.gqt
 
 $GQT query \
-    -i $DATA_PATH/10.1e4.var.vcf.gqt \
+    -G $DATA_PATH/10.1e4.var.vcf.gqt \
     -d $DATA_PATH/more_fields.ped.db \
     -p "" \
     -g "maf()>=0.5" \
@@ -400,7 +412,7 @@ else
 fi
 
 $GQT query \
-    -i $DATA_PATH/10.1e4.var.vcf.gz.gqt \
+    -G $DATA_PATH/10.1e4.var.vcf.gz.gqt \
     -d $DATA_PATH/more_fields.ped.db \
     -p "" \
     -g "maf()>=0.5" \
@@ -485,7 +497,7 @@ then
         | awk '{s+=$1} END {print s}'`
 
     GQT_COUNT=`$GQT query \
-                    -i $BCF.gqt \
+                    -G $BCF.gqt \
                     -d $DATA_PATH/more_fields.ped.db \
                     -p "" \
                     -g "maf()" \
@@ -527,7 +539,7 @@ BCFTOOLS_COUNT=`bcftools view $BCF\
     | awk '{s+=$1} END {print s}'`
 
 HET_COUNT=`$GQT query \
-    -i $BCF.gqt \
+    -G $BCF.gqt \
     -d $DATA_PATH/more_fields.ped.db \
     -p "" \
     -g "count(HET)" \
@@ -536,7 +548,7 @@ HET_COUNT=`$GQT query \
     | awk '{s+=$1} END {print s}'`
 
 ALT_COUNT=`$GQT query \
-    -i $BCF.gqt \
+    -G $BCF.gqt \
     -d $DATA_PATH/more_fields.ped.db \
     -p "" \
     -g "count(HOM_ALT)" \
@@ -605,5 +617,19 @@ then
             vcftools.fst.tmp
     fi
 fi
+
+clean_up
+
+
+$GQT convert bcf \
+    -B \
+    -i $BCF \
+    2> /dev/null
+
+
+
+$GQT convert bcf \
+    -i $BCF \
+    2> /dev/null
 
 clean_up

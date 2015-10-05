@@ -33,7 +33,7 @@
 
 struct gqt_file_header {
     char marker[3]; // "GQT"
-    char type; // g gqt, v vid, b bim
+    char type; // g gqt, v vid, b bim, o off
     uint32_t major, minor, revision, build;
     uint32_t magic; //0x11223344
     unsigned long id_hash;// used to varify the files were created together.

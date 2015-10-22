@@ -300,25 +300,99 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
 }
 //}}}
 
+//{{{int convert_file_by_name_bcf_to_wahbm_metadata_offset(char *in,
+int convert_file_by_name_bcf_to_wahbm_metadata_offset(char *in,
+                                                      uint32_t num_fields,
+                                                      uint32_t num_records,
+                                                      char *wah_out,
+                                                      char *bim_out,
+                                                      char *offset_out,
+                                                      char *vid_out,
+                                                      char *tmp_dir,
+                                                      char *full_cmd)
+{
+    uint32_t num_inds = num_fields;
+    uint32_t num_vars = num_records;
+
+    char *gt_of_name,
+         *gt_s_of_name,
+         *gt_s_r_of_name,
+         *md_of_name,
+         *md_s_of_name;
+
+    int r = asprintf(&gt_of_name, "%s/.gt.tmp.packed", tmp_dir);
+    if (r == -1) err(EX_OSERR, "asprintf error");
+    r = asprintf(&gt_s_of_name, "%s/.s.gt.tmp.packed", tmp_dir);
+    if (r == -1) err(EX_OSERR, "asprintf error");
+    r = asprintf(&gt_s_r_of_name, "%s/.r.s.gt.tmp.packed", tmp_dir);
+    if (r == -1) err(EX_OSERR, "asprintf error");
+    r = asprintf(&md_of_name, "%s/.md.tmp", tmp_dir);
+    if (r == -1) err(EX_OSERR, "asprintf error");
+    r = asprintf(&md_s_of_name, "%s/.s.md.tmp", tmp_dir);
+    if (r == -1) err(EX_OSERR, "asprintf error");
+
+
+    struct bcf_file bcf_f = init_bcf_file(in);
+    pri_queue q = priq_new(0);
+
+    uint64_t *md_index = (uint64_t *) malloc(num_vars * sizeof(uint64_t));
+    if (!md_index )
+        err(EX_OSERR, "malloc error");
+    
+    uint64_t *md_s_index = (uint64_t *) malloc(num_vars * sizeof(uint64_t));
+    if (!md_s_index )
+        err(EX_OSERR, "malloc error");
+
+
+    push_bcf_gt_md_offset(&q,
+                          &bcf_f,
+                          md_index,
+                          num_inds,
+                          num_vars,
+                          gt_of_name,
+                          md_of_name,
+                          offset_out,
+                          full_cmd);
+    sort_gt(&q,
+            num_inds,
+            num_vars,
+            gt_of_name,
+            gt_s_of_name,
+            vid_out,
+            full_cmd);
+
+    compress_md(&bcf_f,
+                md_of_name,
+                bim_out,
+                md_index,
+                num_vars,
+                num_inds,
+                full_cmd);
+
+    rotate_gt(num_inds,
+              num_vars,
+              gt_s_of_name,
+              gt_s_r_of_name);
+
+    close_bcf_file(&bcf_f);
+
+    r = convert_file_by_name_ubin_to_wahbm(gt_s_r_of_name,
+                                               wah_out,
+                                               full_cmd);
+
+    remove(gt_of_name);
+    remove(gt_s_of_name);
+    remove(gt_s_r_of_name);
+    remove(md_of_name);
+    remove(md_s_of_name);
+
+    //free(md_index);
+    free(md_s_index);
+    return r;
+}
+//}}}
+
 //{{{ void push_bcf_gt_offset(pri_queue *q,
-/*
- * Read a BCF file and populated:
- * INPUT:
- *   bcf_f: a bcf_file struct that contains the file handle and metadata for
- *          the target BCF file 
- * OUTPUT:
- *   q: a prioriy queue where the priority is the alt allele count and
- *      the number of leaded zeros, and the value is the index of that 
- *      variant both in md_of_name (where md_index maps index to the file
- *      offset) and in gt_of_name (which is fixed width and that index can be
- *      multiplied by width to get fill offset)
- *   md_of_name: a file containg the variant metadata
- *   md_index: an array of 64-bit ints that contains that maps the index of a
- *             vairiant to its offset in md_of_name
- *   gt_of_name: a variant-major file containing arrays of pakced genotypes
- *               (0,1,2,3) this is a fixed-width file and each element in the
- *               array is a 32-bit int
- */
 void push_bcf_gt_offset(pri_queue *q,
                        struct bcf_file *bcf_f,
                        uint32_t num_inds,
@@ -463,13 +537,6 @@ void push_bcf_gt_offset(pri_queue *q,
             err(EX_IOERR, "Error writing to \"%s\"", gt_of_name); 
 
         // Write offset the of the start of the current line
-        /*
-        if (fwrite(&last_offset,
-                   sizeof(uint64_t),
-                   1,
-                   off_of) != 1)
-            err(EX_IOERR, "Error writing to \"%s\"", offset_of_name); 
-        */
         add_to_off_file(off_of, last_offset);
 
         memset(packed_ints, 0, num_ind_ints*sizeof(uint32_t));
@@ -483,25 +550,26 @@ void push_bcf_gt_offset(pri_queue *q,
 }
 //}}}
 
-//{{{ void push_bcf_gt_md_offset(pri_queue *q,
+//{{{ void push_bcf_gt_md(pri_queue *q,
 void push_bcf_gt_md_offset(pri_queue *q,
                            struct bcf_file *bcf_f,
+                           uint64_t *md_index,
                            uint32_t num_inds,
                            uint32_t num_vars,
                            char *gt_of_name,
-                           char *offset_of_name,
                            char *md_of_name,
+                           char *offset_of_name,
                            char *full_cmd)
 {
-    // store genotypes in packed ints
+
     FILE *gt_of = fopen(gt_of_name,"wb");
     if (!gt_of)
-        err(EX_CANTCREAT, "Cannot create file '%s'", gt_of_name);
+        err(EX_CANTCREAT, "Cannot create file \"%s\"", gt_of_name);
 
-    // store uncompressed variant metadata
+
     FILE *md_of = fopen(md_of_name,"w");
     if (!md_of)
-        err(EX_CANTCREAT, "Cannot create file '%s'", md_of_name);
+        err(EX_CANTCREAT, "Cannot create file \"%s\"", md_of_name);
 
     struct off_file *off_of = new_off_file(offset_of_name,
                                            full_cmd,
@@ -521,10 +589,12 @@ void push_bcf_gt_md_offset(pri_queue *q,
 
     int32_t *gt_p = NULL;
 
+    kstring_t md = {0,0,0};
+
     priority p;
 
     uint32_t tenth_num_var = num_vars / 10;
-    fprintf(stderr,"Extracting genotypes, variant metadata, and offsets");
+    fprintf(stderr,"Extracting genotypes and metadata");
 
     uint64_t last_offset = 0;
 
@@ -536,8 +606,12 @@ void push_bcf_gt_md_offset(pri_queue *q,
         int_i = 0;
         two_bit_i = 0;
 
-        last_offset = bcf_f->offset;
         // Get the next bcf record
+        //int r = bcf_read(bcf_f->fp, bcf_f->hdr, bcf_f->line);
+        //int r = bcf_read(bcf_f->fp.bcf, bcf_f->hdr, bcf_f->line);
+
+        last_offset = bcf_f->offset;
+
         int r = get_bcf_line(bcf_f);
 
         if (r == -1) 
@@ -628,7 +702,7 @@ void push_bcf_gt_md_offset(pri_queue *q,
                    gt_of) != num_ind_ints)
             err(EX_IOERR, "Error writing to \"%s\"", gt_of_name); 
 
-        //Get metadata
+        // Get metadata
         bcf_f->line->n_sample = 0;
         vcf_format1(bcf_f->hdr, bcf_f->line, &md);
         md_i += md.l;

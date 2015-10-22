@@ -52,6 +52,7 @@ int query_cmp(uint32_t value,
               int condition_value);
 
 
+#if 0
 void get_bcf_query_result(uint32_t *mask,
                         uint32_t mask_len,
                         struct gqt_query *q,
@@ -62,6 +63,7 @@ void get_bcf_query_result(uint32_t *mask,
                         char *vid_file_name,
                         char *bcf_file_name,
                         int bcf_output);
+#endif
 
 int compare_uint32_t (const void *a, const void *b);
 
@@ -102,10 +104,9 @@ int query(int argc, char **argv, char *full_cmd)
     if (argc < 2) return query_help();
 
     int c;
-    char *gqt_file_name=NULL,
-         *id_query=NULL,
-         *gt_query=NULL,
-         *db_file_name=NULL,
+    char *input_file_name=NULL,
+         *gqt_file_name=NULL,
+         *ped_db_file_name=NULL,
          *bim_file_name=NULL,
          *off_file_name=NULL,
          *bcf_file_name=NULL,
@@ -115,24 +116,29 @@ int query(int argc, char **argv, char *full_cmd)
         id_q_count = 0,
         gt_q_count = 0,
         d_is_set = 0,
+        v_is_set = 0,
         V_is_set = 0,
         G_is_set = 0,
         B_is_set = 0,
         O_is_set = 0,
+        S_is_set = 0,
         bcf_output = 0;
 
     char *id_query_list[100];
     char *gt_query_list[100];
 
     //{{{ parse cmd line opts
-    while ((c = getopt (argc, argv, "chi:p:g:d:B:V:G:O:")) != -1) {
+    while ((c = getopt (argc, argv, "chvi:p:g:d:B:V:G:O:S:")) != -1) {
         switch (c) {
+        case 'v':
+            v_is_set = 1;
+            break;
         case 'c':
             c_is_set = 1;
             break;
         case 'i':
             i_is_set = 1;
-            bcf_file_name = optarg;
+            input_file_name = optarg;
             break;
         case 'p':
             id_query_list[id_q_count] = optarg;
@@ -144,7 +150,7 @@ int query(int argc, char **argv, char *full_cmd)
             break;
         case 'd':
             d_is_set = 1;
-            db_file_name = optarg;
+            ped_db_file_name = optarg;
             break;
         case 'B':
             B_is_set = 1;
@@ -157,6 +163,10 @@ int query(int argc, char **argv, char *full_cmd)
         case 'G':
             G_is_set = 1;
             gqt_file_name = optarg;
+            break;
+        case 'S':
+            S_is_set = 1;
+            bcf_file_name = optarg;
             break;
         case 'O':
             O_is_set = 1;
@@ -183,16 +193,69 @@ int query(int argc, char **argv, char *full_cmd)
         }
     }
 
-    if ((B_is_set == 1) && (O_is_set == 1)) {
-        fprintf(stderr,
-                "Both BIM and OFF files are specified.  Can only use one.\n");
+    if (i_is_set == 0) {
+        fprintf (stderr, "No input file given (vcf.gz/bcf/gqt).\n");
         return query_help();
     }
 
+    if (strlen(input_file_name) < 4) {
+        fprintf (stderr,
+                 "Cannot determine input file type for file '%s'.\n",
+                 input_file_name);
+        fprintf (stderr,
+                 "NOTE: The file must have a supported extension "
+                 "(vcf.gz/bcf/gqt).\n");
+        return query_help();
+    }
+    // See if -i is a gqt file or a bcf file
+    char *input_file_type = (char *)malloc(3*sizeof(char));
+
+    strncpy(input_file_type,
+            input_file_name + ( strlen(input_file_name) - 3),
+            3 * sizeof(char));
+
+    if (strcmp(input_file_type, "gqt") == 0 ) {
+        G_is_set = 1;
+        gqt_file_name = input_file_name;
+    } else if (strcmp(input_file_type, "bcf") == 0 ) {
+        S_is_set = 1;
+        bcf_file_name = input_file_name;
+   } else {
+        if (strlen(input_file_name) < 8) {
+            fprintf (stderr,
+                    "Cannot determine input file type for file '%s'.\n",
+                    input_file_name);
+            fprintf (stderr,
+                     "NOTE: The file must have a supported extension "
+                     "(vcf.gz/bcf/gqt).\n");
+            return query_help();
+        }
+
+        free(input_file_type);
+        input_file_type = (char *)malloc(6*sizeof(char));
+
+        strncpy(input_file_type,
+                input_file_name + ( strlen(input_file_name) - 6),
+                6 * sizeof(char));
+
+        if (strcmp(input_file_type, "vcf.gz") == 0 ) {
+            S_is_set = 1;
+            bcf_file_name = input_file_name;
+        } else {
+            fprintf (stderr,
+                    "Cannot determine input file type for file '%s'.\n",
+                    input_file_name);
+            fprintf (stderr,
+                     "NOTE: The file must have a supported extension "
+                     "(vcf.gz/bcf/gqt).\n");
+            return query_help();
+        }
+    }
+
     // BCF/VCFGZ file is set
-    if (i_is_set == 1) {
+    if (S_is_set == 1) {
         if ( access( bcf_file_name, F_OK) == -1 )
-            err(EX_NOINPUT, "Error accessing BCF file \"%s\"", bcf_file_name);
+            err(EX_NOINPUT, "Error accessing BCF file '%s'", bcf_file_name);
 
         // GQT is not, autodetect
         if (G_is_set == 0) {
@@ -206,26 +269,31 @@ int query(int argc, char **argv, char *full_cmd)
                 G_is_set = 1;
             } else {
                 fprintf(stderr,
-                        "Auto detect failure: GQT file %s not found\n",
+                        "Auto detect failure: GQT file '%s' not found\n",
                         gqt_file_name);
+                return query_help();
+            }
+        } else {
+            if ( access( gqt_file_name, F_OK) == -1 ) {
+                fprintf(stderr, "GQT file '%s' not found\n", gqt_file_name);
                 return query_help();
             }
         }
 
         // PED DB is not, autodetect
         if (d_is_set == 0) {
-            db_file_name  = (char*)malloc(strlen(bcf_file_name) + 4); 
-            if (!db_file_name)
+            ped_db_file_name  = (char*)malloc(strlen(bcf_file_name) + 4); 
+            if (!ped_db_file_name)
                 err(EX_OSERR, "malloc error");
-            strcpy(db_file_name, bcf_file_name);
-            strcat(db_file_name, ".db");
+            strcpy(ped_db_file_name, bcf_file_name);
+            strcat(ped_db_file_name, ".db");
 
-            if ( access( db_file_name, F_OK) != -1 ) {
+            if ( access( ped_db_file_name, F_OK) != -1 ) {
                 d_is_set = 1;
             } else {
                 fprintf(stderr,
-                        "Auto detect failure: DB file %s not found\n",
-                        db_file_name);
+                        "Auto detect failure: DB file '%s' not found\n",
+                        ped_db_file_name);
                 return query_help();
             }
         }
@@ -242,95 +310,92 @@ int query(int argc, char **argv, char *full_cmd)
                 V_is_set = 1;
             } else {
                 fprintf(stderr,
-                        "Auto detect failure: VID file %s not found\n",
+                        "Auto detect failure: VID file '%s' not found\n",
                         vid_file_name);
                 return query_help();
             }
         }
 
-        if ( (B_is_set == 0) && (O_is_set == 0) ) {
-            // first try and find the off file, then look for the bim
+        // Try and find the BIM file, okay if not there (for now)
+        if (B_is_set == 0) {
+            bim_file_name  = (char*)malloc(strlen(bcf_file_name) + 5); 
+            if (!bim_file_name)
+                err(EX_OSERR, "malloc error");
+            strcpy(bim_file_name, bcf_file_name);
+            strcat(bim_file_name, ".bim");
+            if ( access( bim_file_name, F_OK) != -1 ) 
+                B_is_set = 1;
+        }
+
+        // Try and find the OFF file, okay if not there (for now)
+        if (O_is_set == 0) {
             off_file_name  = (char*)malloc(strlen(bcf_file_name) + 5); 
             if (!off_file_name)
                 err(EX_OSERR, "malloc error");
             strcpy(off_file_name, bcf_file_name);
             strcat(off_file_name, ".off");
 
-            if ( access( off_file_name, F_OK) != -1 ) {
+            if ( access( off_file_name, F_OK) != -1 ) 
                 O_is_set = 1;
-            } else {
-                bim_file_name  = (char*)malloc(strlen(bcf_file_name) + 5); 
-                if (!bim_file_name)
-                    err(EX_OSERR, "malloc error");
-                strcpy(bim_file_name, bcf_file_name);
-                strcat(bim_file_name, ".bim");
-                if ( access( bim_file_name, F_OK) != -1 ) 
-                    B_is_set = 1;
-            }
-
-            if ( (B_is_set == 0) && (O_is_set == 0) ) {
-                fprintf(stderr,
-                        "Auto detect failure: neither OFF file %s nor "
-                        "BIM file %s where found\n",
-                        off_file_name, bim_file_name);
-                return query_help();
-            }
-        }
+        } 
     } else if (G_is_set == 1) { 
-        if ( access( gqt_file_name, F_OK) == -1 )
-            err(EX_NOINPUT, "Error accessing GQT file \"%s\"", gqt_file_name);
-
-        // If the BCF/VCFGZ file is not set, then the BIM file is used
-
-        if (B_is_set == 0) {
-            int auto_bim_file_name_size = asprintf(&bim_file_name,
-                                                   "%s",
-                                                   gqt_file_name);
-            if (auto_bim_file_name_size == -1)
-                err(EX_OSERR, "asprintf error");
-            strcpy(bim_file_name + strlen(bim_file_name) - 3, "bim");
-
-            if ( access( bim_file_name, F_OK) != -1 ) {
-                B_is_set = 1;
-            } else {
-                fprintf(stderr,
-                        "Auto detect failure: BIM file %s not found\n",
-                        bim_file_name);
-                return query_help();
-            }
+        if ( access( gqt_file_name, F_OK) == -1 ) {
+            fprintf(stderr, "GQT file '%s' not found\n", gqt_file_name);
+            return query_help();
         }
+
+        // Try and find the BIM file, okay if not there (for now)
+        if (B_is_set == 0) {
+            bim_file_name  = (char*)malloc(strlen(gqt_file_name)); 
+            if (!bim_file_name)
+                err(EX_OSERR, "malloc error");
+            strcpy(bim_file_name, gqt_file_name);
+            strcpy(bim_file_name + strlen(bim_file_name) - 3, "bim");
+            if ( access( bim_file_name, F_OK) != -1 ) 
+                B_is_set = 1;
+        } 
+
+        if (O_is_set == 0) {
+            off_file_name  = (char*)malloc(strlen(gqt_file_name)); 
+            if (!off_file_name)
+                err(EX_OSERR, "malloc error");
+            strcpy(off_file_name, gqt_file_name);
+            strcpy(off_file_name + strlen(off_file_name) - 3, "off");
+            if ( access( off_file_name, F_OK) != -1 ) 
+                O_is_set = 1;
+        } 
+
 
         if (V_is_set == 0) {
-            int auto_vid_file_name_size = asprintf(&vid_file_name,
-                                                   "%s",
-                                                   gqt_file_name);
-            if (auto_vid_file_name_size == -1)
-                err(EX_OSERR, "asprintf error");
+            vid_file_name  = (char*)malloc(strlen(gqt_file_name)); 
+            if (!vid_file_name)
+                err(EX_OSERR, "malloc error");
+            strcpy(vid_file_name, gqt_file_name);
             strcpy(vid_file_name + strlen(vid_file_name) - 3, "vid");
 
             if ( access( vid_file_name, F_OK) != -1 ) {
                 V_is_set = 1;
             } else {
                 fprintf(stderr,
-                        "Auto detect failure: VID file %s not found\n",
+                        "Auto detect failure: VID file '%s' not found\n",
                         vid_file_name);
                 return query_help();
             }
         }
 
         if (d_is_set == 0) {
-            int auto_db_file_name_size = asprintf(&db_file_name,
-                                                  "%s",
-                                                  gqt_file_name);
-            if ( auto_db_file_name_size == -1) err(EX_OSERR, "asprintf error");
-            strcpy(db_file_name + strlen(db_file_name) - 3, "db\0");
+            ped_db_file_name  = (char*)malloc(strlen(gqt_file_name)); 
+            if (!ped_db_file_name)
+                err(EX_OSERR, "malloc error");
+            strcpy(ped_db_file_name, gqt_file_name);
+            strcpy(ped_db_file_name + strlen(gqt_file_name) - 3, "db\0");
 
-            if ( access( db_file_name, F_OK) != -1 ) {
+            if ( access( ped_db_file_name, F_OK) != -1 ) {
                 d_is_set = 1;
             } else {
                 fprintf(stderr,
-                        "Auto detect failure: PED DB file %s not found\n",
-                        db_file_name);
+                        "Auto detect failure: PED DB file '%s' not found\n",
+                        ped_db_file_name);
                 return query_help();
             }
         }
@@ -340,19 +405,14 @@ int query(int argc, char **argv, char *full_cmd)
         return query_help();
     } 
 
-    if ((B_is_set == 0) && (O_is_set == 0)){
-        fprintf(stderr, "Must set either BIM or OFF file.\n");
-        return query_help();
-    } 
-
     if (B_is_set == 1) {
         if ( access( bim_file_name, F_OK) == -1 )
-            err(EX_NOINPUT, "Error accessing BIM file \"%s\"", bim_file_name);
+            err(EX_NOINPUT, "Error accessing BIM file '%s'", bim_file_name);
     }
 
     if (O_is_set == 1) {
         if ( access( off_file_name, F_OK) == -1 )
-            err(EX_NOINPUT, "Error accessing OFF file \"%s\"", bim_file_name);
+            err(EX_NOINPUT, "Error accessing OFF file '%s'", bim_file_name);
     }
 
     if (V_is_set == 0) {
@@ -360,15 +420,15 @@ int query(int argc, char **argv, char *full_cmd)
         return query_help();
     } else {
         if ( access( vid_file_name, F_OK) == -1 )
-            err(EX_NOINPUT, "Error accessing VID file \"%s\"", vid_file_name);
+            err(EX_NOINPUT, "Error accessing VID file '%s'", vid_file_name);
     }
 
     if (d_is_set == 0) {
         fprintf(stderr, "DB file is not set\n");
         return query_help();
     } else {
-        if ( access( db_file_name, F_OK) == -1 )
-            err(EX_NOINPUT, "Error accessing DB file \"%s\"", db_file_name);
+        if ( access( ped_db_file_name, F_OK) == -1 )
+            err(EX_NOINPUT, "Error accessing DB file '%s'", ped_db_file_name);
     }
 
     if (gt_q_count != id_q_count) {
@@ -376,6 +436,29 @@ int query(int argc, char **argv, char *full_cmd)
                 "Mismatched number of individual and genotype query strings\n");
         return query_help();
     }
+
+
+    if ((B_is_set == 0) && (O_is_set == 0) && (c_is_set == 0)) {
+        fprintf(stderr, 
+                "Must set either BIM or OFF files when doing anything "
+                "other than counting.\n");
+        return query_help();
+    }
+
+    if ( (v_is_set == 1) && ((O_is_set == 0) || (S_is_set == 0)) ) {
+        fprintf(stderr, 
+                "To get genotypes source BCF/VCF.GZ and OFF files "
+                "must be set.\n");
+        return query_help();
+    }
+
+    if ( (v_is_set == 0) && (B_is_set == 0) ) {
+        fprintf(stderr, 
+                "To get variant data only BIM file must be set.\n");
+        return query_help();
+    }
+
+
     //}}}
 
     struct gqt_query q[100];
@@ -412,7 +495,7 @@ int query(int argc, char **argv, char *full_cmd)
          */
         id_lens[i] = resolve_ind_query(&R,
                                       id_query_list[i],
-                                      db_file_name);
+                                      ped_db_file_name);
 
         uint32_t *tmp_U_R = (uint32_t *)
                 realloc(U_R, (U_R_len + id_lens[i]) * sizeof(uint32_t));
@@ -421,6 +504,7 @@ int query(int argc, char **argv, char *full_cmd)
         else
             U_R = tmp_U_R;
 
+
         for (j = 0; j < id_lens[i]; ++j) {
             U_R[U_R_len] = R[j];
             U_R_len += 1;
@@ -428,7 +512,6 @@ int query(int argc, char **argv, char *full_cmd)
 
         // Enforce that the offsets of the relevant samples is 
         // within the number of samples in the GQT index.
-        //if (id_lens[i] > wf.num_records) {
         if (id_lens[i] > wf->gqt_header->num_samples) {
             fprintf(stderr, 
                     "ERROR: there are more samples in the PED database (%d) "
@@ -596,12 +679,19 @@ int query(int argc, char **argv, char *full_cmd)
         free(R);
     }
 
+    if (U_R == NULL) {
+        U_R_len= resolve_ind_query(&U_R,
+                                   "",
+                                   ped_db_file_name);
+    }
+
     // Get the uniq elements in place
     qsort(U_R, U_R_len, sizeof(uint32_t), compare_uint32_t);
     for (i = j = 0; i < U_R_len; i++)
         if (U_R[i] != U_R[j]) 
             U_R[++j] = U_R[i];
     U_R_len = j + 1;
+
 
     uint32_t *final_mask = (uint32_t *) calloc(num_ints,sizeof(uint32_t));
 
@@ -648,7 +738,7 @@ int query(int argc, char **argv, char *full_cmd)
                 break;
         }
 
-        if (B_is_set == 1)
+        if (v_is_set == 0)
             print_query_result_bim(mapped_mask,
                                num_ints,
                                vid_f->vids,
@@ -690,7 +780,6 @@ int query(int argc, char **argv, char *full_cmd)
     return 0;
 }
 //}}}
-
  
 //{{{ void print_query_result_bim(uint32_t *mask,
 void print_query_result_bim(uint32_t *mask,

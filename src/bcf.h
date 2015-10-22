@@ -59,6 +59,16 @@ void push_bcf_gt_offset(pri_queue *q,
                        char *offset_of_name,
                        char *full_cmd);
 
+void push_bcf_gt_md_offset(pri_queue *q,
+                           struct bcf_file *bcf_f,
+                           uint64_t *md_index,
+                           uint32_t num_inds,
+                           uint32_t num_vars,
+                           char *gt_of_name,
+                           char *md_of_name,
+                           char *offset_of_name,
+                           char *full_cmd);
+
 void sort_gt(pri_queue *q,
              uint32_t num_inds,
              uint32_t num_vars,
@@ -97,6 +107,17 @@ int convert_file_by_name_bcf_to_wahbm_offset(char *in,
                                              char *vid_out,
                                              char *tmp_dir,
                                              char *full_cmd);
+
+int convert_file_by_name_bcf_to_wahbm_metadata_offset(char *in,
+                                                      uint32_t num_fields,
+                                                      uint32_t num_records,
+                                                      char *wah_out,
+                                                      char *bim_out,
+                                                      char *offset_out,
+                                                      char *vid_out,
+                                                      char *tmp_dir,
+                                                      char *full_cmd);
+
 
 int get_bcf_line(struct bcf_file *bcf_f);
 

@@ -14,7 +14,7 @@
 #include "genotq.h"
 
 int convert_help();
-int bcf_wahbm_metadata(char *in,
+int bcf_wahbm_metadata(char *bcf_file_name,
                  char *wah_out,
                  char *bim_out,
                  char *vid_out,
@@ -31,7 +31,10 @@ int bcf_wahbm_offset(char *bcf_file_name,
                      uint32_t num_records,
                      char *full_cmd);
 
-int ped_ped(char *in, char *ped, uint32_t col, char *ped_db_file_name);
+int ped_ped(char *bcf_file_name,
+            char *ped_file_name,
+            uint32_t col,
+            char *ped_db_file_name);
 
 int convert(int argc, char **argv, char *full_cmd)
 {
@@ -45,55 +48,37 @@ int convert(int argc, char **argv, char *full_cmd)
          *off_file_name=NULL,
          *vid_file_name=NULL,
          *tmp_dir=NULL,
-         *ped=NULL;
+         *ped_file_name=NULL;
 
     uint32_t num_fields = 0, num_records = 0, col = 2;
     int i_is_set = 0, 
-        B_is_set = 0, 
-        O_is_set = 0, 
-        o_is_set = 0, 
-        f_is_set = 0, 
-        b_is_set = 0, 
-        v_is_set = 0, 
-        t_is_set = 0, 
         p_is_set = 0, 
-        r_is_set = 0; 
+        c_is_set = 0, 
+        t_is_set = 0, 
+        r_is_set = 0, 
+        f_is_set = 0, 
+        G_is_set = 0, 
+        V_is_set = 0, 
+        O_is_set = 0, 
+        B_is_set = 0, 
+        D_is_set = 0;
 
-    while((c = getopt (argc, argv, "Bhi:o:f:r:b:v:t:p:c:O:")) != -1) {
+    while((c = getopt (argc, argv, "i:p:c:t:f:r:G:V:O:B:D:")) != -1) {
         switch (c) {
-            case 'O':
-                O_is_set = 1;
-                off_file_name = optarg;
-                break;
-            case 'B':
-                B_is_set = 1;
-                break;
-            case 'c':
-                col = atoi(optarg);
-                break;
-            case 'p':
-                p_is_set = 1;
-                ped = optarg;
-                break;
-            case 't':
-                t_is_set = 1;
-                tmp_dir = optarg;
-                break;
-            case 'v':
-                v_is_set = 1;
-                vid_file_name = optarg;
-                break;
-            case 'b':
-                b_is_set = 1;
-                bim_file_name = optarg;
-                break;
             case 'i':
                 i_is_set = 1;
                 bcf_file_name = optarg;
                 break;
-            case 'o':
-                o_is_set = 1;
-                gqt_file_name = optarg;
+            case 'p':
+                p_is_set = 1;
+                ped_file_name = optarg;
+                break;
+            case 'c':
+                col = atoi(optarg);
+                break;
+            case 't':
+                t_is_set = 1;
+                tmp_dir = optarg;
                 break;
             case 'f':
                 f_is_set = 1;
@@ -103,18 +88,41 @@ int convert(int argc, char **argv, char *full_cmd)
                 r_is_set = 1;
                 num_records = atoi(optarg);
                 break;
+            case 'G':
+                G_is_set = 1;
+                gqt_file_name = optarg;
+                break;
+            case 'V':
+                V_is_set = 1;
+                vid_file_name = optarg;
+                break;
+            case 'O':
+                O_is_set = 1;
+                off_file_name = optarg;
+                break;
+            case 'B':
+                B_is_set = 1;
+                bim_file_name = optarg;
+                break;
+            case 'D':
+                D_is_set = 1;
+                ped_db_file_name = optarg;
+                break;
             case 'h':
                 convert_help();
                 return 1;
             case '?':
                 if ( (optopt == 'i') || 
-                     (optopt == 'f') ||
-                     (optopt == 'r') ||
-                     (optopt == 't') ||
-                     (optopt == 's') ||
                      (optopt == 'p') ||
                      (optopt == 'c') ||
-                     (optopt == 'o') )
+                     (optopt == 't') ||
+                     (optopt == 'f') ||
+                     (optopt == 'r') ||
+                     (optopt == 'G') ||
+                     (optopt == 'V') ||
+                     (optopt == 'O') ||
+                     (optopt == 'B') ||
+                     (optopt == 'D') )
                     fprintf (stderr, "Option -%c requires an argument.\n",
                             optopt);
                 else if (isprint (optopt))
@@ -129,22 +137,19 @@ int convert(int argc, char **argv, char *full_cmd)
 
     char *type = argv[0];
 
+    // Make sure that the BCF file is specified and accessible 
     if (i_is_set == 0) {
         fprintf(stderr, "BCF/VCF/VCF.GZ file is not set\n");
         return convert_help();
     } else {
         if ( access( bcf_file_name, F_OK) == -1 )
             err(EX_NOINPUT,
-                "Error accessing BCF/VCF/VCF.GZ file \"%s\"",
+                "Error accessing BCF/VCF/VCF.GZ file '%s'",
                 bcf_file_name);
     }
 
-    if ( (O_is_set == 1) && ((B_is_set == 1) || (b_is_set == 1)) ) {
-        fprintf(stderr, "Must use either offset or bim, not both.\b");
-        return convert_help();
-    }
- 
     if (strcmp(type, "bcf") == 0) {
+        // If the user does not specify fields and rows then look for index
         if ( (f_is_set == 0) || (r_is_set == 0) ) {
 
             fprintf(stderr,"Attempting to autodetect number of variants "
@@ -172,8 +177,8 @@ int convert(int argc, char **argv, char *full_cmd)
             } else if ( hts_get_format(fp)->format==bcf ) {
                 idx = bcf_index_load(bcf_file_name);
                 if ( !idx ) {
-                    err(EX_NOINPUT,"
-                        Could not load index: %s.csi",
+                    err(EX_NOINPUT,
+                        "Could not load index: %s.csi",
                         bcf_file_name);
                 }
             } else {
@@ -207,34 +212,39 @@ int convert(int argc, char **argv, char *full_cmd)
             if (tbx)
                 tbx_destroy(tbx);
         }
-        if (o_is_set == 0) {
+
+        if (G_is_set == 0) {
             gqt_file_name  = (char*)malloc(strlen(bcf_file_name) + 5);
             if (!gqt_file_name)
                 err(EX_OSERR, "malloc error");
             strcpy(gqt_file_name,bcf_file_name);
             strcat(gqt_file_name, ".gqt");
         }
-        if ((B_is_set == 1) && (b_is_set == 0)) {
+
+        if (B_is_set == 0) {
             bim_file_name  = (char*)malloc(strlen(bcf_file_name) + 5);
             if (!bim_file_name)
                 err(EX_OSERR, "malloc error");
             strcpy(bim_file_name,bcf_file_name);
             strcat(bim_file_name, ".bim");
         }
-        if ((B_is_set == 0) && (O_is_set == 0)) {
-            off_file_name  = (char*)malloc(strlen(in) + 5); // 5 for ext and \0
+
+        if (O_is_set == 0) {
+            off_file_name  = (char*)malloc(strlen(bcf_file_name) + 5); 
             if (!off_file_name)
                 err(EX_OSERR, "malloc error");
-            strcpy(off_file_name,in);
+            strcpy(off_file_name, bcf_file_name);
             strcat(off_file_name, ".off");
         }
-        if (v_is_set == 0) {
-            vid_file_name  = (char*)malloc(strlen(in) + 5); // 5 for ext and \0
+
+        if (V_is_set == 0) {
+            vid_file_name  = (char*)malloc(strlen(bcf_file_name) + 5);
             if (!vid_file_name)
                 err(EX_OSERR, "malloc error");
-            strcpy(vid_file_name,in);
+            strcpy(vid_file_name, bcf_file_name);
             strcat(vid_file_name, ".vid");
         }
+
         if (t_is_set == 0) {
             tmp_dir  = (char*)malloc(3*sizeof(char)); // "./\0"
             if (!tmp_dir  )
@@ -242,45 +252,36 @@ int convert(int argc, char **argv, char *full_cmd)
             strcpy(tmp_dir,"./");
         }
 
-        if (B_is_set)
-            return bcf_wahbm_metadata(in,
-                                      gqt_file_name,
-                                      bim_file_name,
-                                      vid_file_name,
-                                      tmp_dir,
-                                      num_fields,
-                                      num_records,
-                                      full_cmd);
-        else
-            return bcf_wahbm_offset(in,
-                                    gqt_file_name,
-                                    off_file_name,
-                                    vid_file_name,
-                                    tmp_dir,
-                                    num_fields,
-                                    num_records,
-                                    full_cmd);
-
+        return convert_file_by_name_bcf_to_wahbm_metadata_offset(
+                bcf_file_name,
+                num_fields,
+                num_records,
+                gqt_file_name,
+                bim_file_name,
+                off_file_name,
+                vid_file_name,
+                tmp_dir,
+                full_cmd);
     } 
 
     if (strcmp(type, "ped") == 0)  {
-        if (o_is_set == 0) {
+        if (D_is_set == 0) {
             if (p_is_set == 1) {
-                ped_db_file_name  = (char*)malloc(strlen(ped) + 4);
+                ped_db_file_name  = (char*)malloc(strlen(ped_file_name) + 4);
                 if (!ped_db_file_name)
                     err(EX_OSERR, "malloc error");
-                strcpy(ped_db_file_name,ped);
+                strcpy(ped_db_file_name, ped_file_name);
                 strcat(ped_db_file_name, ".db");
             } else {
-                ped_db_file_name = (char*)malloc(strlen(in) + 4);
+                ped_db_file_name = (char*)malloc(strlen(bcf_file_name) + 4);
                 if (!ped_db_file_name)
                     err(EX_OSERR, "malloc error");
-                strcpy(ped_db_file_name,in);
+                strcpy(ped_db_file_name,bcf_file_name);
                 strcat(ped_db_file_name, ".db");
             }
       }
 
-      return ped_ped(in, ped, col, ped_db_file_name);
+      return ped_ped(bcf_file_name, ped_file_name, col, ped_db_file_name);
     }
     return convert_help();
 }
@@ -296,11 +297,11 @@ int convert_help()
             "     options:\n"
             "         -p           PED file name (opt.)\n"
             "         -c           Sample name column in PED (Default 2)\n"
-            "         -o           Output file name (opt.)\n"
-            "         -v           VID output file name (opt.)\n"
+            "         -G           GQT output file name (opt.)\n"
+            "         -V           VID output file name (opt.)\n"
             "         -O           OFF output file name (opt.)\n"
-            "         -B           Use BIM file instead of OFF file (opt.)\n"
-            "         -b           BIM output file name (opt.)\n"
+            "         -B           BIM output file name (opt.)\n"
+            "         -D           PED DB output file name (opt.)\n"
             "         -r           Number of variants (opt. with index)\n"
             "         -f           Number of samples (opt. with index)\n"
             "         -t           Tmp working directory(./ by defualt)\n",
@@ -310,12 +311,18 @@ int convert_help()
 }
 
 
-int ped_ped(char *in, char *ped, uint32_t col, char *ped_db_file_name)
+int ped_ped(char *bcf_file_name,
+            char *ped_file_name,
+            uint32_t col,
+            char *ped_db_file_name)
 {
-    return convert_file_by_name_ped_to_db(in, ped, col, ped_db_file_name);
+    return convert_file_by_name_ped_to_db(bcf_file_name,
+                                          ped_file_name,
+                                          col,
+                                          ped_db_file_name);
 }
 
-int bcf_wahbm_metadata(char *in,
+int bcf_wahbm_metadata(char *bcf_file_name,
                        char *wah_out,
                        char *bim_out,
                        char *vid_out,
@@ -324,7 +331,7 @@ int bcf_wahbm_metadata(char *in,
                        uint32_t num_records,
                        char *full_cmd)
 {
-    return convert_file_by_name_bcf_to_wahbm_bim(in,
+    return convert_file_by_name_bcf_to_wahbm_bim(bcf_file_name,
                                                  num_fields,
                                                  num_records,
                                                  wah_out,
@@ -334,7 +341,7 @@ int bcf_wahbm_metadata(char *in,
                                                  full_cmd);
 }
 
-int bcf_wahbm_offset(char *in,
+int bcf_wahbm_offset(char *bcf_file_name,
                      char *wah_out,
                      char *offset_out,
                      char *vid_out,
@@ -343,7 +350,7 @@ int bcf_wahbm_offset(char *in,
                      uint32_t num_records,
                      char *full_cmd)
 {
-    return convert_file_by_name_bcf_to_wahbm_offset(in,
+    return convert_file_by_name_bcf_to_wahbm_offset(bcf_file_name,
                                                     num_fields,
                                                     num_records,
                                                     wah_out,
@@ -351,25 +358,4 @@ int bcf_wahbm_offset(char *in,
                                                     vid_out,
                                                     tmp_dir,
                                                     full_cmd);
-}
-
-int bcf_wahbm_metadata_offset(char *in,
-                              char *wah_out,
-                              char *bim_out,
-                              char *offset_out,
-                              char *vid_out,
-                              char *tmp_dir,
-                              uint32_t num_fields,
-                              uint32_t num_records,
-                              char *full_cmd)
-{
-    return convert_file_by_name_bcf_to_wahbm_metadata_offset(in,
-                                                             num_fields,
-                                                             num_records,
-                                                             wah_out,
-                                                             bim_out,
-                                                             offset_out,
-                                                             vid_out,
-                                                             tmp_dir,
-                                                             full_cmd);
 }

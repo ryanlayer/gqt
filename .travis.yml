@@ -1,0 +1,10 @@
+language: python
+compiler: gcc
+
+
+install:
+    - ./.install-deps.sh
+    - make
+
+script:
+    -  

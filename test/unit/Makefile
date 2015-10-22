@@ -35,6 +35,7 @@ all: clean $(TEST_NAMES) test
 	    $(SRC)/variant_metadata.c \
 	    $(SRC)/ped.c \
 	    $(SRC)/vid.c \
+	    $(SRC)/off.c \
 	    $(SRC)/bim.c \
 	    $(SRC)/pq.c \
 	    $(SRC)/bcf.c \

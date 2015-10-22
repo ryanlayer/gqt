@@ -356,7 +356,7 @@ struct gqt_file_header *new_gqt_file_header(char type,
     h->marker[1] = 'Q';
     h->marker[2] = 'T';
 
-    if ( !((type != 'g') || (type != 'v') || (type != 'b')) )
+    if ( !((type != 'g') || (type != 'v') || (type != 'b') || (type != 'o')) )
         errx(EX_UNAVAILABLE,
              "Cannot create header for unknown file type '%c'.",
              type);

@@ -8,6 +8,7 @@
 #include <err.h>
 #include <sysexits.h>
 #include <sys/errno.h>
+#include <htslib/knetfile.h>
 /*
 #include "parse_q.h"
 #include "pq.h"
@@ -47,6 +48,8 @@ struct gqt_file_header *new_gqt_file_header(char type,
                                             uint32_t num_samples);
 
 struct gqt_file_header *read_gqt_file_header(char *file_name, FILE *f);
+struct gqt_file_header *read_remote_gqt_file_header(char *file_name,
+                                                    knetFile *f);
 
 struct uint_ll {
     uint32_t value;
@@ -84,6 +87,8 @@ void parse_cmd_line_int_csv(uint32_t *I,
 const char *int_to_binary(uint32_t x);
 
 void check_file_read(char *file_name, FILE *fp, size_t exp, size_t obs);
+
+void check_remote_file_read(char *file_name, size_t exp, size_t obs);
 
 int check_field_name(char *field_name);
 

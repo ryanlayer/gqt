@@ -637,3 +637,30 @@ else
     echo "ERROR($LINENO): GQT all genotypes does not match BCFTOOLS all genotypes"
     exit
 fi
+
+clean_up
+$BCFTOOLS index $BCF
+$GQT convert bcf -i $BCF
+$GQT convert ped -i $BCF
+$GQT query -i $BCF \
+    -p "BCF_ID < 5" \
+    -g "count(HET)" \
+    | grep -v "^#" > tmp.local.out
+
+$GQT query -i $BCF \
+    -B http://s3-us-west-2.amazonaws.com/gqt-data/test/10.1e4.var.bcf.bim \
+    -p "BCF_ID < 5" \
+    -g "count(HET)" \
+| grep -v "^#" \
+> tmp.remote.out
+
+if diff tmp.local.out tmp.remote.out > /dev/null
+then
+    echo "SUCCESS($LINENO): Local BIM matches remote BIM"
+    rm tmp.local.out tmp.remote.out
+else
+    echo "ERROR($LINENO): Local BIM does not match remote BIM"
+    exit
+fi
+
+

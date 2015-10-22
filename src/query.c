@@ -254,8 +254,10 @@ int query(int argc, char **argv, char *full_cmd)
 
     // BCF/VCFGZ file is set
     if (S_is_set == 1) {
+        /*
         if ( access( bcf_file_name, F_OK) == -1 )
             err(EX_NOINPUT, "Error accessing BCF file '%s'", bcf_file_name);
+        */
 
         // GQT is not, autodetect
         if (G_is_set == 0) {
@@ -273,12 +275,15 @@ int query(int argc, char **argv, char *full_cmd)
                         gqt_file_name);
                 return query_help();
             }
-        } else {
+        } 
+        /*
+        else {
             if ( access( gqt_file_name, F_OK) == -1 ) {
                 fprintf(stderr, "GQT file '%s' not found\n", gqt_file_name);
                 return query_help();
             }
         }
+        */
 
         // PED DB is not, autodetect
         if (d_is_set == 0) {
@@ -339,10 +344,12 @@ int query(int argc, char **argv, char *full_cmd)
                 O_is_set = 1;
         } 
     } else if (G_is_set == 1) { 
+        /*
         if ( access( gqt_file_name, F_OK) == -1 ) {
             fprintf(stderr, "GQT file '%s' not found\n", gqt_file_name);
             return query_help();
         }
+        */
 
         // Try and find the BIM file, okay if not there (for now)
         if (B_is_set == 0) {
@@ -405,6 +412,7 @@ int query(int argc, char **argv, char *full_cmd)
         return query_help();
     } 
 
+    /*
     if (B_is_set == 1) {
         if ( access( bim_file_name, F_OK) == -1 )
             err(EX_NOINPUT, "Error accessing BIM file '%s'", bim_file_name);
@@ -414,22 +422,29 @@ int query(int argc, char **argv, char *full_cmd)
         if ( access( off_file_name, F_OK) == -1 )
             err(EX_NOINPUT, "Error accessing OFF file '%s'", bim_file_name);
     }
+    */
 
     if (V_is_set == 0) {
         fprintf(stderr, "VID file is not set\n");
         return query_help();
-    } else {
+    } 
+    /*
+    else {
         if ( access( vid_file_name, F_OK) == -1 )
             err(EX_NOINPUT, "Error accessing VID file '%s'", vid_file_name);
     }
+    */
 
     if (d_is_set == 0) {
         fprintf(stderr, "DB file is not set\n");
         return query_help();
-    } else {
+    }
+    /*
+    else {
         if ( access( ped_db_file_name, F_OK) == -1 )
             err(EX_NOINPUT, "Error accessing DB file '%s'", ped_db_file_name);
     }
+    */
 
     if (gt_q_count != id_q_count) {
         fprintf(stderr, 

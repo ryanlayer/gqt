@@ -13,6 +13,7 @@
 #include <math.h>
 #include <limits.h>
 #include <sysexits.h>
+#include <htslib/knetfile.h>
 #include "genotq.h"
 #ifdef __SSE4_2__
 #include <nmmintrin.h>
@@ -203,6 +204,14 @@ void check_file_read(char *file_name, FILE *fp, size_t exp, size_t obs)
 }
 //}}}
 
+//{{{void check_remote_file_read(char *file_name, size_t exp, size_t obs);
+void check_remote_file_read(char *file_name, size_t exp, size_t obs)
+{
+    if (exp != obs) 
+        err(EX_IOERR, "Error reading file \"%s\"", file_name);
+}
+//}}}
+
 //{{{ int check_field_name(char *field_name)
 int check_field_name(char *field_name)
 {
@@ -278,7 +287,7 @@ struct gqt_file_header *new_gqt_file_header(char type,
 }
 //}}}
 
-//{{{struct gqt_file_header read_gqt_file_header(FILE *f)
+//{{{ struct gqt_file_header *read_gqt_file_header(char *file_name, FILE *f)
 struct gqt_file_header *read_gqt_file_header(char *file_name, FILE *f)
 {
     struct gqt_file_header *h = (struct gqt_file_header *) 
@@ -289,6 +298,22 @@ struct gqt_file_header *read_gqt_file_header(char *file_name, FILE *f)
 
     size_t fr = fread(h, sizeof(struct gqt_file_header), 1, f);
     check_file_read(file_name, f, 1, fr);
+    return h;
+}
+//}}}
+
+//{{{ struct gqt_file_header *read_remote_gqt_file_header(char *file_name,
+struct gqt_file_header *read_remote_gqt_file_header(char *file_name,
+                                                    knetFile *f)
+{
+    struct gqt_file_header *h = (struct gqt_file_header *) 
+            malloc(sizeof(struct gqt_file_header));
+
+    if (knet_seek(f, 0, SEEK_SET))
+        err(EX_IOERR, "Error seeking to header in VID file '%s'.", file_name);
+
+    size_t fr = knet_read(f, h, 1 * sizeof(struct gqt_file_header));
+    check_remote_file_read(file_name, 1 * sizeof(struct gqt_file_header), fr);
     return h;
 }
 //}}}

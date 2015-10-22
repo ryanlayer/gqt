@@ -29,6 +29,7 @@ all: clean $(TEST_NAMES) test
 	    $(SRC)/timer.c \
 	    $(SRC)/plt.c \
 	    $(SRC)/vid.c \
+	    $(SRC)/off.c \
 	    $(SRC)/bim.c \
 	    $(SRC)/pq.c \
 	    $(SRC)/bcf.c \

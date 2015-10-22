@@ -21,6 +21,7 @@ LIB= timer.o \
      pop.o \
      bim.o \
      vid.o \
+     off.o \
      parse_q.yy.o \
      parse_q.o \
      ped.o \

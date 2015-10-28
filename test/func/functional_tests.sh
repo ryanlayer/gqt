@@ -264,9 +264,9 @@ fi
 
 clean_up
 
-$BCFTOOLS index $BCF
-$GQT convert bcf -i $BCF
-$GQT convert ped -i $BCF -p $DATA_PATH/more_fields.ped
+$BCFTOOLS index $BCF 2> /dev/null
+$GQT convert bcf -i $BCF 2> /dev/null
+$GQT convert ped -i $BCF -p $DATA_PATH/more_fields.ped 2> /dev/null
 
 # count the number of homo_ref rows
 GQT_BOTH_NUM=`$GQT query \
@@ -398,7 +398,7 @@ fi
 $BCFTOOLS view -Oz $BCF -o $DATA_PATH/10.1e4.var.vcf.gz
 $BCFTOOLS index $DATA_PATH/10.1e4.var.vcf.gz
 
-$GQT convert bcf -i $DATA_PATH/10.1e4.var.vcf.gz
+$GQT convert bcf -i $DATA_PATH/10.1e4.var.vcf.gz 2> /dev/null
 
 $GQT query \
     -i $BCF.gqt \
@@ -580,8 +580,8 @@ then
             --out $DATA_PATH/A_vs_B \
         2> /dev/null > /dev/null
         tail -n+2 $DATA_PATH/A_vs_B.weir.fst | cut -f 3 > vcftools.fst.tmp
-        $GQT convert bcf -i $BCF
-        $GQT convert ped -i $BCF
+        $GQT convert bcf -i $BCF 2> /dev/null
+        $GQT convert ped -i $BCF 2> /dev/null
         $GQT fst \
             -i $BCF.gqt \
             -d $BCF.db \
@@ -622,9 +622,9 @@ fi
 
 clean_up
 
-$BCFTOOLS index $BCF
-$GQT convert bcf -i $BCF
-$GQT convert ped -i $BCF
+$BCFTOOLS index $BCF 2> /dev/null
+$GQT convert bcf -i $BCF 2> /dev/null
+$GQT convert ped -i $BCF 2> /dev/null
 
 $GQT query -i $BCF -v | grep -v "^#" > tmp.gqt.out
 $BCFTOOLS view $BCF | grep -v "^#" > tmp.bcf.out
@@ -639,9 +639,9 @@ else
 fi
 
 clean_up
-$BCFTOOLS index $BCF
-$GQT convert bcf -i $BCF
-$GQT convert ped -i $BCF
+$BCFTOOLS index $BCF 2> /dev/null
+$GQT convert bcf -i $BCF 2> /dev/null
+$GQT convert ped -i $BCF 2> /dev/null
 $GQT query -i $BCF \
     -p "BCF_ID < 5" \
     -g "count(HET)" \
@@ -660,6 +660,31 @@ then
     rm tmp.local.out tmp.remote.out
 else
     echo "ERROR($LINENO): Local BIM does not match remote BIM"
+    exit
+fi
+
+clean_up
+$BCFTOOLS index $BCF 2> /dev/null
+$GQT convert bcf -i $BCF 2> /dev/null
+$GQT convert ped -i $BCF 2> /dev/null
+$GQT query -i $BCF \
+    -p "BCF_ID < 5" \
+    -g "count(HET)" \
+    | grep -v "^#" > tmp.local.out
+
+$GQT query -i $BCF \
+    -O http://s3-us-west-2.amazonaws.com/gqt-data/test/10.1e4.var.bcf.off \
+    -p "BCF_ID < 5" \
+    -g "count(HET)" \
+| grep -v "^#" \
+> tmp.remote.out
+
+if diff tmp.local.out tmp.remote.out > /dev/null
+then
+    echo "SUCCESS($LINENO): Local OFF matches remote OFF"
+    rm tmp.local.out tmp.remote.out
+else
+    echo "ERROR($LINENO): Local OFF does not match remote OFF"
     exit
 fi
 

@@ -3,9 +3,17 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <htslib/knetfile.h>
 
 struct off_file {
-    FILE *file;
+    union {
+        FILE *local;
+        knetFile *remote;
+    } file;
+    enum {
+        OFF_LOCAL,
+        OFF_REMOTE
+    } type;
     char *file_name;
     struct gqt_file_header *gqt_header;
     uint64_t *offsets;

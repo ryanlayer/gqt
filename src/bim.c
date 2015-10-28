@@ -161,10 +161,10 @@ struct bim_file *open_bim_file(char *file_name)
 {
     struct bim_file *b = (struct bim_file *) malloc(sizeof(struct bim_file));
 
+    b->type = BIM_REMOTE;
     b->file_name = strdup(file_name);
     //b->file = fopen(file_name,"rb+");
     b->file.remote = knet_open(file_name,"rb+");
-    b->type = BIM_REMOTE;
 
     if (!(b->file.remote))
         err(EX_NOINPUT, "Cannot open BIM file \"%s\"", file_name);

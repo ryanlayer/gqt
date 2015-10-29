@@ -335,7 +335,7 @@ unsigned long hash_cmd(char *full_cmd)
 
 //{{{ void download_file(char *fn)
 // LIFTED FROM HTSLIB
-int download_file(char *fn)
+char *download_file(char *fn, char *path)
 {
     int buf_size = 1 * 1024 * 1024;
     uint8_t *buf;
@@ -348,11 +348,23 @@ int download_file(char *fn)
         if (*p == '/') break;
     fn = p + 1;
 
-    // First try to open a local copy
+
+    // First try to open a local copy, if successfull return the same
     fp = fopen(fn, "r");
     if (fp) {
         fclose(fp);
-        return 0;
+        return strdup(fn);
+    }
+
+    char *target_file;
+    if (asprintf(&target_file,"%s/%s", path, fn) == -1)
+        err(EX_OSERR, "asprintf error");
+    
+    // See if it has already been downloaded
+    fp = fopen(target_file, "r");
+    if (fp) {
+        fclose(fp);
+        return target_file;
     }
 
     // If failed, download from remote and open
@@ -362,12 +374,11 @@ int download_file(char *fn)
              "[download_from_remote] fail to open remote file %s\n",
              url);
     }
-    if ((fp = fopen(fn, "wb")) == 0) {
+    if ((fp = fopen(target_file, "wb")) == 0) {
         hclose_abruptly(fp_remote);
         errx(EX_NOINPUT,
-                "[download_from_remote] fail to create file in the "
-                "working directory %s\n",
-                fn);
+                "[download_from_remote] fail to create file '%s'",
+                target_file);
     }
     buf = (uint8_t*)calloc(buf_size, 1);
     while ((l = hread(fp_remote, buf, buf_size)) > 0)
@@ -378,6 +389,6 @@ int download_file(char *fn)
         errx(EX_NOINPUT,
                 "[download_from_remote] fail to close remote file %s\n",
                 url);
-    return 1;
+    return target_file;
 }
 //}}}

@@ -110,7 +110,8 @@ int query(int argc, char **argv, char *full_cmd)
          *bim_file_name=NULL,
          *off_file_name=NULL,
          *bcf_file_name=NULL,
-         *vid_file_name=NULL;
+         *vid_file_name=NULL,
+         *tmp_dir_name=NULL;
     int c_is_set = 0,
         i_is_set = 0,
         id_q_count = 0,
@@ -122,13 +123,14 @@ int query(int argc, char **argv, char *full_cmd)
         B_is_set = 0,
         O_is_set = 0,
         S_is_set = 0,
+        t_is_set = 0,
         bcf_output = 0;
 
     char *id_query_list[100];
     char *gt_query_list[100];
 
     //{{{ parse cmd line opts
-    while ((c = getopt (argc, argv, "chvi:p:g:d:B:V:G:O:S:")) != -1) {
+    while ((c = getopt (argc, argv, "chvi:p:g:d:B:V:G:O:S:t:")) != -1) {
         switch (c) {
         case 'v':
             v_is_set = 1;
@@ -172,6 +174,10 @@ int query(int argc, char **argv, char *full_cmd)
             O_is_set = 1;
             off_file_name = optarg;
             break;
+        case 't':
+            t_is_set = 1;
+            tmp_dir_name = optarg;
+            break;
         case 'h':
             return query_help();
         case '?':
@@ -191,6 +197,11 @@ int query(int argc, char **argv, char *full_cmd)
         default:
             return query_help();
         }
+    }
+
+    if (t_is_set == 0) {
+        if (asprintf(&tmp_dir_name,"./") == -1)
+            err(EX_OSERR, "asprintf error");
     }
 
     if (i_is_set == 0) {
@@ -510,7 +521,8 @@ int query(int argc, char **argv, char *full_cmd)
          */
         id_lens[i] = resolve_ind_query(&R,
                                       id_query_list[i],
-                                      ped_db_file_name);
+                                      ped_db_file_name,
+                                      tmp_dir_name);
 
         uint32_t *tmp_U_R = (uint32_t *)
                 realloc(U_R, (U_R_len + id_lens[i]) * sizeof(uint32_t));
@@ -697,7 +709,8 @@ int query(int argc, char **argv, char *full_cmd)
     if (U_R == NULL) {
         U_R_len= resolve_ind_query(&U_R,
                                    "",
-                                   ped_db_file_name);
+                                   ped_db_file_name,
+                                   tmp_dir_name);
     }
 
     // Get the uniq elements in place
@@ -1098,6 +1111,7 @@ int query_help()
 "%s v%s\n"
 "usage:   gqt query -i <bcf/vcf or gqt file> \\\n"
 "                   -d <ped database file> \\\n"
+"                   -t tmp direcory name for remote files (default ./)\n"
 "                   -B <bim file> (opt.)\\\n"
 "                   -O <off file> (opt.)\\\n"
 "                   -V <vid file> (opt.)\\\n"

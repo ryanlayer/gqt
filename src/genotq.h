@@ -96,5 +96,5 @@ int is_int(char *s, int *v);
 
 unsigned long hash_cmd(char *full_cmd);
 
-int download_file(char *fn);
+char *download_file(char *fn, char *path);
 #endif

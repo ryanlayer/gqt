@@ -293,17 +293,9 @@ then
     echo "SUCCESS($LINENO): Number of HOM_REF in both ESN match in VCF and GQT"
 else
     echo "ERROR($LINENO): Number of HOM_REF in both ESN do not match in VCF($VCF_BOTH_NUM)  and GQT($GQT_BOTH_NUM)"
-    echo -e"
-    $GQT query \
-        -i $BCF.gqt \ 
-        -d $DATA_PATH/more_fields.ped.db \ 
-        -p "Population ='ESN'" \
-        -g "HOM_REF" \
-        | grep -v "#" \
-        | wc -l"
+    echo -e "$GQT query -i $BCF.gqt  -d $DATA_PATH/more_fields.ped.db  -p "Population ='ESN'" -g "HOM_REF" | grep -v "#" | wc -l"
         exit
 fi 
-
 
 $GQT query \
     -i $BCF.gqt \
@@ -662,8 +654,8 @@ else
     echo "ERROR($LINENO): Local BIM does not match remote BIM"
     exit
 fi
-
 clean_up
+
 $BCFTOOLS index $BCF 2> /dev/null
 $GQT convert bcf -i $BCF 2> /dev/null
 $GQT convert ped -i $BCF 2> /dev/null
@@ -687,5 +679,39 @@ else
     echo "ERROR($LINENO): Local OFF does not match remote OFF"
     exit
 fi
+clean_up
 
 
+$BCFTOOLS index $BCF 2> /dev/null
+$GQT convert bcf -i $BCF 2> /dev/null
+
+$GQT convert ped \
+    -i $BCF \
+    -p $DATA_PATH/more_fields.ped 2> /dev/null
+
+$GQT query \
+    -i $BCF \
+    -d $DATA_PATH/more_fields.ped.db \
+    -p "Population ='ESN'" \
+    -g "HOM_REF" \
+| grep -v "^#" \
+> tmp.local.out
+    
+rm -f ./more_fields.ped.db
+$GQT query \
+    -i $BCF \
+    -d http://s3-us-west-2.amazonaws.com/gqt-data/test/more_fields.ped.db \
+    -p "Population ='ESN'" \
+    -g "HOM_REF" \
+| grep -v "^#" \
+> tmp.remote.out
+
+if diff tmp.local.out tmp.remote.out > /dev/null
+then
+    echo "SUCCESS($LINENO): Local PED DB matches remote PED DB"
+    rm tmp.local.out tmp.remote.out
+else
+    echo "ERROR($LINENO): Local PED DB does not match remote PED DB"
+    exit
+fi
+clean_up

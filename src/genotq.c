@@ -14,6 +14,7 @@
 #include <limits.h>
 #include <sysexits.h>
 #include <htslib/knetfile.h>
+#include <htslib/hfile.h>
 #include "genotq.h"
 #ifdef __SSE4_2__
 #include <nmmintrin.h>
@@ -329,5 +330,54 @@ unsigned long hash_cmd(char *full_cmd)
         hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
 
     return hash;
+}
+//}}}
+
+//{{{ void download_file(char *fn)
+// LIFTED FROM HTSLIB
+int download_file(char *fn)
+{
+    int buf_size = 1 * 1024 * 1024;
+    uint8_t *buf;
+    FILE *fp;
+    hFILE *fp_remote;
+    char *url = fn;
+    char *p;
+    int l = strlen(fn);
+    for (p = fn + l - 1; p >= fn; --p)
+        if (*p == '/') break;
+    fn = p + 1;
+
+    // First try to open a local copy
+    fp = fopen(fn, "r");
+    if (fp) {
+        fclose(fp);
+        return 0;
+    }
+
+    // If failed, download from remote and open
+    fp_remote = hopen(url, "rb");
+    if (fp_remote == 0) {
+        errx(EX_NOINPUT,
+             "[download_from_remote] fail to open remote file %s\n",
+             url);
+    }
+    if ((fp = fopen(fn, "wb")) == 0) {
+        hclose_abruptly(fp_remote);
+        errx(EX_NOINPUT,
+                "[download_from_remote] fail to create file in the "
+                "working directory %s\n",
+                fn);
+    }
+    buf = (uint8_t*)calloc(buf_size, 1);
+    while ((l = hread(fp_remote, buf, buf_size)) > 0)
+        fwrite(buf, 1, l, fp);
+    free(buf);
+    fclose(fp);
+    if (hclose(fp_remote) != 0)
+        errx(EX_NOINPUT,
+                "[download_from_remote] fail to close remote file %s\n",
+                url);
+    return 1;
 }
 //}}}

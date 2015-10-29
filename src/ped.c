@@ -6,7 +6,12 @@
 #include <sqlite3.h>
 #include <sys/stat.h>
 #include <htslib/vcf.h>
+#include <htslib/faidx.h>
+#include <err.h>
+#include <sysexits.h>
+
 #include "ped.h"
+
 
 //{{{ static int uint32_t_ll_callback(void *ll_p,
 static int uint32_t_ll_callback(void *ll_p,
@@ -531,6 +536,9 @@ uint32_t resolve_ind_query(uint32_t **R, char *query, char *ped_db_file)
 {
     sqlite3 *db;
     char *err_msg = NULL;
+
+    int was_remote = download_file(ped_db_file);
+
     int rc = sqlite3_open(ped_db_file, &db);
     if( rc != SQLITE_OK )
         err(EX_NOINPUT,

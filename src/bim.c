@@ -15,6 +15,7 @@
  * md line lengths       ( bcf_f->num_records*sizeof(uint64_t))
  * compressed data 
  */
+//{{{struct bim_file_header *new_bim_file_header(uint64_t u_size,
 struct bim_file_header *new_bim_file_header(uint64_t u_size,
                                             uint64_t c_size,
                                             uint64_t h_size,
@@ -30,7 +31,9 @@ struct bim_file_header *new_bim_file_header(uint64_t u_size,
 
     return h;
 }
+//}}}
 
+//{{{struct bim_file *new_bim_file(char *file_name,
 struct bim_file *new_bim_file(char *file_name,
                               char *full_cmd,
                               uint32_t num_variants,
@@ -85,7 +88,9 @@ struct bim_file *new_bim_file(char *file_name,
 
     return b;
 }
+//}}}
 
+//{{{void destroy_bim_file(struct bim_file *b)
 void destroy_bim_file(struct bim_file *b)
 {
     if (b->type == BIM_LOCAL) {
@@ -105,7 +110,9 @@ void destroy_bim_file(struct bim_file *b)
 
     b = NULL;
 }
+//}}}
 
+//{{{struct bim_file_header *read_bim_file_header(struct bim_file *b)
 struct bim_file_header *read_bim_file_header(struct bim_file *b)
 {
     assert(b->type == BIM_REMOTE);
@@ -156,7 +163,9 @@ struct bim_file_header *read_bim_file_header(struct bim_file *b)
 
     return h;
 }
+//}}}
 
+//{{{struct bim_file *open_bim_file(char *file_name)
 struct bim_file *open_bim_file(char *file_name)
 {
     struct bim_file *b = (struct bim_file *) malloc(sizeof(struct bim_file));
@@ -167,7 +176,7 @@ struct bim_file *open_bim_file(char *file_name)
     b->file.remote = knet_open(file_name,"rb+");
 
     if (!(b->file.remote))
-        err(EX_NOINPUT, "Cannot open BIM file \"%s\"", file_name);
+        err(EX_NOINPUT, "Cannot open BIM file '%s'", file_name);
 
     b->gqt_header = read_remote_gqt_file_header(b->file_name, b->file.remote);
 
@@ -186,7 +195,9 @@ struct bim_file *open_bim_file(char *file_name)
 
     return b;
 }
+//}}}
 
+//{{{void update_bim_file_header(uint64_t u_size,
 void update_bim_file_header(uint64_t u_size,
                             uint64_t c_size,
                             uint64_t h_size,
@@ -212,7 +223,9 @@ void update_bim_file_header(uint64_t u_size,
     if (fwrite(&h_size, sizeof(uint64_t), 1, b->file.local) != 1)
         err(EX_IOERR, "Error writing header to BIM file \"%s\"", b->file_name);
 }
+//}}}
 
+//{{{void seek_bim_to_data(struct bim_file *b)
 void seek_bim_to_data(struct bim_file *b)
 {
     if (b->type == BIM_LOCAL) { 
@@ -227,3 +240,4 @@ void seek_bim_to_data(struct bim_file *b)
                 b->file_name);
     }
 }
+//}}}

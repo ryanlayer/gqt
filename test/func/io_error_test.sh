@@ -5,7 +5,7 @@
 ### Missing file
 for CMD in pca-shared gst fst calpha query "convert ped" "convert bcf"
 do
-    run $GQT $CMD -i no_such_file
+    run $GQT $CMD -i no_such_file.gqt
     assert_fail_to_stderr $EX_NOINPUT $LINENO
 done
 
@@ -51,10 +51,10 @@ assert_fail_to_stderr $EX_SOFTWARE $LINENO
 run $GQT query -i $BCF.gqt -d no_db -p "Bar==1" -g "HET"
 assert_fail_to_stderr $EX_NOINPUT $LINENO
 
-run $GQT query -i $BCF.gqt -v no_file
+run $GQT query -i $BCF.gqt -V no_file
 assert_fail_to_stderr $EX_NOINPUT $LINENO
 
-run $GQT query -i $BCF.gqt -b no_file
+run $GQT query -i $BCF.gqt -B no_file
 assert_fail_to_stderr $EX_NOINPUT $LINENO
 
 # corrupt GQT file
@@ -84,7 +84,7 @@ rm_index
 # corrupt VID file
 make_index
 perl -e '$out = "foobar";print pack("V*",10,0,length($out),0,48,0,1,0,666,666);print $out' > truncated.bin
-run $GQT query -i $BCF.gqt  -b truncated.bin
+run $GQT query -i $BCF.gqt  -B truncated.bin
 assert_fail_to_stderr $EX_IOERR $LINENO
 assert_in_stderr truncated.bin $LINENO
 rm_index
@@ -167,7 +167,7 @@ rm_index
 
 # Test VID without VID header
 make_index
-run $GQT query -i $BCF.gqt -v $BCF.gqt
+run $GQT query -i $BCF.gqt -V $BCF.gqt
 assert_fail_to_stderr $EX_NOINPUT $LINENO
 assert_in_stderr "gqt: File '../data/10.1e4.var.bcf.gqt' is not a VID file." $LINENO
 rm_index
@@ -175,32 +175,33 @@ rm_index
 
 # Test VID with VID header
 make_index
-run $GQT query -i $BCF.gqt -v $BCF.vid
+run $GQT query -i $BCF.gqt -V $BCF.vid
 assert_exit_code $EX_OK $LINENO
 rm_index
 
 # Test BIM without BIM header
 make_index
-run $GQT query -i $BCF.gqt -b $BCF.gqt
+run $GQT query -i $BCF.gqt -B $BCF.gqt
 assert_fail_to_stderr $EX_NOINPUT $LINENO
 assert_in_stderr "gqt: File '../data/10.1e4.var.bcf.gqt' is not a BIM file." $LINENO
 rm_index
 
 # Test BIM with BIM header
 make_index
-run $GQT query -i $BCF.gqt -b $BCF.bim
+run $GQT query -i $BCF.gqt -B $BCF.bim
 assert_exit_code $EX_OK $LINENO
 rm_index
 
 # Test WAHBM without WAHBM header
 make_index
-run $GQT query -i $BCF -b $BCF.bim -v $BCF.vid -d $BCF.db
+run $GQT query -i $BCF -G $BCF -B $BCF.bim -V $BCF.vid -d $BCF.db
 assert_fail_to_stderr $EX_NOINPUT $LINENO
 assert_in_stderr "gqt: File '../data/10.1e4.var.bcf' is not a GQT file." $LINENO
 rm_index
 
 # Test WAHBM with WAHBM header
 make_index
-run $GQT query -i $BCF.gqt -b $BCF.bim -v $BCF.vid -d $BCF.db
+run $GQT query -i $BCF -G $BCF.gqt -B $BCF.bim -V $BCF.vid -d $BCF.db
 assert_exit_code $EX_OK $LINENO
 rm_index
+

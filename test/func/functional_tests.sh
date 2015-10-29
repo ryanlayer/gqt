@@ -681,6 +681,30 @@ else
 fi
 clean_up
 
+$BCFTOOLS index $BCF 2> /dev/null
+$GQT convert bcf -i $BCF 2> /dev/null
+$GQT convert ped -i $BCF 2> /dev/null
+$GQT query -i $BCF \
+    -p "BCF_ID < 5" \
+    -g "count(HET)" \
+    | grep -v "^#" > tmp.local.out
+
+$GQT query -i $BCF \
+    -V http://s3-us-west-2.amazonaws.com/gqt-data/test/10.1e4.var.bcf.vid \
+    -p "BCF_ID < 5" \
+    -g "count(HET)" \
+| grep -v "^#" \
+> tmp.remote.out
+
+if diff tmp.local.out tmp.remote.out > /dev/null
+then
+    echo "SUCCESS($LINENO): Local VID matches remote VID"
+    rm tmp.local.out tmp.remote.out
+else
+    echo "ERROR($LINENO): Local VID does not match remote VID"
+    exit
+fi
+clean_up
 
 $BCFTOOLS index $BCF 2> /dev/null
 $GQT convert bcf -i $BCF 2> /dev/null
@@ -715,3 +739,20 @@ else
     exit
 fi
 clean_up
+
+$GQT query \
+    -i http://s3-us-west-2.amazonaws.com/gqt-data/test/10.1e4.var.bcf -v
+
+#$GQT fst \
+#    -i $BCF.gqt \
+#    -d $BCF.db \
+#    -p "BCF_Sample in ( 'I0', 'I1', 'I2', 'I3', 'I4')"\
+#    -p "BCF_Sample in ( 'I5', 'I6', 'I7', 'I8', 'I9')" 
+#
+#$GQT fst \
+#    -i http://s3-us-west-2.amazonaws.com/gqt-data/test/10.1e4.var.bcf.gqt \
+#    -d http://s3-us-west-2.amazonaws.com/gqt-data/test/10.1e4.var.bcf.db \
+#    -p "BCF_Sample in ( 'I0', 'I1', 'I2', 'I3', 'I4')"\
+#    -p "BCF_Sample in ( 'I5', 'I6', 'I7', 'I8', 'I9')" 
+
+

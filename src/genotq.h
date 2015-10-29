@@ -97,4 +97,6 @@ int is_int(char *s, int *v);
 unsigned long hash_cmd(char *full_cmd);
 
 char *download_file(char *fn, char *path);
+
+int ping_file(char *file_name);
 #endif

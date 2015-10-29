@@ -19,7 +19,7 @@
 #include "quick_file.h"
 #include "output_buffer.h"
 
-int query_help();
+int query_help(int error_code);
 
 void print_query_result_offset(uint32_t *mask,
                                uint32_t mask_len,
@@ -101,7 +101,7 @@ int query_cmp(uint32_t value,
 //{{{ int query(int argc, char **argv, char *full_cmd)
 int query(int argc, char **argv, char *full_cmd)
 {
-    if (argc < 2) return query_help();
+    if (argc < 2) return query_help(EX_USAGE);
 
     int c;
     char *input_file_name=NULL,
@@ -179,7 +179,7 @@ int query(int argc, char **argv, char *full_cmd)
             tmp_dir_name = optarg;
             break;
         case 'h':
-            return query_help();
+            return query_help(EX_USAGE);
         case '?':
             if ( (optopt == 'i') ||
                     (optopt == 'p') ||
@@ -193,9 +193,9 @@ int query(int argc, char **argv, char *full_cmd)
                 fprintf (stderr, "Unknown option `-%c'.\n", optopt);
             else
                 fprintf (stderr, "Unknown option character `\\x%x'.\n", optopt);
-            return query_help();
+            return query_help(EX_USAGE);
         default:
-            return query_help();
+            return query_help(EX_USAGE);
         }
     }
 
@@ -206,7 +206,7 @@ int query(int argc, char **argv, char *full_cmd)
 
     if (i_is_set == 0) {
         fprintf (stderr, "No input file given (vcf.gz/bcf/gqt).\n");
-        return query_help();
+        return query_help(EX_NOINPUT);
     }
 
     if (strlen(input_file_name) < 4) {
@@ -216,7 +216,7 @@ int query(int argc, char **argv, char *full_cmd)
         fprintf (stderr,
                  "NOTE: The file must have a supported extension "
                  "(vcf.gz/bcf/gqt).\n");
-        return query_help();
+        return query_help(EX_NOINPUT);
     }
     // See if -i is a gqt file or a bcf file
     char *input_file_type = (char *)malloc(3*sizeof(char));
@@ -239,7 +239,7 @@ int query(int argc, char **argv, char *full_cmd)
             fprintf (stderr,
                      "NOTE: The file must have a supported extension "
                      "(vcf.gz/bcf/gqt).\n");
-            return query_help();
+            return query_help(EX_NOINPUT);
         }
 
         free(input_file_type);
@@ -259,7 +259,7 @@ int query(int argc, char **argv, char *full_cmd)
             fprintf (stderr,
                      "NOTE: The file must have a supported extension "
                      "(vcf.gz/bcf/gqt).\n");
-            return query_help();
+            return query_help(EX_NOINPUT);
         }
     }
 
@@ -278,6 +278,16 @@ int query(int argc, char **argv, char *full_cmd)
             strcpy(gqt_file_name, bcf_file_name);
             strcat(gqt_file_name, ".gqt");
 
+            if ( ping_file(gqt_file_name) != 0 ) {
+                G_is_set = 1;
+            } else {
+                fprintf(stderr,
+                        "Auto detect failure: GQT file '%s' not found\n",
+                        gqt_file_name);
+                return query_help(EX_NOINPUT);
+            }
+
+            /*
             if ( access( gqt_file_name, F_OK) != -1 ) {
                 G_is_set = 1;
             } else {
@@ -286,6 +296,7 @@ int query(int argc, char **argv, char *full_cmd)
                         gqt_file_name);
                 return query_help();
             }
+            */
         } 
         /*
         else {
@@ -304,6 +315,9 @@ int query(int argc, char **argv, char *full_cmd)
             strcpy(ped_db_file_name, bcf_file_name);
             strcat(ped_db_file_name, ".db");
 
+            d_is_set = 1;
+
+            /*
             if ( access( ped_db_file_name, F_OK) != -1 ) {
                 d_is_set = 1;
             } else {
@@ -312,6 +326,7 @@ int query(int argc, char **argv, char *full_cmd)
                         ped_db_file_name);
                 return query_help();
             }
+            */
         }
 
         // VID is not, autodetect
@@ -321,7 +336,9 @@ int query(int argc, char **argv, char *full_cmd)
                 err(EX_OSERR, "malloc error");
             strcpy(vid_file_name, bcf_file_name);
             strcat(vid_file_name, ".vid");
+            V_is_set = 1;
 
+            /*
             if ( access( vid_file_name, F_OK) != -1 ) {
                 V_is_set = 1;
             } else {
@@ -330,6 +347,7 @@ int query(int argc, char **argv, char *full_cmd)
                         vid_file_name);
                 return query_help();
             }
+            */
         }
 
         // Try and find the BIM file, okay if not there (for now)
@@ -339,8 +357,12 @@ int query(int argc, char **argv, char *full_cmd)
                 err(EX_OSERR, "malloc error");
             strcpy(bim_file_name, bcf_file_name);
             strcat(bim_file_name, ".bim");
+            B_is_set = 1;
+
+            /*
             if ( access( bim_file_name, F_OK) != -1 ) 
                 B_is_set = 1;
+            */
         }
 
         // Try and find the OFF file, okay if not there (for now)
@@ -350,9 +372,12 @@ int query(int argc, char **argv, char *full_cmd)
                 err(EX_OSERR, "malloc error");
             strcpy(off_file_name, bcf_file_name);
             strcat(off_file_name, ".off");
+            O_is_set = 1;
 
+            /*
             if ( access( off_file_name, F_OK) != -1 ) 
                 O_is_set = 1;
+            */
         } 
     } else if (G_is_set == 1) { 
         /*
@@ -369,8 +394,12 @@ int query(int argc, char **argv, char *full_cmd)
                 err(EX_OSERR, "malloc error");
             strcpy(bim_file_name, gqt_file_name);
             strcpy(bim_file_name + strlen(bim_file_name) - 3, "bim");
+            B_is_set = 1;
+
+            /*
             if ( access( bim_file_name, F_OK) != -1 ) 
                 B_is_set = 1;
+            */
         } 
 
         if (O_is_set == 0) {
@@ -379,8 +408,11 @@ int query(int argc, char **argv, char *full_cmd)
                 err(EX_OSERR, "malloc error");
             strcpy(off_file_name, gqt_file_name);
             strcpy(off_file_name + strlen(off_file_name) - 3, "off");
+            O_is_set = 1;
+            /*
             if ( access( off_file_name, F_OK) != -1 ) 
                 O_is_set = 1;
+            */
         } 
 
 
@@ -391,6 +423,9 @@ int query(int argc, char **argv, char *full_cmd)
             strcpy(vid_file_name, gqt_file_name);
             strcpy(vid_file_name + strlen(vid_file_name) - 3, "vid");
 
+            V_is_set = 1;
+
+            /*
             if ( access( vid_file_name, F_OK) != -1 ) {
                 V_is_set = 1;
             } else {
@@ -399,6 +434,7 @@ int query(int argc, char **argv, char *full_cmd)
                         vid_file_name);
                 return query_help();
             }
+            */
         }
 
         if (d_is_set == 0) {
@@ -407,7 +443,9 @@ int query(int argc, char **argv, char *full_cmd)
                 err(EX_OSERR, "malloc error");
             strcpy(ped_db_file_name, gqt_file_name);
             strcpy(ped_db_file_name + strlen(gqt_file_name) - 3, "db\0");
+            d_is_set = 1;
 
+            /*
             if ( access( ped_db_file_name, F_OK) != -1 ) {
                 d_is_set = 1;
             } else {
@@ -416,11 +454,12 @@ int query(int argc, char **argv, char *full_cmd)
                         ped_db_file_name);
                 return query_help();
             }
+            */
         }
     }  else {
         fprintf(stderr,
                 "Neither GQT or BCF/VCF.GZ file given.\n");
-        return query_help();
+        return query_help(EX_NOINPUT);
     } 
 
     /*
@@ -437,7 +476,7 @@ int query(int argc, char **argv, char *full_cmd)
 
     if (V_is_set == 0) {
         fprintf(stderr, "VID file is not set\n");
-        return query_help();
+        return query_help(EX_NOINPUT);
     } 
     /*
     else {
@@ -448,7 +487,7 @@ int query(int argc, char **argv, char *full_cmd)
 
     if (d_is_set == 0) {
         fprintf(stderr, "DB file is not set\n");
-        return query_help();
+        return query_help(EX_NOINPUT);
     }
     /*
     else {
@@ -460,7 +499,7 @@ int query(int argc, char **argv, char *full_cmd)
     if (gt_q_count != id_q_count) {
         fprintf(stderr, 
                 "Mismatched number of individual and genotype query strings\n");
-        return query_help();
+        return query_help(EX_NOINPUT);
     }
 
 
@@ -468,20 +507,20 @@ int query(int argc, char **argv, char *full_cmd)
         fprintf(stderr, 
                 "Must set either BIM or OFF files when doing anything "
                 "other than counting.\n");
-        return query_help();
+        return query_help(EX_NOINPUT);
     }
 
     if ( (v_is_set == 1) && ((O_is_set == 0) || (S_is_set == 0)) ) {
         fprintf(stderr, 
                 "To get genotypes source BCF/VCF.GZ and OFF files "
                 "must be set.\n");
-        return query_help();
+        return query_help(EX_NOINPUT);
     }
 
-    if ( (v_is_set == 0) && (B_is_set == 0) ) {
+    if ( (v_is_set == 0) && (B_is_set == 0) && (c_is_set == 0)) {
         fprintf(stderr, 
                 "To get variant data only BIM file must be set.\n");
-        return query_help();
+        return query_help(EX_NOINPUT);
     }
 
 
@@ -1105,7 +1144,7 @@ void print_query_result_offset(uint32_t *mask,
 //}}}
 
 //{{{int query_help()
-int query_help()
+int query_help(int error_code)
 {
     fprintf(stderr, 
 "%s v%s\n"
@@ -1165,7 +1204,7 @@ int query_help()
 "\n"
 "\t-g \"count(HET HOM_ALT) < 10\"\n",
 PROGRAM_NAME, VERSION);
-    return EX_USAGE;
+    return error_code;
 }
 //}}}
 

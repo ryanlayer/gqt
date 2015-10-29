@@ -15,7 +15,7 @@
 #include "ubin.h"
 #include "bcf.h"
 
-char *BCF_FILE = "../data/diff_gts.bcf";
+char *BCF_FILE = "../data/10.1e4.var.bcf";
 uint32_t NUM_INDS = 10;
 uint32_t NUM_VARS = 43;
 
@@ -112,5 +112,16 @@ void test_open_off_file(void)
 #endif
 
     //remove(file_name);
+}
+//}}}
+
+//{{{void test_ping_file(void)
+void test_ping_file(void)
+{
+
+    TEST_ASSERT_EQUAL(1, ping_file(BCF_FILE));
+    TEST_ASSERT_EQUAL(2, ping_file("http://s3-us-west-2.amazonaws.com/gqt-data/test/10.1e4.var.bcf.off"));
+    TEST_ASSERT_EQUAL(0, ping_file("nada"));
+    TEST_ASSERT_EQUAL(0, ping_file("http://s3-us-west-2.amazonaws.com/gqt-data/test/10.1e4.var.bcf.nada"));
 }
 //}}}

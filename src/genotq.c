@@ -392,3 +392,22 @@ char *download_file(char *fn, char *path)
     return target_file;
 }
 //}}}
+
+//{{{ void download_file(char *fn)
+int ping_file(char *file_name)
+{
+    FILE *f = fopen(file_name, "r");
+    if (f) {
+        fclose(f);
+        return 1;
+    }
+
+    hFILE *f_remote = hopen(file_name, "rb");
+    if (f_remote != 0) {
+        int r = hclose(f_remote);
+        return 2;
+    }
+
+    return 0;
+}
+//}}}

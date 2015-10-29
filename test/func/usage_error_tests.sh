@@ -19,7 +19,7 @@ done
 ### Missing file
 for CMD in pca-shared gst fst calpha query "convert ped" "convert bcf"
 do
-    run $GQT $CMD -i no_such_file
+    run $GQT $CMD -i no_such_file.gqt
     assert_fail_to_stderr $EX_NOINPUT $LINENO
 done
 
@@ -49,12 +49,13 @@ rm_index
 
 make_index
 run $GQT query -i $BCF.gqt -p "" -g "maf(HET)<1"
-assert_fail_to_stderr $EX_USAGE $LINENO
+assert_fail_to_stderr $EX_USAGE $LINENO 
 assert_in_stderr "gqt: GENOTYPE SYNTAX ERROR: Opperation (maf) does not expect genotype (HOM_REF,HET,HOM_ALT,UNKNOWN) prior to ')'" $LINENO
 rm_index
 
 make_index
 run $GQT query -i $BCF.gqt -p "" -g "maf()<1 f"
-assert_fail_to_stderr $EX_USAGE $LINENO
-assert_in_stderr "gqt: GENOTYPE SYNTAX ERROR: Invalid trailing value 'f'"
+assert_fail_to_stderr $EX_USAGE $LINENO "Trailing value in genotype query"
+assert_in_stderr "gqt: GENOTYPE SYNTAX ERROR: Invalid trailing value 'f'" \
+    "Trailing value in genotype query"
 rm_index

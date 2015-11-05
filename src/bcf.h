@@ -99,7 +99,6 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
                                           char *tmp_dir,
                                           char *full_cmd);
 
-<<<<<<< HEAD
 int get_variant_metadata_type(struct bcf_file *bcf_f,
                               char *field_name);
 

@@ -25,11 +25,13 @@ fi
 
 
 BCF=$DATA_PATH/10.1e4.var.bcf
+VCF=$DATA_PATH/10.1e4.var.vcf.gz
 
 clean_up()
 {
     ls $DATA_PATH/* \
         | grep -v "^$BCF$" \
+        | grep -v "^$VCF$" \
         | grep -v "^$DATA_PATH/diff_gts.bcf$" \
         | grep -v "^$DATA_PATH/more_fields.ped$" \
         | grep -v "^$DATA_PATH/too_many_fields.ped$" \
@@ -96,15 +98,48 @@ $GQT convert bcf \
     -r 43 \
     -f 10 \
     -i $BCF \
-    -b tmp.bcf.bim \
-    -v tmp.bcf.vid \
-    -o tmp.bcf.gqt \
+    -B tmp.bcf.bim \
+    -V tmp.bcf.vid \
+    -G tmp.bcf.gqt \
     2> /dev/null
+
+if [ -e "tmp.bcf.bim" ]
+then
+    echo "SUCCESS($LINENO): Specified BIM file name"
+else
+    echo "ERROR($LINENO): Could not specify BIM file name"
+    exit
+fi
+
+if [ -e "tmp.bcf.vid" ]
+then
+    echo "SUCCESS($LINENO): Specified VID file name"
+else
+    echo "ERROR($LINENO): Could not specify VID file name"
+    exit
+fi
+
+if [ -e "tmp.bcf.gqt" ]
+then
+    echo "SUCCESS($LINENO): Specified GQT file name"
+else
+    echo "ERROR($LINENO): Could not specify GQT file name"
+    exit
+fi
+
 
 $GQT convert ped \
     -i $BCF \
-    -o tmp.bcf.db \
+    -D tmp.bcf.db \
     2> /dev/null
+
+if [ -e "tmp.bcf.db" ]
+then
+    echo "SUCCESS($LINENO): Specified PED DB file name from BCF"
+else
+    echo "ERROR($LINENO): Could not specify PED DB file name from BDF"
+    exit
+fi
 
 $GQT convert bcf \
     -r 43 \
@@ -116,8 +151,9 @@ $GQT convert ped \
     -i $BCF \
     2> /dev/null
 
-$GQT query -i tmp.bcf.gqt -b tmp.bcf.bim -v tmp.bcf.vid -d tmp.bcf.db\
+$GQT query -i tmp.bcf.gqt -B tmp.bcf.bim -V tmp.bcf.vid -d tmp.bcf.db\
 | grep -v "gqt_queryCommand" > tmp.spec
+
 
 $GQT query -i $BCF.gqt \
 | grep -v "gqt_queryCommand" > tmp.nospec
@@ -145,7 +181,7 @@ rm -f tmp.ped.db
 
 $GQT convert ped \
     -i $BCF \
-    -o tmp.bcf.db \
+    -D tmp.bcf.db \
     2> /dev/null
 
 if [ -e "tmp.bcf.db" ]
@@ -226,11 +262,17 @@ else
     echo "SKIP($LINENO): SQLITE3 not set"
 fi
 
+clean_up
+
+$BCFTOOLS index $BCF
+$GQT convert bcf -i $BCF
+$GQT convert ped -i $BCF -p $DATA_PATH/more_fields.ped
 
 # count the number of homo_ref rows
 GQT_BOTH_NUM=`$GQT query \
     -i $BCF.gqt \
     -d $DATA_PATH/more_fields.ped.db \
+    -V $BCF.vid \
     -p "Population ='ESN'" \
     -g "HOM_REF" \
     | grep -v "#" \
@@ -376,21 +418,10 @@ else
 fi
 
 
-$BCFTOOLS view -Ov $BCF -o $DATA_PATH/10.1e4.var.vcf
-
-$GQT convert bcf \
-    -r 43 \
-    -f 10 \
-    -i $DATA_PATH/10.1e4.var.vcf \
-    2> /dev/null
-
 $BCFTOOLS view -Oz $BCF -o $DATA_PATH/10.1e4.var.vcf.gz
+$BCFTOOLS index $DATA_PATH/10.1e4.var.vcf.gz
 
-$GQT convert bcf \
-    -r 43 \
-    -f 10 \
-    -i $DATA_PATH/10.1e4.var.vcf.gz\
-    2> /dev/null
+$GQT convert bcf -i $DATA_PATH/10.1e4.var.vcf.gz
 
 $GQT query \
     -i $BCF.gqt \
@@ -401,26 +432,6 @@ $GQT query \
     | cut -f1-3 \
     > tmp.bcf.gqt
 
-$GQT query \
-    -i $DATA_PATH/10.1e4.var.vcf.gqt \
-    -d $DATA_PATH/more_fields.ped.db \
-    -p "" \
-    -g "maf()>=0.5" \
-    | grep -v "^#" \
-    | cut -f1-3 \
-    > tmp.vcf.gqt
-
-if diff tmp.bcf.gqt tmp.vcf.gqt > /dev/null
- then 
-    echo "SUCCESS($LINENO): BCF-based GQT matches VCF-based GQT"
-    rm tmp.vcf.gqt
-else
-    L=$LINENO
-    cp tmp.bcf.gqt tmp.$L.bcf.gqt
-    mv tmp.vcf.gqt tmp.$L.vcf.gqt
-    echo "ERROR($L): BCF-based GQT does not matches VCF-based GQT"
-    exit
-fi
 
 $GQT query \
     -i $DATA_PATH/10.1e4.var.vcf.gz.gqt \
@@ -430,6 +441,7 @@ $GQT query \
     | grep -v "^#" \
     | cut -f1-3 \
     > tmp.vcf.gz.gqt
+
 
 if diff tmp.bcf.gqt tmp.vcf.gz.gqt > /dev/null
  then 
@@ -619,6 +631,8 @@ then
             --out $DATA_PATH/A_vs_B \
         2> /dev/null > /dev/null
         tail -n+2 $DATA_PATH/A_vs_B.weir.fst | cut -f 3 > vcftools.fst.tmp
+        $GQT convert bcf -i $BCF
+        $GQT convert ped -i $BCF
         $GQT fst \
             -i $BCF.gqt \
             -d $BCF.db \
@@ -665,3 +679,19 @@ then
 fi
 
 clean_up
+
+$BCFTOOLS index $BCF
+$GQT convert bcf -i $BCF
+$GQT convert ped -i $BCF
+
+$GQT query -i $BCF -v | grep -v "^#" > tmp.gqt.out
+$BCFTOOLS view $BCF | grep -v "^#" > tmp.bcf.out
+
+if diff tmp.gqt.out tmp.bcf.out > /dev/null
+then
+    echo "SUCCESS($LINENO): GQT all genotypes matches BCFTOOLS all genotypes"
+    rm tmp.gqt.out tmp.bcf.out
+else
+    echo "ERROR($LINENO): GQT all genotypes does not match BCFTOOLS all genotypes"
+    exit
+fi

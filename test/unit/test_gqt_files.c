@@ -1161,3 +1161,7 @@ void test_write_lod_vid_file(void)
     remove("test_vid");
 }
 //}}}
+
+void test_off_file(void)
+{
+}

@@ -6,7 +6,7 @@
 
 
 
-int gqt_help(int argc, char **argv);
+int gqt_help(int argc, char **argv, int exit_code);
 int convert(int argc, char **argv, char *full_cmd);
 int view(int argc, char **argv);
 int gt(int argc, char **argv);
@@ -20,7 +20,7 @@ int pop(char *op, int argc, char **argv, char *full_cmd);
 
 int main(int argc, char **argv)
 {
-    if (argc < 2) return gqt_help(argc, argv);
+    if (argc < 2) return gqt_help(argc, argv, 0);
 
     char *cmd = argv[1];
 
@@ -60,13 +60,13 @@ int main(int argc, char **argv)
     else if (strcmp(cmd,"misc") == 0) return misc(argc-2, argv+2, full_cmd);
     else {
         fprintf(stderr, "Unknown command\n");
-        return gqt_help(argc, argv);
+        return gqt_help(argc, argv, EX_USAGE);
     }
 
     free(full_cmd);
 }
 
-int gqt_help(int argc, char **argv)
+int gqt_help(int argc, char **argv, int exit_code)
 {
     fprintf(stderr,
             "%s, v%s\n"
@@ -81,5 +81,5 @@ int gqt_help(int argc, char **argv)
                                 "(Weir and Cockerham 1984)\n",
             PROGRAM_NAME, VERSION,
             PROGRAM_NAME);
-    return EX_USAGE;
+    return exit_code;
 }

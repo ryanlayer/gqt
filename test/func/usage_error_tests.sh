@@ -8,7 +8,7 @@ assert_fail_to_stderr $EX_USAGE $LINENO
 
 ### Missing command line attributes
 run $GQT 
-assert_fail_to_stderr $EX_USAGE $LINENO
+assert_fail_to_stderr $EX_OK $LINENO
 
 for CMD in pca-shared gst fst calpha query "convert ped" "convert bcf"
 do

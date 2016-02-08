@@ -1792,8 +1792,11 @@ int convert_file_by_name_bcf_to_wahbm_bim(char *in,
     close_hdf5_file(hdf5_f);
     close_bcf_file(&bcf_f);
     remove(".tmp.h5");
+<<<<<<< HEAD
 =======
 >>>>>>> no_bim
+=======
+>>>>>>> f3afedbc6485986b0a86fa9cab7cb65c4ae3f7fe
 
     if (bcf_f->is_bcf) {
         hts_close(bcf_f->fp.bcf);

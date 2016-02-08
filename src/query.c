@@ -208,11 +208,12 @@ int query(int argc, char **argv, char *full_cmd)
         return query_help(EX_NOINPUT);
     }
     // See if -i is a gqt file or a bcf file
-    char *input_file_type = (char *)malloc(3*sizeof(char));
+    char *input_file_type = (char *)malloc(4*sizeof(char));
 
     strncpy(input_file_type,
             input_file_name + ( strlen(input_file_name) - 3),
             3 * sizeof(char));
+    input_file_type[3] = '\0';
 
     if (strcmp(input_file_type, "gqt") == 0 ) {
         G_is_set = 1;
@@ -346,7 +347,8 @@ int query(int argc, char **argv, char *full_cmd)
 
         // Try and find the BIM file, okay if not there (for now)
         if (B_is_set == 0) {
-            bim_file_name  = (char*)malloc(strlen(gqt_file_name)); 
+            bim_file_name  = (char*)
+                    malloc((1+strlen(gqt_file_name))*sizeof(char)); 
             if (!bim_file_name)
                 err(EX_OSERR, "malloc error");
             strcpy(bim_file_name, gqt_file_name);
@@ -356,7 +358,8 @@ int query(int argc, char **argv, char *full_cmd)
         } 
 
         if (O_is_set == 0) {
-            off_file_name  = (char*)malloc(strlen(gqt_file_name)); 
+            off_file_name  = (char*)
+                malloc((1+strlen(gqt_file_name))*sizeof(char)); 
             if (!off_file_name)
                 err(EX_OSERR, "malloc error");
             strcpy(off_file_name, gqt_file_name);
@@ -367,7 +370,8 @@ int query(int argc, char **argv, char *full_cmd)
 
 
         if (V_is_set == 0) {
-            vid_file_name  = (char*)malloc(strlen(gqt_file_name)); 
+            vid_file_name  = (char*)
+                malloc((1+strlen(gqt_file_name))*sizeof(char)); 
             if (!vid_file_name)
                 err(EX_OSERR, "malloc error");
             strcpy(vid_file_name, gqt_file_name);
@@ -384,7 +388,8 @@ int query(int argc, char **argv, char *full_cmd)
         }
 
         if (d_is_set == 0) {
-            ped_db_file_name  = (char*)malloc(strlen(gqt_file_name)); 
+            ped_db_file_name  = (char*)
+                malloc((1+strlen(gqt_file_name))*sizeof(char)); 
             if (!ped_db_file_name)
                 err(EX_OSERR, "malloc error");
             strcpy(ped_db_file_name, gqt_file_name);
@@ -1083,11 +1088,12 @@ int query_help(int exit_code)
 "%s v%s\n"
 "usage:   gqt query -i <bcf/vcf or gqt file> \\\n"
 "                   -d <ped database file> \\\n"
+"                   -c only print number of resulting variants \\\n"
+"                   -v print genotypes (from the source bcf/vcf)\\\n"
 "                   -B <bim file> (opt.)\\\n"
 "                   -O <off file> (opt.)\\\n"
 "                   -V <vid file> (opt.)\\\n"
 "                   -G <gqt file> (opt.)\\\n"
-"                   -c only print number of resulting variants \\\n"
 "                   -p <population query 1> \\\n"
 "                   -g <genotype query 1> \\\n"
 "                   -p <population query 2> \\\n"

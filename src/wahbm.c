@@ -15,7 +15,9 @@
 #include <limits.h>
 #include <pthread.h>
 #include <assert.h>
+#ifdef __AVX__
 #include <immintrin.h>
+#endif
 #include <inttypes.h>
 #include <math.h>
 

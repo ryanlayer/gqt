@@ -2,7 +2,11 @@
 #define __WAHBM_H__
 
 #include <stdint.h>
+
+#ifdef __AVX__
 #include <immintrin.h>
+#endif
+
 #include "plt.h"
 #include "ubin.h"
 #include "wah.h"

@@ -121,14 +121,19 @@ void quick_file_init(char *filename, struct quick_file_info *qfile) {
 
     /* decompress until deflate stream ends or end of file */
     do {
-        strm.avail_in = fread(in_buf, 1, CHUNK, bim_f->file);
+        //strm.avail_in = fread(in_buf, 1, CHUNK, bim_f->file);
+        strm.avail_in = knet_read(bim_f->file.remote, 
+                                  in_buf,
+                                  1 * CHUNK);
         //check_file_read(filename, fp, CHUNK, strm.avail_in);
+        /*
         if (ferror(bim_f->file)) {
             (void)inflateEnd(&strm);
             err(EX_NOINPUT,
                 "Cannot read compressed file '%s'",
                 bim_f->file_name);
         }
+        */
         if (strm.avail_in == 0)
             break;
         strm.next_in = in_buf;

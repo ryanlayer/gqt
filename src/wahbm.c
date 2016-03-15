@@ -20,6 +20,7 @@
 #endif
 #include <inttypes.h>
 #include <math.h>
+#include <assert.h>
 
 #include "wahbm.h"
 #include "wahbm_in_place.h"
@@ -55,23 +56,24 @@ struct wahbm_file *new_wahbm_file(char *file_name,
     struct wahbm_file *wf = (struct wahbm_file *) 
             malloc(sizeof(struct wahbm_file));
 
+    wf->type = WAHBM_LOCAL;
     wf->file_name = strdup(file_name);
 
-    wf->file = fopen(file_name,"wb");
-    if (!wf->file)
+    wf->file.local = fopen(file_name,"wb");
+    if (!wf->file.local)
         err(EX_CANTCREAT, "Cannot create WAHBM file '%s'", file_name);
 
     wf->gqt_header = new_gqt_file_header('w', 
-                                              full_cmd,
-                                              num_variants,
-                                              num_samples);
+                                         full_cmd,
+                                         num_variants,
+                                         num_samples);
 
     //wf->word_size = 31;
 
     if (fwrite(wf->gqt_header,
                sizeof(struct gqt_file_header),
                1,
-               wf->file) != 1)
+               wf->file.local) != 1)
         err(EX_IOERR, "Error writing header to WAHBM file '%s'", file_name);
 
     // 4 BM for each individual
@@ -82,10 +84,10 @@ struct wahbm_file *new_wahbm_file(char *file_name,
     if (fwrite(wf->record_offsets,
                sizeof(uint64_t),
                4*num_samples,
-               wf->file) != 4*num_samples)
+               wf->file.local) != 4*num_samples)
         err(EX_IOERR, "Error writing header to WAHBM file '%s'", file_name);
 
-    wf->header_offset = ftell(wf->file);
+    wf->header_offset = ftell(wf->file.local);
 
     return wf;
 }
@@ -97,6 +99,8 @@ void append_ubin_to_wahbm_file(struct wahbm_file *wf,
                                uint32_t *ubin,
                                uint32_t ubin_len)
 {
+    assert(wf->type == WAHBM_LOCAL);
+
     uint32_t *wah;
     uint32_t *wah_sizes;
     uint32_t wah_len = ubin_to_bitmap_wah(ubin,
@@ -119,7 +123,7 @@ void append_ubin_to_wahbm_file(struct wahbm_file *wf,
     }
 
     // Jump to the end of the file
-    if( fseek(wf->file, 0, SEEK_END) )
+    if( fseek(wf->file.local, 0, SEEK_END) )
         err(EX_IOERR,
             "Error seeking to record offsets in WAH BM file '%s'.",
             wf->file_name);
@@ -128,7 +132,7 @@ void append_ubin_to_wahbm_file(struct wahbm_file *wf,
     if (fwrite(wah, 
                sizeof(uint32_t), 
                wah_len,
-               wf->file) != wah_len)
+               wf->file.local) != wah_len)
         err(EX_IOERR, "Error writing WAH to '%s'.", wf->file_name); 
 
     free(wah);
@@ -143,6 +147,8 @@ void append_wahbm_to_wahbm_file(struct wahbm_file *wf,
                                 uint32_t wah_len,
                                 uint32_t *wah_sizes)
 {
+    assert(wf->type == WAHBM_LOCAL);
+
     uint64_t offset_total = 0;
     if (wah_i > 0)
         offset_total = wf->record_offsets[wah_i*4 - 1];
@@ -156,7 +162,7 @@ void append_wahbm_to_wahbm_file(struct wahbm_file *wf,
     }
 
     // Jump to the end of the file
-    if( fseek(wf->file, 0, SEEK_END) )
+    if( fseek(wf->file.local, 0, SEEK_END) )
         err(EX_IOERR,
             "Error seeking to record offsets in WAH BM file '%s'.",
             wf->file_name);
@@ -165,7 +171,7 @@ void append_wahbm_to_wahbm_file(struct wahbm_file *wf,
     if (fwrite(wah, 
                sizeof(uint32_t), 
                wah_len,
-               wf->file) != wah_len)
+               wf->file.local) != wah_len)
         err(EX_IOERR, "Error writing WAH to '%s'.", wf->file_name); 
 }
 //}}}
@@ -173,8 +179,10 @@ void append_wahbm_to_wahbm_file(struct wahbm_file *wf,
 //{{{void write_record_offsets(struct wahbm_file *wf)
 void write_record_offsets(struct wahbm_file *wf)
 {
+    assert(wf->type == WAHBM_LOCAL);
+
     // Jump to the correct point in the WAH header
-    if ( fseek(wf->file, sizeof(struct gqt_file_header), SEEK_SET) )
+    if ( fseek(wf->file.local, sizeof(struct gqt_file_header), SEEK_SET) )
         err(EX_IOERR,
             "Error seeking to record offsets in WAH BM file '%s'.",
             wf->file_name);
@@ -182,7 +190,7 @@ void write_record_offsets(struct wahbm_file *wf)
     if (fwrite(wf->record_offsets,
                sizeof(uint64_t),
                4*(wf->gqt_header->num_samples),
-               wf->file) != 4*(wf->gqt_header->num_samples))
+               wf->file.local) != 4*(wf->gqt_header->num_samples))
         err(EX_IOERR,
             "Error writing header to WAHBM file '%s'",
             wf->file_name);
@@ -192,7 +200,15 @@ void write_record_offsets(struct wahbm_file *wf)
 //{{{void destroy_wahbm_file(struct wahbm_file *wf)
 void destroy_wahbm_file(struct wahbm_file *wf)
 {
-    fclose(wf->file);
+    if (wf->type == WAHBM_LOCAL) {
+        if (fclose(wf->file.local))
+            err(EX_IOERR, "Error closeing WAHBM file '%s'", wf->file_name); 
+    } else {
+        if (knet_close(wf->file.remote) != 0)
+            err(EX_IOERR,
+                "Error closeing remote WAHBM file '%s'",
+                wf->file_name); 
+    }
     free(wf->record_offsets);
     free(wf);
 }
@@ -204,13 +220,15 @@ struct wahbm_file *open_wahbm_file(char *file_name)
     struct wahbm_file *wf = (struct wahbm_file *) 
             malloc(sizeof(struct wahbm_file));
 
+    wf->type = WAHBM_REMOTE;
     wf->file_name = strdup(file_name);
-    wf->file = fopen(file_name,"rb");
+    wf->file.remote = knet_open(file_name,"rb+");
 
-    if (!(wf->file))
-        err(EX_NOINPUT, "Cannot open WAHBM file \"%s\"", file_name);
+    if (!(wf->file.remote))
+        err(EX_NOINPUT, "Cannot open WAHBM file '%s'", file_name);
 
-    wf->gqt_header = read_gqt_file_header(wf->file_name, wf->file);
+    wf->gqt_header = read_remote_gqt_file_header(wf->file_name,
+                                                 wf->file.remote);
 
     if ( !((wf->gqt_header->marker[0] == 'G') &&
            (wf->gqt_header->marker[1] == 'Q') && 
@@ -224,13 +242,24 @@ struct wahbm_file *open_wahbm_file(char *file_name)
     wf->record_offsets = (uint64_t *) 
             malloc(4*wf->gqt_header->num_samples*sizeof(uint64_t));
 
+    size_t fr = knet_read(wf->file.remote,
+                          wf->record_offsets,
+                          4*wf->gqt_header->num_samples * sizeof(uint64_t));
+
+    check_remote_file_read(wf->file_name,
+                           4*wf->gqt_header->num_samples * sizeof(uint64_t),
+                           fr);
+
+    /*
     size_t fr = fread(wf->record_offsets,
                       sizeof(uint64_t),
                       4*wf->gqt_header->num_samples,
                       wf->file);
     check_file_read(wf->file_name, wf->file, 4*wf->gqt_header->num_samples, fr);
+    */
 
-    wf->header_offset = ftell(wf->file);
+    //wf->header_offset = ftell(wf->file);
+    wf->header_offset = knet_tell(wf->file.remote);
 
     return wf;
 }
@@ -264,9 +293,23 @@ uint32_t get_wahbm_bitmap(struct wahbm_file *wf,
                 (wf->record_offsets[bitmap_i*4 + bitarray_i] - wah_size);
     }
 
-    fseek(wf->file, wah_offset, SEEK_SET);
-    size_t fr = fread(*wah_bitmap,sizeof(uint32_t),wah_size,wf->file);
-    check_file_read(wf->file_name, wf->file, wah_size, fr);
+    if (wf->type == WAHBM_LOCAL) {
+        fseek(wf->file.local, wah_offset, SEEK_SET);
+        size_t fr = fread(*wah_bitmap,sizeof(uint32_t),wah_size,wf->file.local);
+        check_file_read(wf->file_name, wf->file.local, wah_size, fr);
+    } else {
+        if (knet_seek(wf->file.remote, wah_offset, SEEK_SET) == -1)
+            err(EX_IOERR,
+                "Error seeking to data in remote WAHBM file '%s'.",
+                wf->file_name);
+
+        size_t fr = knet_read(wf->file.remote,
+                              *wah_bitmap,
+                              wah_size*sizeof(uint32_t));
+        check_remote_file_read(wf->file_name,
+                               wah_size*sizeof(uint32_t),
+                               fr);
+    }
 
     return (uint32_t)wah_size;
 }

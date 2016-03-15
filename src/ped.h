@@ -41,10 +41,14 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
                                         uint32_t col,
                                         char *db_name);
 
-uint32_t resolve_ind_query(uint32_t **R, char *query, char *ped_db_file);
+uint32_t resolve_ind_query(uint32_t **R,
+                           char *query,
+                           char *ped_db_file,
+                           char *tmp_dir);
 
 uint32_t resolve_label_query(char ***R,
                              char *label_id,
                              char *query,
-                             char *ped_db_file);
+                             char *ped_db_file,
+                             char *tmp_dir);
 #endif

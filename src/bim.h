@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <htslib/knetfile.h>
 
 #include "genotq.h"
 
@@ -20,7 +21,15 @@ struct bim_file_header {
 };
 
 struct bim_file {
-    FILE *file;
+    //FILE *file;
+    union {
+        FILE *local;
+        knetFile *remote;
+    } file;
+    enum {
+        BIM_LOCAL,
+        BIM_REMOTE
+    } type;
     char *file_name;
     uint64_t data_start;
     struct gqt_file_header *gqt_header;

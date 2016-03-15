@@ -7,7 +7,14 @@
 #include "genotq.h"
 
 struct vid_file {
-    FILE *file;
+    union {
+        FILE *local;
+        knetFile *remote;
+    } file;
+    enum {
+        VID_LOCAL,
+        VID_REMOTE
+    } type;
     char *file_name;
     uint32_t *vids;
     struct gqt_file_header *gqt_header;

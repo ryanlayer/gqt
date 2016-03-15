@@ -190,13 +190,22 @@ function print_exit_code {
 function assert_exit_code {
     E=$(print_exit_code $1)
     O=$(print_exit_code $RETVAL)
+
+    MSG="\"$CMD\""
+    if [ -n "$3" ]
+    then
+        MSG="$3"
+    fi
+
     if [ $RETVAL -ne $1 ]
     then
-        echo -e "FAILURE EXIT CODE($2): \"$CMD\""
+        #echo -e "FAILURE EXIT CODE($2): \"$CMD\""
+        echo -e "FAILURE EXIT CODE($2): $MSG"
         echo -e "-->\texpected $E, observed $O"
         exit
     else
-        echo -e "SUCCESS EXIT CODE($2): \"$CMD\""
+        #echo -e "SUCCESS EXIT CODE($2): \"$CMD\""
+        echo -e "SUCCESS EXIT CODE($2): $MSG"
         if [ $VERBOSE ] 
         then
             echo -e "-->\texpected $E, observed $O"
@@ -207,25 +216,43 @@ function assert_exit_code {
 
 #{{{ function assert_no_stdout {
 function assert_no_stdout {
+
+    MSG="\"$CMD\""
+    if [ -n "$2" ]
+    then
+        MSG="$2"
+    fi
+
     if [ -n "$OUTVAL" ]
     then
-        echo -e "FAILURE NON-EMPTY STDOUT($1): \"$CMD\""
+        #echo -e "FAILURE NON-EMPTY STDOUT($1): \"$CMD\""
+        echo -e "FAILURE NON-EMPTY STDOUT($1): $MSG"
         echo -e "-->\t$OUTVAL"
         exit
     else
-        echo -e "SUCCESS NON-EMPTY STDOUT($1): \"$CMD\""
+        #echo -e "SUCCESS NON-EMPTY STDOUT($1): \"$CMD\""
+        echo -e "SUCCESS NON-EMPTY STDOUT($1): $MSG"
     fi
 }
 #}}}
 
 #{{{function assert_stderr {
 function assert_stderr {
+
+    MSG="\"$CMD\""
+    if [ -n "$2" ]
+    then
+        MSG="$2"
+    fi
+
     if [ -z "$ERRVAL" ]
     then
-        echo -e "FAILURE EMPTY STDERR($1): \"$CMD\""
+        #echo -e "FAILURE EMPTY STDERR($1): \"$CMD\""
+        echo -e "FAILURE EMPTY STDERR($1): $MSG"
         exit
     else
-        echo -e "SUCESS EMPTY STDERR($1): \"$CMD\""
+        #echo -e "SUCESS EMPTY STDERR($1): \"$CMD\""
+        echo -e "SUCESS EMPTY STDERR($1): $MSG"
         if [ $VERBOSE ] 
         then
             echo -e "-->\t$ERRVAL"
@@ -236,20 +263,30 @@ function assert_stderr {
 
 #{{{function assert_in_stderr {
 function assert_in_stderr {
+
+    MSG="\"$CMD\""
+    if [ -n "$2" ]
+    then
+        MSG="$2"
+    fi
+
     if [ -z "$ERRVAL" ]
     then
-        echo -e "FAILURE EMPTY STDERR($2): \"$CMD\""
+        #echo -e "FAILURE EMPTY STDERR($2): \"$CMD\""
+        echo -e "FAILURE EMPTY STDERR($2): $MSG"
         exit
     else
         if [[ $ERRVAL == *"$1"* ]]
         then
-            echo -e "SUCESS STDERR CONTAINS \"$1\" ($2): \"$CMD\""
+            #echo -e "SUCESS STDERR CONTAINS \"$1\" ($2): \"$CMD\""
+            echo -e "SUCESS STDERR CONTAINS \"$1\" ($2): $MSG"
             if [ $VERBOSE ] 
             then
                 echo -e "-->\t$ERRVAL"
             fi
         else
-            echo -e "FAILURE STDERR DOES NOT CONTAIN \"$1\" ($2): \"$CMD\""
+            #echo -e "FAILURE STDERR DOES NOT CONTAIN \"$1\" ($2): \"$CMD\""
+            echo -e "FAILURE STDERR DOES NOT CONTAIN \"$1\" ($2): $MSG"
             echo -e "-->\t$ERRVAL"
             exit
         fi
@@ -259,20 +296,30 @@ function assert_in_stderr {
 
 #{{{function assert_in_stdout {
 function assert_in_stdout {
+    MSG="\"$CMD\""
+    if [ -n "$3" ]
+    then
+        MSG="$3"
+    fi
+
+
     if [ -z "$OUTVAL" ]
     then
-        echo -e "FAILURE EMPTY STDOUT($2): \"$CMD\""
+        #echo -e "FAILURE EMPTY STDOUT($2): \"$CMD\""
+        echo -e "FAILURE EMPTY STDOUT($2): $MSG"
         exit
     else
         if [[ $OUTVAL == *"$1"* ]]
         then
-            echo -e "SUCESS STDOUT CONTAINS \"$1\" ($2): \"$CMD\""
+            #echo -e "SUCESS STDOUT CONTAINS \"$1\" ($2): \"$CMD\""
+            echo -e "SUCESS STDOUT CONTAINS \"$1\" ($2): $MSG"
             if [ $VERBOSE ] 
             then
                 echo -e "-->\t$OUTVAL"
             fi
         else
-            echo -e "FAILURE STDOUT DOES NOT CONTAIN \"$1\" ($2): \"$CMD\""
+            #echo -e "FAILURE STDOUT DOES NOT CONTAIN \"$1\" ($2): \"$CMD\""
+            echo -e "FAILURE STDOUT DOES NOT CONTAIN \"$1\" ($2): $MSG"
             echo -e "-->\t$OUTVAL"
             exit
         fi
@@ -282,9 +329,9 @@ function assert_in_stdout {
 
 #{{{ function assert_fail_to_stderr {
 function assert_fail_to_stderr {
-    assert_exit_code $1 $2
-    assert_no_stdout $2
-    assert_stderr $2
+    assert_exit_code $1 $2 "$3"
+    assert_no_stdout $2 "$3"
+    assert_stderr $2 "$3"
 }
 #}}}
 

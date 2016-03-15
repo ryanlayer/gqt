@@ -6,7 +6,12 @@
 #include <sqlite3.h>
 #include <sys/stat.h>
 #include <htslib/vcf.h>
+#include <htslib/faidx.h>
+#include <err.h>
+#include <sysexits.h>
+
 #include "ped.h"
+
 
 //{{{ static int uint32_t_ll_callback(void *ll_p,
 static int uint32_t_ll_callback(void *ll_p,
@@ -526,15 +531,21 @@ uint32_t convert_file_by_name_ped_to_db(char *bcf_file_name,
 //}}}
 
 //{{{ uint32_t resolve_ind_query(uint32_t **R, char *query, char *ped_db_file)
-uint32_t resolve_ind_query(uint32_t **R, char *query, char *ped_db_file)
+uint32_t resolve_ind_query(uint32_t **R,
+                           char *query,
+                           char *ped_db_file,
+                           char *tmp_dir)
 {
     sqlite3 *db;
     char *err_msg = NULL;
-    int rc = sqlite3_open(ped_db_file, &db);
+
+    char *r_ped_db_file = download_file(ped_db_file, tmp_dir);
+
+    int rc = sqlite3_open(r_ped_db_file, &db);
     if( rc != SQLITE_OK )
         err(EX_NOINPUT,
             "SQL error '%s' for database '%s'",
-            err_msg, ped_db_file);
+            err_msg, r_ped_db_file);
 
     char *test_q;
     int r;
@@ -572,6 +583,8 @@ uint32_t resolve_ind_query(uint32_t **R, char *query, char *ped_db_file)
         curr = tmp;
     }
 
+    free(r_ped_db_file);
+
     sqlite3_close(db);
     return ll.len;
 }
@@ -581,11 +594,14 @@ uint32_t resolve_ind_query(uint32_t **R, char *query, char *ped_db_file)
 uint32_t resolve_label_query(char ***R,
                              char *label_id,
                              char *query,
-                             char *ped_db_file)
+                             char *ped_db_file,
+                             char *tmp_dir)
 {
+    char *r_ped_db_file = download_file(ped_db_file, tmp_dir);
+
     sqlite3 *db;
     char *err_msg = NULL;
-    int rc = sqlite3_open(ped_db_file, &db);
+    int rc = sqlite3_open(r_ped_db_file, &db);
     if( rc != SQLITE_OK )
         err(EX_NOINPUT,
             "SQL error '%s' for database '%s'",
@@ -628,6 +644,7 @@ uint32_t resolve_label_query(char ***R,
     }
 
     sqlite3_close(db);
+    free(r_ped_db_file);
     return ll.len;
 }
 //}}}

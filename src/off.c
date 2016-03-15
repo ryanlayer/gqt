@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sysexits.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "off.h"
 #include "genotq.h"
@@ -23,14 +24,16 @@ struct off_file *new_off_file(char *file_name,
 
     o->file_name = strdup(file_name);
 
-    o->file = fopen(file_name,"wb");
-    if (!o->file)
+    o->type = OFF_LOCAL;
+
+    o->file.local = fopen(file_name,"wb");
+    if (!o->file.local)
         err(EX_CANTCREAT, "Cannot create OFF file '%s'", file_name);
 
     if (fwrite(o->gqt_header,
                sizeof(struct gqt_file_header),
                1,
-               o->file) != 1)
+               o->file.local) != 1)
         err(EX_IOERR, "Error writing header to OFF file '%s'", file_name);
 
     return o;
@@ -38,8 +41,13 @@ struct off_file *new_off_file(char *file_name,
 
 void destroy_off_file(struct off_file *o)
 {
-    if (fclose(o->file))
-        err(EX_IOERR, "Error closeing OFF file '%s'", o->file_name); 
+    if (o->type == OFF_LOCAL) {
+        if (fclose(o->file.local))
+            err(EX_IOERR, "Error closeing OFF file '%s'", o->file_name); 
+    } else {
+        if (knet_close(o->file.remote) != 0)
+            err(EX_IOERR, "Error closeing remote OFF file '%s'", o->file_name); 
+    }
 
     free(o->gqt_header);
     free(o->file_name);
@@ -52,13 +60,14 @@ struct off_file *open_off_file(char *file_name)
     if (!o)
         err(EX_OSERR, "malloc error");
 
+    o->type = OFF_REMOTE;
     o->file_name = strdup(file_name);
-    o->file = fopen(file_name,"rb+");
 
-    if (!(o->file))
-        err(EX_NOINPUT, "Cannot open OFF file '%s'", file_name);
+    o->file.remote = knet_open(file_name,"rb+");
+    if (!(o->file.remote))
+        err(EX_NOINPUT, "Cannot open OFF file \"%s\"", file_name);
 
-    o->gqt_header = read_gqt_file_header(o->file_name, o->file);
+    o->gqt_header = read_remote_gqt_file_header(o->file_name, o->file.remote);
 
     if ( !((o->gqt_header->marker[0] == 'G') &&
            (o->gqt_header->marker[1] == 'Q') && 
@@ -74,17 +83,20 @@ struct off_file *open_off_file(char *file_name)
         err(EX_OSERR, "malloc error");
 
 
-    size_t fr = fread(o->offsets,
-                      sizeof(uint64_t),
-                      o->gqt_header->num_variants,
-                      o->file);
-    check_file_read(o->file_name, o->file, o->gqt_header->num_variants, fr);
+    size_t fr = knet_read(o->file.remote,
+                          o->offsets,
+                          o->gqt_header->num_variants * sizeof(uint64_t));
+    check_remote_file_read(o->file_name, 
+                          o->gqt_header->num_variants * sizeof(uint64_t),
+                          fr);
 
     return o;
 }
 
 void add_to_off_file(struct off_file *o, uint64_t next_off)
 {
-    if (fwrite(&next_off, sizeof(uint64_t), 1, o->file) != 1)
+    assert(o->type == OFF_LOCAL);
+
+    if (fwrite(&next_off, sizeof(uint64_t), 1, o->file.local) != 1)
         err(EX_IOERR, "Error writing header to OFF file '%s'", o->file_name);
 }

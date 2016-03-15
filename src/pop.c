@@ -13,6 +13,8 @@
 #include <ctype.h>
 #include <inttypes.h>
 #include <time.h>
+#include <err.h>
+#include <sysexits.h>
 
 #include "ped.h"
 #include "vid.h"
@@ -32,21 +34,24 @@ uint32_t pca_shared(struct wahbm_file *wf,
                     char **id_query_list,
                     char *label_field_name,
                     char *db_file_name,
-                    char *id_out_file);
+                    char *id_out_file,
+                    char *tmp_dir_name);
 
 uint32_t fst(struct wahbm_file *wf,
              char **id_query_list,
              uint32_t id_q_count,
              uint32_t *vids,
              char *db_file_name,
-             double **mapped_fst);
+             double **mapped_fst,
+             char *tmp_dir_name);
 
 uint32_t gst(struct wahbm_file *wf,
              char **id_query_list,
              uint32_t id_q_count,
              uint32_t *vids,
              char *db_file_name,
-             double **mapped_gst);
+             double **mapped_gst,
+             char *tmp_dir_name);
 
 uint32_t calpha(struct wahbm_file *wf,
                 char **id_query_list,
@@ -56,7 +61,8 @@ uint32_t calpha(struct wahbm_file *wf,
                 uint32_t **case_ctrl_counts,
                 uint32_t *n_cases,
                 uint32_t *n_ctrls,
-                uint32_t N);
+                uint32_t N,
+                char *tmp_dir_name);
 
 void print_calpha_result(uint32_t *R,
                          uint32_t n_cases,
@@ -84,21 +90,27 @@ int pop(char *op, int argc, char **argv, char *full_cmd)
          *bim_file_name=NULL,
          *label_file_name=NULL,
          *label_field_name=NULL,
-         *vid_file_name=NULL;
+         *vid_file_name=NULL,
+         *tmp_dir_name=NULL;
     int i_is_set = 0,
         id_q_count = 0,
         d_is_set = 0,
         v_is_set = 0,
         f_is_set = 0,
         l_is_set = 0,
+        t_is_set = 0,
         b_is_set = 0;
     uint32_t N;
 
     char *id_query_list[100];
 
     //{{{ parse cmd line opts
-    while ((c = getopt (argc, argv, "hi:p:d:b:v:f:l:")) != -1) {
+    while ((c = getopt (argc, argv, "hi:p:d:b:v:f:l:t:")) != -1) {
         switch (c) {
+        case 't':
+            t_is_set = 1;
+            tmp_dir_name = optarg;
+            break;
         case 'l':
             l_is_set = 1;
             label_file_name = optarg;
@@ -145,6 +157,11 @@ int pop(char *op, int argc, char **argv, char *full_cmd)
         default:
             return pop_help(op);
         }
+    }
+
+    if (t_is_set == 0) {
+        if (asprintf(&tmp_dir_name,"./") == -1)
+            err(EX_OSERR, "asprintf error");
     }
 
     if (i_is_set == 0) {
@@ -258,7 +275,8 @@ int pop(char *op, int argc, char **argv, char *full_cmd)
                            id_query_list,
                            label_field_name,
                            db_file_name,
-                           label_file_name);
+                           label_file_name,
+                           tmp_dir_name);
     }else if (strcmp("fst",op) == 0) {
         double *R;
         len_R = fst(wf,
@@ -266,7 +284,8 @@ int pop(char *op, int argc, char **argv, char *full_cmd)
                     id_q_count,
                     vid_f->vids,
                     db_file_name,
-                    &R);
+                    &R,
+                    tmp_dir_name);
         print_pop_result(op,
                          R,
                          wf->gqt_header->num_variants,
@@ -279,7 +298,8 @@ int pop(char *op, int argc, char **argv, char *full_cmd)
                     id_q_count,
                     vid_f->vids,
                     db_file_name,
-                    &R);
+                    &R,
+                    tmp_dir_name);
         print_pop_result(op,
                          R,
                          wf->gqt_header->num_variants,
@@ -306,7 +326,8 @@ int pop(char *op, int argc, char **argv, char *full_cmd)
                        &R,
                        &n_cases,
                        &n_ctrls,
-                       0);
+                       0,
+                       tmp_dir_name);
 
         print_calpha_result(R,
                             n_cases,
@@ -336,7 +357,8 @@ uint32_t gst(struct wahbm_file *wf,
              uint32_t id_q_count,
              uint32_t *vids,
              char *db_file_name,
-             double **mapped_gst) {
+             double **mapped_gst,
+             char *tmp_dir_name) {
 
     uint32_t i,j;
     uint32_t id_lens[id_q_count];
@@ -354,7 +376,8 @@ uint32_t gst(struct wahbm_file *wf,
          */
         id_lens[i] = resolve_ind_query(&R,
                                       id_query_list[i],
-                                      db_file_name);
+                                      db_file_name,
+                                      tmp_dir_name);
 
         // Enforce that the offsets of the relevant samples is 
         // within the number of samples in the GQT index.
@@ -455,7 +478,8 @@ uint32_t calpha(struct wahbm_file *wf,
                 uint32_t **mapped_case_ctrl_counts,
                 uint32_t *n_cases,
                 uint32_t *n_ctrls,
-                uint32_t N) {
+                uint32_t N,
+                char *tmp_dir_name) {
 
     uint32_t **case_ctrl_counts = 
             (uint32_t **)malloc((N*2 + 2)* sizeof(uint32_t *));
@@ -474,12 +498,14 @@ uint32_t calpha(struct wahbm_file *wf,
     uint32_t *case_ids;
     uint32_t num_cases = resolve_ind_query(&case_ids,
                                            id_query_list[0],
-                                           db_file_name);
+                                           db_file_name,
+                                           tmp_dir_name);
 
     uint32_t *ctrl_ids;
     uint32_t num_ctrls = resolve_ind_query(&ctrl_ids,
                                            id_query_list[1],
-                                           db_file_name);
+                                           db_file_name,
+                                           tmp_dir_name);
 
     uint32_t num_all = num_cases + num_ctrls;
     uint32_t *all_ids = (uint32_t *)malloc(num_all * sizeof(uint32_t));
@@ -674,7 +700,8 @@ uint32_t fst(struct wahbm_file *wf,
              uint32_t id_q_count,
              uint32_t *vids,
              char *db_file_name,
-             double **mapped_fst) {
+             double **mapped_fst,
+             char *tmp_dir_name) {
 
     uint32_t i,j;
     uint32_t id_lens[id_q_count];
@@ -694,7 +721,8 @@ uint32_t fst(struct wahbm_file *wf,
          */
         id_lens[i] = resolve_ind_query(&R,
                                       id_query_list[i],
-                                      db_file_name);
+                                      db_file_name,
+                                      tmp_dir_name);
 
         // Enforce that the offsets of the relevant samples is 
         // within the number of samples in the GQT index.
@@ -850,18 +878,21 @@ uint32_t pca_shared(struct wahbm_file *wf,
                     char **id_query_list,
                     char *label_field_name,
                     char *db_file_name,
-                    char *id_out_file)
+                    char *id_out_file,
+                    char *tmp_dir_name)
 {
     uint32_t *record_ids;
     uint32_t num_records = resolve_ind_query(&record_ids,
                                              id_query_list[0],
-                                             db_file_name);
+                                             db_file_name,
+                                             tmp_dir_name);
 
     char **labels;
     uint32_t num_labels = resolve_label_query(&labels,
                                               label_field_name,
                                              id_query_list[0],
-                                             db_file_name);
+                                             db_file_name,
+                                             tmp_dir_name);
 
     FILE *f = fopen(id_out_file, "w");
     if (!f)
@@ -1087,6 +1118,7 @@ int pop_help(char *func)
 "%s %s\n"
 "usage:   gqt %s -i <gqt file> \\\n"
 "                   -d <ped database file> \\\n"
+"                   -t tmp direcory name for remote files (default ./)\n"
 "                   -f <label db field name> (requried for pca-shared)\\\n"
 "                   -l <label output file> (requried for pca-shared)\\\n"
 "                   -p <population query 1> \\\n"

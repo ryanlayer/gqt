@@ -13,7 +13,14 @@
 #include "pthread_pool.h"
 
 struct wahbm_file {
-    FILE *file;
+    union {
+        FILE *local;
+        knetFile *remote;
+    } file;
+    enum {
+        WAHBM_LOCAL,
+        WAHBM_REMOTE
+    } type;
     char *file_name;
     uint32_t word_size;
     uint64_t *record_offsets;

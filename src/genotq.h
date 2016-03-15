@@ -8,6 +8,7 @@
 #include <err.h>
 #include <sysexits.h>
 #include <sys/errno.h>
+#include <htslib/knetfile.h>
 /*
 #include "parse_q.h"
 #include "pq.h"
@@ -49,6 +50,8 @@ struct gqt_file_header *new_gqt_file_header(char type,
                                             uint32_t num_samples);
 
 struct gqt_file_header *read_gqt_file_header(char *file_name, FILE *f);
+struct gqt_file_header *read_remote_gqt_file_header(char *file_name,
+                                                    knetFile *f);
 
 struct uint_ll {
         uint32_t value;
@@ -116,9 +119,15 @@ int float_compare (const void * a, const void * b);
 
 void check_file_read(char *file_name, FILE *fp, size_t exp, size_t obs);
 
+void check_remote_file_read(char *file_name, size_t exp, size_t obs);
+
 int check_field_name(char *field_name);
 
 int is_int(char *s, int *v);
 
 unsigned long hash_cmd(char *full_cmd);
+
+char *download_file(char *fn, char *path);
+
+int ping_file(char *file_name);
 #endif

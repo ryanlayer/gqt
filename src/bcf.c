@@ -1198,7 +1198,8 @@ void compress_md(struct bcf_file *bcf_f,
             // Track the size of the compressed data
             c_size += have;
             //if (fwrite(out_buf, 1, have, fp_o) != have) 
-            if (fwrite(out_buf, 1, have, bim_f->file) != have) 
+            assert(bim_f->type == BIM_LOCAL);
+            if (fwrite(out_buf, 1, have, bim_f->file.local) != have) 
                 err(EX_IOERR, "Error writing compressed value 0.");
 
             //fwrite(in_buf, 1, CHUNK, fp_o);
@@ -1257,7 +1258,10 @@ void compress_md(struct bcf_file *bcf_f,
         // Track the size of the compressed data
         c_size += have;
         //if (fwrite(out_buf, 1, have, fp_o) != have) 
-        if (fwrite(out_buf, 1, have, bim_f->file) != have) 
+        if (bim_f->type != BIM_LOCAL)
+            errx(1, "Cannot write to remote BIM file.");
+
+        if (fwrite(out_buf, 1, have, bim_f->file.local) != have) 
             err(EX_IOERR, "Error writing compressed value 1.");
 
         in_buf_i = 0;
@@ -1302,7 +1306,9 @@ void compress_md(struct bcf_file *bcf_f,
         // Track the size of the compressed data
         c_size += have;
         //if (fwrite(out_buf, 1, have, fp_o) != have) 
-        if (fwrite(out_buf, 1, have, bim_f->file) != have) 
+        if (bim_f->type != BIM_LOCAL)
+            errx(1,"Cannot write to remote BIM file.");
+        if (fwrite(out_buf, 1, have, bim_f->file.local) != have) 
             err(EX_IOERR, "Error writing compressed value 1.");
     }
 

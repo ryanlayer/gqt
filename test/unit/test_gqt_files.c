@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <string.h>
+#include <htslib/knetfile.h>
 
 #include "unity.h"
 #include "wahbm.h"
@@ -686,7 +687,7 @@ void test_seek_bim_to_data(void)
     if (fwrite(test_data,
                sizeof(uint64_t),
                4,
-               b->file) != 4)
+               b->file.local) != 4)
         err(EX_IOERR, "Error writing to BIM file \"%s\"", file_name);
 
     destroy_bim_file(b);
@@ -722,7 +723,9 @@ void test_seek_bim_to_data(void)
     seek_bim_to_data(b1);
 
     uint32_t read_data_0[4];
-    if (fread(read_data_0, sizeof(uint32_t), 4, b1->file) != 4)
+    //if (fread(read_data_0, sizeof(uint32_t), 4, b1->file.remote) != 4)
+    if (knet_read(b1->file.remote, 
+                  read_data_0, 4 * sizeof(uint32_t)) != 4 * sizeof(uint32_t))
         err(EX_IOERR, "Read error '%s'", b1->file_name);
     TEST_ASSERT_EQUAL(10, read_data_0[0]);
     TEST_ASSERT_EQUAL(11, read_data_0[1]);
@@ -732,7 +735,10 @@ void test_seek_bim_to_data(void)
     seek_bim_to_data(b1);
 
     uint32_t read_data_1[4];
-    if (fread(read_data_1, sizeof(uint32_t), 4, b1->file) != 4)
+    //if (fread(read_data_1, sizeof(uint32_t), 4, b1->file.remote) != 4)
+    if (knet_read(b1->file.remote,
+                  read_data_1, 
+                  4 * sizeof(uint32_t)) != 4 * sizeof(uint32_t))
         err(EX_IOERR, "Read error '%s'", b1->file_name);
     TEST_ASSERT_EQUAL(10, read_data_1[0]);
     TEST_ASSERT_EQUAL(11, read_data_1[1]);
@@ -771,9 +777,10 @@ void test_upate_bim_header(void)
                                       h_size,
                                       md_line_lens);
 
-    destroy_bim_file(b);
+    //destroy_bim_file(b);
 
-    struct bim_file *b1 = open_bim_file(file_name);
+    //struct bim_file *b1 = open_bim_file(file_name);
+    struct bim_file *b1 = b;
 
     TEST_ASSERT_EQUAL('G', b1->gqt_header->marker[0]);
     TEST_ASSERT_EQUAL('Q', b1->gqt_header->marker[1]);
@@ -807,9 +814,9 @@ void test_upate_bim_header(void)
     TEST_ASSERT_EQUAL(11, b1->bim_header->c_size);
     TEST_ASSERT_EQUAL(12, b1->bim_header->h_size);
 
-    destroy_bim_file(b1);
+    //destroy_bim_file(b1);
 
-    struct bim_file *b2 = open_bim_file(file_name);
+    struct bim_file *b2 = b;
 
     TEST_ASSERT_EQUAL('G', b2->gqt_header->marker[0]);
     TEST_ASSERT_EQUAL('Q', b2->gqt_header->marker[1]);

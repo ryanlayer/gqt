@@ -613,7 +613,7 @@ if [[ -f "`which $VCFTOOLS`" ]]
 then
     if [[ -f "`which $BCFTOOLS`" ]]
     then
-        BCFTOOLS view $BCF > $DATA_PATH/10.1e4.var.vcf
+        $BCFTOOLS view $BCF > $DATA_PATH/10.1e4.var.vcf
         echo -e "I0\nI1\nI2\nI3\nI4" > $DATA_PATH/A.txt
         echo -e "I5\nI6\nI7\nI8\nI9" > $DATA_PATH/B.txt
         $VCFTOOLS \

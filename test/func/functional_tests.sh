@@ -545,7 +545,7 @@ export BCFTOOLS_PLUGINS=":$HOME/src/bcftools/plugins/"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/src/htslib"
 export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:$HOME/src/htslib"
 
-R=`bcftools plugin fill-AN-AC 2>&1`
+R=`$BCFTOOLS plugin fill-AN-AC 2>&1`
 
 if [[ $R == *"Could not load \"fill-AN-AC\""* ]]
 then
@@ -554,8 +554,8 @@ then
 fi
 
 
-BCFTOOLS_COUNT=`bcftools view $BCF\
-    | bcftools plugin fill-AN-AC \
+BCFTOOLS_COUNT=`$BCFTOOLS view $BCF\
+    | $BCFTOOLS plugin fill-AN-AC \
     | grep -v "#" \
     | awk '{
         split($8,a,";");
@@ -798,8 +798,31 @@ else
 fi
 clean_up
 
+$BCFTOOLS index $BCF 2> /dev/null
+$GQT convert bcf -i $BCF 2> /dev/null
+
 $GQT query \
-    -i http://s3-us-west-2.amazonaws.com/gqt-data/test/10.1e4.var.bcf -v
+    -i http://s3-us-west-2.amazonaws.com/gqt-data/test/10.1e4.var.bcf -v \
+    | grep -v "^#" \
+> tmp.remote.out
+
+$GQT query \
+    -i $BCF -v \
+    | grep -v "^#" \
+> tmp.local.out
+
+if diff tmp.local.out tmp.remote.out > /dev/null
+then
+    echo "SUCCESS($LINENO): Local results matches remote results"
+    rm tmp.local.out tmp.remote.out
+else
+    echo "ERROR($LINENO): Local results do not match remote results"
+    exit
+fi
+clean_up
+
+
+
 
 #$GQT fst \
 #    -i $BCF.gqt \

@@ -1,4 +1,4 @@
-For detail information about GQT please see our Nature Methods paper at:
+For detailed information about GQT please see our Nature Methods paper at:
 
 http://www.nature.com/nmeth/journal/vaop/ncurrent/full/nmeth.3654.html
 

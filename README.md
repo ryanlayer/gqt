@@ -33,6 +33,7 @@ GQT depends on htslib, sqlite3, and lex (flex).
 ```
 git clone https://github.com/samtools/htslib.git
 cd htslib
+./configure --disable-bz2 --disable-lzma --enable-libcurl
 make
 cd ..
 ```

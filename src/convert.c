@@ -304,7 +304,7 @@ int convert_help()
             "         -D           PED DB output file name (opt.)\n"
             "         -r           Number of variants (opt. with index)\n"
             "         -f           Number of samples (opt. with index)\n"
-            "         -t           Tmp working directory(./ by defualt)\n",
+            "         -t           Tmp working directory(./ by default)\n",
             PROGRAM_NAME, VERSION);
 
     return EX_USAGE;
